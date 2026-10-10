@@ -1,6 +1,7 @@
 import type { BasicNodeShape } from '../opencanvas/domain/nodes/basicNodePresentation';
 import { paletteSwatch, type PaletteKey, type SwatchResolver } from '../opencanvas/domain/nodes/nodePalette';
 import type { Size2d } from '../opencanvas/domain/geometry/types';
+import { readableTextOn } from '../lib/colorUtils';
 import type { DslDirection } from './ast';
 import type { CanonicalAttribute } from './sceneMeta';
 
@@ -30,7 +31,7 @@ export const SHAPE_WORDS: Readonly<Record<string, DslShapeSpec>> = {
   doc: { kind: 'process', shape: 'document', minSize: { width: 132, height: 96 }, maxSize: { width: 320, height: 260 }, wrap: 240 },
   note: { kind: 'sticky', minSize: { width: 180, height: 100 }, maxSize: { width: 320, height: 320 }, wrap: 260 },
   parallelogram: { kind: 'process', shape: 'parallelogram', minSize: { width: 152, height: 80 }, maxSize: { width: 340, height: 220 }, wrap: 240 },
-  person: { kind: 'process', shape: 'actor', minSize: { width: 104, height: 128 }, maxSize: { width: 240, height: 280 }, wrap: 165 },
+  person: { kind: 'process', shape: 'actor', minSize: { width: 104, height: 128 }, maxSize: { width: 280, height: 360 }, wrap: 165 },
   queue: { kind: 'process', shape: 'queue', minSize: { width: 152, height: 84 }, maxSize: { width: 340, height: 220 }, wrap: 240 },
   component: { kind: 'process', shape: 'rounded', minSize: { width: 140, height: 60 }, maxSize: { width: 320, height: 240 }, wrap: 240 },
   browser: { kind: 'browser', minSize: { width: 240, height: 170 }, maxSize: { width: 480, height: 400 }, wrap: 300 },
@@ -166,8 +167,9 @@ export function nodeAppearance(
   const key = color && !isHexColor(color) ? COLOR_WORDS[color]?.key : undefined;
   const custom = color && isHexColor(color) ? color : undefined;
   const mode = fill === 'bold' ? 'solid' : 'pastel';
+  // An authored hex is the fill as written: the label takes whichever ink reads on it (the DSL has no text colour).
   const swatch = custom
-    ? { fill: custom, stroke: custom, textColor: mode === 'solid' ? '#ffffff' : '#0f172a' }
+    ? { fill: custom, stroke: custom, textColor: readableTextOn(custom) }
     : swatchOf((key ?? 'white') as PaletteKey, mode);
   return {
     fill: fill === 'outline' ? 'transparent' : swatch.fill,

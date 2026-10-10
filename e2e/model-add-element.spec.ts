@@ -26,7 +26,9 @@ test('Model panel adds an element and a child, one undo each, and Map shows it @
   await expect(name).toBeFocused();
   await page.keyboard.type('Billing');
   await page.keyboard.press('Enter');
-  expect(await elementIds(page)).toContain('new-system');
+  // The first rename of a just-added element moves its id to the name (nothing references it yet).
+  await expect.poll(() => elementIds(page)).toContain('billing');
+  expect(await elementIds(page)).not.toContain('new-system');
   const row = (label: string) => page.getByRole('treeitem', { name: new RegExp(`^${label}`) });
   const outline = () => page.getByRole('button', { name: 'All elements', exact: true }).click();
   await outline();
@@ -42,6 +44,7 @@ test('Model panel adds an element and a child, one undo each, and Map shows it @
   await expect.poll(() => elementIds(page)).toContain('new-system');
   await redo.click();
   await expect(row('Billing')).toHaveCount(1);
+  await expect.poll(() => elementIds(page)).toContain('billing');
 
   await row('Shop').first().click();
   await page.getByRole('button', { name: 'Add inside', exact: true }).click();
@@ -52,5 +55,5 @@ test('Model panel adds an element and a child, one undo each, and Map shows it @
   await expect(page.getByRole('button', { name: 'Add inside', exact: true })).toBeDisabled();
 
   await page.getByRole('button', { name: 'Map', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => (window as unknown as Api).__V2__.getMapState().nodes)).toContain('new-system');
+  await expect.poll(() => page.evaluate(() => (window as unknown as Api).__V2__.getMapState().nodes)).toContain('billing');
 });

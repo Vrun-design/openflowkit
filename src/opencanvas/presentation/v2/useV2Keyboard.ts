@@ -18,7 +18,8 @@ interface V2KeyboardOptions {
   readonly onWrapInSection: () => void;
   readonly onCut: () => void;
   readonly onCopy: () => void;
-  readonly onPaste: () => void;
+  /** ⌘V: never cancelled, so the native paste event still fires; the editor falls back when none does. */
+  readonly onPasteKey: () => void;
   readonly onCopyStyle: () => void;
   readonly onPasteStyle: () => void;
   readonly onAlign: (mode: AlignMode) => void;
@@ -69,6 +70,15 @@ const ALT_ALIGN: Readonly<Record<string, AlignMode>> = {
   KeyA: 'left', KeyD: 'right', KeyW: 'top', KeyS: 'bottom', KeyH: 'center-x', KeyV: 'center-y',
 };
 
+const CONTROLS = 'button, a[href], [role="slider"], [role="menu"], [role="listbox"], [role="tree"]';
+const CONTROL_KEYS = [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+
+/** The key is the focused field's or control's own (typing, activation, arrow navigation), or already handled. */
+export function keyOwnedByTarget(event: KeyboardEvent<HTMLElement>): boolean {
+  return event.defaultPrevented || isEditableTarget(event.target)
+    || (event.target instanceof HTMLElement && event.target.closest(CONTROLS) !== null && CONTROL_KEYS.includes(event.key));
+}
+
 // I-02: V/H/R/O/A/T switch tools; typing in a label or input never does.
 // Escape exits the active gesture, then an armed tool, then the selection.
 export function useV2Keyboard(options: V2KeyboardOptions) {
@@ -85,11 +95,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
       return;
     }
-    if (event.defaultPrevented || isEditableTarget(event.target)) return;
     // Native chrome controls keep activation/navigation keys. Global tool and
     // history shortcuts still work after choosing a tool with the mouse.
-    if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], [role="menu"], [role="listbox"]')
-      && [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+    if (keyOwnedByTarget(event)) return;
     if (event.key === ' ' && !event.repeat) {
       if (!opts.editingRef.current) {
         opts.onSpacePan(true);
@@ -146,9 +154,10 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (command && key === 'c') {
       opts.onCopy();
       event.preventDefault();
+    // ⌘V is not cancelled: that would cancel the native paste event, which the editor reads (shapes, images,
+    // image URLs, Mermaid) without a clipboard permission prompt.
     } else if (command && key === 'v') {
-      opts.onPaste();
-      event.preventDefault();
+      opts.onPasteKey();
     } else if (command && (key === 'b' || key === 'i' || key === 'u')) {
       opts.onTextStyle(key === 'b' ? 'bold' : key === 'i' ? 'italic' : 'underline');
       event.preventDefault();
@@ -165,7 +174,7 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (!command && event.altKey && !event.shiftKey && ALT_ALIGN[event.code]) {
       opts.onAlign(ALT_ALIGN[event.code]);
       event.preventDefault();
-    } else if (!command && event.altKey && event.code === 'KeyD') {
+    } else if (!command && event.altKey && event.code === 'KeyC') {
       opts.onToggleCode();
       event.preventDefault();
     } else if (!command && event.altKey && event.code === 'KeyM') {
@@ -198,10 +207,14 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     // M switches Canvas and Map on a model page, ahead of type-to-edit: it is a mode key there, not the start of a label.
     } else if (!command && !event.shiftKey && !event.altKey && key === 'm' && opts.onToggleMap()) {
       event.preventDefault();
+    // ⇧1/⇧2 (by code) sit above type-to-edit: they zoom, never type "!" or "@" into a label.
+    } else if (!command && !event.altKey && event.shiftKey && (event.code === 'Digit1' || event.code === 'Digit2')) {
+      if (event.code === 'Digit1') opts.onFitView(); else opts.onZoomToSelection();
+      event.preventDefault();
     } else if (!command && !event.altKey && event.key.length === 1 && event.key !== ' '
       && opts.onTypeToEdit(event.key)) {
       event.preventDefault();
-    // ⇧H/V and ⇧1/⇧2 sit below type-to-edit: a capital letter on one selected
+    // ⇧H/V sit below type-to-edit: a capital letter on one selected
     // shape starts its label; flips need none or several selected.
     } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyI') {
       opts.onInsertImage();
@@ -214,9 +227,6 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (!command && !event.altKey && event.shiftKey && (event.code === 'KeyH' || event.code === 'KeyV')) {
       opts.onFlip(event.code === 'KeyH' ? 'horizontal' : 'vertical');
-      event.preventDefault();
-    } else if (!command && !event.altKey && event.shiftKey && (event.code === 'Digit1' || event.code === 'Digit2')) {
-      if (event.code === 'Digit1') opts.onFitView(); else opts.onZoomToSelection();
       event.preventDefault();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'v') {
       opts.onToolChange('select');
@@ -252,7 +262,7 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onEditPrimary('f2');
       event.preventDefault();
     } else if (event.key === 'Enter') {
-      opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
+      opts.onEditPrimary(command || event.shiftKey ? 'f2' : 'enter');
       event.preventDefault();
     } else if (event.key === 'Escape') {
       if (opts.onCancelGesture()) {

@@ -1,5 +1,6 @@
 // Syntax and icon ops: the two lookups an agent needs before it can write DSL.
 import { z } from 'zod';
+import { DSL_FAMILIES } from '../../dsl/ast';
 import { defineOp } from './types';
 import type { IconMatch } from './types';
 
@@ -49,7 +50,9 @@ export const getSyntax = defineOp({
   name: 'get_syntax',
   title: 'Read the grammar',
   description: 'The OpenFlow DSL grammar: the full reference, or one family’s section.',
-  schema: z.object({ family: z.string().min(1).optional().describe('flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart, wireframe') }),
+  // `Flowchart` is a family too; anything else fails listing the ones there are.
+  schema: z.object({ family: z.preprocess((value) => typeof value === 'string' ? value.trim().toLowerCase() : value, z.enum(DSL_FAMILIES))
+    .optional().describe('One family’s section; omit for the full reference.') }),
   async run({ family }, context) {
     return { command: null, output: { family: family ?? null, syntax: await context.capabilities.syntax(family) } };
   },

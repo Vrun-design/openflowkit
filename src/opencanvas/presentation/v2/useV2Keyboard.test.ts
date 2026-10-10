@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import type { KeyboardEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { useV2Keyboard } from './useV2Keyboard';
+import { keyOwnedByTarget, useV2Keyboard } from './useV2Keyboard';
 
 function setup(onTypeToEdit = vi.fn(() => true)) {
   const onToolChange = vi.fn();
@@ -16,22 +16,25 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onFind = vi.fn();
   const onToggleMap = vi.fn(() => true);
   const onToggleAgent = vi.fn();
+  const onToggleCode = vi.fn();
+  const onEditPrimary = vi.fn();
+  const onPasteKey = vi.fn();
   const insert = { onInsertFrame: vi.fn(), onInsertSticky: vi.fn(), onToggleMore: vi.fn() };
-  const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
+  const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
   const { result } = renderHook(() => useV2Keyboard({
     onReorder, onToggleLock, ...clipboard, ...arrange, ...insert,
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
-    onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
+    onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary, onPasteKey, onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onEscapePanel: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
     onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons, onToggleInspect, onToggleMap, onFind,
-    onToggleAgent, onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
+    onToggleAgent, onToggleCode, onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));
   const key = (init: Partial<KeyboardEvent<HTMLElement>>) => result.current({
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, ...insert, onToggleAgent, onFind, onToggleMap, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
+  return { key, ...insert, onToggleAgent, onToggleCode, onEditPrimary, onPasteKey, onFind, onToggleMap, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -132,10 +135,13 @@ describe('useV2Keyboard camera', () => {
 });
 
 describe('useV2Keyboard edit shortcuts', () => {
-  it('⌘X/C/V clipboard, ⌘⌥C/V style, ⌘B/I/U text style', () => {
+  it('⌘X/C clipboard, ⌘⌥C/V style, ⌘B/I/U text style; ⌘V is left to the native paste event', () => {
     const t = setup();
-    key(t, { key: 'x', metaKey: true }); key(t, { key: 'c', metaKey: true }); key(t, { key: 'v', metaKey: true });
-    expect([t.onCut, t.onCopy, t.onPaste].map((fn) => fn.mock.calls.length)).toEqual([1, 1, 1]);
+    const preventDefault = vi.fn();
+    key(t, { key: 'x', metaKey: true }); key(t, { key: 'c', metaKey: true }); key(t, { key: 'v', metaKey: true, preventDefault });
+    expect([t.onCut, t.onCopy].map((fn) => fn.mock.calls.length)).toEqual([1, 1]);
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(t.onPasteKey).toHaveBeenCalledOnce();
     key(t, { key: 'ç', code: 'KeyC', metaKey: true, altKey: true });
     key(t, { key: '√', code: 'KeyV', metaKey: true, altKey: true });
     expect(t.onCopyStyle).toHaveBeenCalledOnce();
@@ -166,6 +172,32 @@ describe('useV2Keyboard edit shortcuts', () => {
     key(t, { key: '@', code: 'Digit2', shiftKey: true });
     expect(t.onFitView).toHaveBeenCalledOnce();
     expect(t.onZoomToSelection).toHaveBeenCalledOnce();
+  });
+
+  it('⌥C opens the code panel; ⌥D stays align right', () => {
+    const t = setup(vi.fn(() => false));
+    key(t, { key: 'ç', code: 'KeyC', altKey: true });
+    expect(t.onToggleCode).toHaveBeenCalledOnce();
+    key(t, { key: '∂', code: 'KeyD', altKey: true });
+    expect(t.onAlign).toHaveBeenCalledWith('right');
+    expect(t.onToggleCode).toHaveBeenCalledOnce();
+  });
+
+  it('⇧1/⇧2 zoom even with one shape selected: they never type "!" or "@" into its label', () => {
+    const t = setup();
+    key(t, { key: '!', code: 'Digit1', shiftKey: true });
+    key(t, { key: '@', code: 'Digit2', shiftKey: true });
+    expect(t.onFitView).toHaveBeenCalledOnce();
+    expect(t.onZoomToSelection).toHaveBeenCalledOnce();
+    expect(t.onTypeToEdit).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+Enter renames like ⌘Enter, for keyboards without ⌘', () => {
+    const t = setup();
+    key(t, { key: 'Enter', ctrlKey: true });
+    key(t, { key: 'Enter', metaKey: true });
+    key(t, { key: 'Enter' });
+    expect(t.onEditPrimary.mock.calls).toEqual([['f2'], ['f2'], ['enter']]);
   });
 
   it('⇧H on a single selected shape types a capital letter instead of flipping', () => {
@@ -204,5 +236,27 @@ describe('useV2Keyboard assistant toggle', () => {
     key({ key: 'j', metaKey: true, shiftKey: true });
     key({ key: 'j', target: document.createElement('textarea') });
     expect(onToggleAgent).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('keyOwnedByTarget', () => {
+  const event = (target: EventTarget, init: Partial<KeyboardEvent<HTMLElement>> = {}) =>
+    ({ key: 'ArrowRight', target, defaultPrevented: false, ...init }) as unknown as KeyboardEvent<HTMLElement>;
+  it('a focused control, tree or field keeps its navigation keys; the canvas does not', () => {
+    const button = document.createElement('button');
+    const tree = document.createElement('ul');
+    tree.setAttribute('role', 'tree');
+    const item = tree.appendChild(document.createElement('li'));
+    expect(keyOwnedByTarget(event(button))).toBe(true);
+    expect(keyOwnedByTarget(event(button, { key: ' ' }))).toBe(true);
+    expect(keyOwnedByTarget(event(item))).toBe(true);
+    const link = document.createElement('a');
+    link.href = 'https://docs.openflowkit.com/';
+    expect(keyOwnedByTarget(event(link, { key: 'Enter' }))).toBe(true);
+    expect(keyOwnedByTarget(event(document.createElement('textarea'), { key: 'q' }))).toBe(true);
+    expect(keyOwnedByTarget(event(document.createElement('section'), { defaultPrevented: true }))).toBe(true);
+    expect(keyOwnedByTarget(event(document.createElement('section')))).toBe(false);
+    // Escape is never a control's: it still closes what is open.
+    expect(keyOwnedByTarget(event(button, { key: 'Escape' }))).toBe(false);
   });
 });

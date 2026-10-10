@@ -10,6 +10,7 @@ import { V2HomePage } from './V2HomePage';
 vi.mock('@/services/storage/v2/v1Import', () => ({
   readV1ImportMarker: () => ({ completedAt: '', docs: { broken: { name: 'Old one', importedAt: '', sourceUpdatedAt: '', status: 'failed', error: 'quota' } } }),
   runV1Import: () => Promise.resolve({ imported: [], failures: [], firstRun: false }),
+  isV1Backup: () => false,
 }));
 
 window.matchMedia ??= (() => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia;
@@ -17,6 +18,10 @@ window.matchMedia ??= (() => ({ matches: false, addEventListener: () => undefine
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
 // jsdom has no modal dialogs; the platform behaviour is covered by the headed spec.
 HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) { this.open = true; };
+// jsdom's File has no text().
+Blob.prototype.text ??= function text(this: Blob) {
+  return new Promise<string>((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(this); });
+};
 HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) { this.open = false; };
 
 beforeEach(async () => {
@@ -77,6 +82,7 @@ describe('V2HomePage', () => {
     fireEvent.click(screen.getByRole('link', { name: /^Archive/ }));
     expect((await screen.findByText('Renamed')).closest('li')!.textContent).toContain('Archived just now');
     await openMenu('Renamed', 'Delete forever…');
+    expect(screen.getByText(/removed from this browser/).textContent).toMatch(/^It’s removed/);
     fireEvent.click(screen.getByRole('button', { name: 'Delete forever' }));
     await screen.findByText('Nothing archived.');
     expect(await createV2Repository(indexedDB).loadDocument('doc-b')).toEqual({ status: 'missing' });
@@ -113,6 +119,20 @@ describe('V2HomePage', () => {
     fireEvent.keyDown(second!, { key: 'Delete' });
     await waitFor(() => expect(within(list).getAllByRole('link')).toHaveLength(1));
     expect((await createV2Repository(indexedDB).listArchive()).map((summary) => summary.name)).toEqual([name]);
+  });
+
+  it('an import says why a file would not open, and what it had to leave out of one that did', async () => {
+    const { container } = renderHome();
+    await screen.findByRole('list', { name: 'Diagrams' });
+    const v1 = { nodes: [{ id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'A' } }], edges: [{ id: 'e', source: 'a', target: 'gone' }] };
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [
+      new File(['{not json'], 'bad.json', { type: 'application/json' }),
+      new File([JSON.stringify(v1)], 'old.json', { type: 'application/json' }),
+    ] } });
+    const toast = await screen.findByText('Imported 1 diagram.');
+    const text = toast.closest('[role="status"], [role="alert"], li, div')!.parentElement!.textContent;
+    expect(text).toContain('bad.json: It isn’t valid JSON');
+    expect(text).toContain('was left out');
   });
 
   it('opens a diagram', async () => {

@@ -21,7 +21,7 @@ const CURATED = {
   'Agents & MCP': ['mcp-server', 'prompting-agents'],
   'AI (bring your own key)': ['ai-generation'],
   'Export & motion': ['exporting', 'animated-export', 'share-links'],
-  'Architecture (C4)': ['architecture-c4', 'architecture-workspace'],
+  'Architecture (C4)': ['map-mode', 'architecture-c4', 'architecture-workspace'],
   Reference: ['openflow-dsl-reference', 'keyboard-shortcuts'],
 };
 

@@ -1,4 +1,4 @@
-import { createShapeNode, type ShapeKind } from '../nodes/shapeNode';
+import { createShapeNode, defaultShapeSize, type ShapeKind } from '../nodes/shapeNode';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import type { Point2d } from '../geometry/types';
 import type { ConnectSide } from './connectHandles';
@@ -12,6 +12,11 @@ export function oppositeSide(side: ConnectSide): ConnectSide {
     case 'bottom': return 'top';
     case 'left': return 'right';
   }
+}
+
+/** A decision leads to a step: ⊕ from a diamond makes the default box, not another question. */
+function isDecision(node: SceneNode): boolean {
+  return node.kind === 'decision' || node.content.shape === 'diamond';
 }
 
 function sourceShapeKind(node: SceneNode): ShapeKind {
@@ -53,19 +58,21 @@ export function planQuickCreate(
   // The new node lives beside its source, in the same container: translations are parent-local.
   const parentMatrix = source.parentId ? buildNodeWorldMatrices(page).get(source.parentId) : undefined;
   const drop = dropAt && parentMatrix ? applyMatrixToPoint(invertMatrix(parentMatrix), dropAt) : dropAt;
+  const decision = isDecision(source);
+  const size = decision ? defaultShapeSize('rectangle') : source.size;
+  // Centred where a same-size copy would sit, so a smaller box stays on the drag axis.
+  const origin = quickCreateOrigin(source, sourceSide);
+  const centre = drop ?? { x: origin.x + source.size.width / 2, y: origin.y + source.size.height / 2 };
   const base = createShapeNode(page, {
-    kind: sourceShapeKind(source),
+    kind: decision ? 'rectangle' : sourceShapeKind(source),
     id: newNodeId,
-    at: drop
-      ? { x: drop.x - source.size.width / 2, y: drop.y - source.size.height / 2 }
-      : quickCreateOrigin(source, sourceSide),
-    size: { ...source.size },
+    at: { x: centre.x - size.width / 2, y: centre.y - size.height / 2 },
+    size: { ...size },
   });
   const node: SceneNode = {
     ...base,
     parentId: source.parentId,
-    kind: source.kind,
-    content: { ...source.content, label: '' },
+    ...(decision ? {} : { kind: source.kind, content: { ...source.content, label: '' } }),
     appearance: { ...source.appearance },
   };
   // Sides are not pinned: the drag side only placed the node. Routing picks

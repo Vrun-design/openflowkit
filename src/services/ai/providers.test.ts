@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById,
+  AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, providerHint, sendsThinking,
   type AiProviderDefinition, type AiProviderId, type AiWireFormat,
 } from './providers';
 
@@ -92,5 +92,21 @@ describe('AI provider catalogue', () => {
     expect(isConfigured(providerById('ollama'), blank)).toBe(true);
     expect(isConfigured(providerById('custom'), blank)).toBe(false);
     expect(isConfigured(providerById('custom'), { ...blank, apiKey: 'k', baseUrl: 'https://proxy.example/v1', model: 'm' })).toBe(true);
+  });
+});
+
+describe('Ollama', () => {
+  it('offers no Think toggle for a wire that never sends it', () => {
+    expect(sendsThinking('ollama')).toBe(false);
+    expect(sendsThinking('openai')).toBe(true);
+  });
+
+  it('drops the OLLAMA_ORIGINS advice on a page served from this machine, which Ollama already allows', () => {
+    const ollama = providerById('ollama');
+    expect(providerHint(ollama, 'https://app.openflowkit.com')).toMatch(/OLLAMA_ORIGINS/);
+    for (const origin of ['http://localhost:5173', 'http://127.0.0.1:4173', 'http://localhost']) {
+      expect(providerHint(ollama, origin), origin).not.toMatch(/OLLAMA_ORIGINS/);
+    }
+    expect(providerHint(providerById('openai'), 'http://localhost')).toBe(providerById('openai').hint);
   });
 });

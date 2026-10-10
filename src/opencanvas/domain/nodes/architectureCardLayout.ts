@@ -28,12 +28,13 @@ export function architectureCardLayout(
     maxLines: Math.max(1, Math.min(2, Math.floor((node.size.height - detailY - 12) / 12))),
     overflow: 'wrap',
   });
-  // The technology takes its natural width up to 40% of the header; the element type gets the rest.
+  // The technology takes what the element type leaves (at least 40% of the header); the type gets the rest.
   const headerWidth = Math.max(2, node.size.width - 64);
+  const typeWidth = measurePortableText(presentation.providerLabel, { fontSize: 10, fontWeight: 700, overflow: 'visible' }).width;
   const resource = measurePortableText(presentation.resourceType, {
     fontSize: 10,
     fontWeight: 600,
-    maxWidth: headerWidth * 0.4,
+    maxWidth: Math.max(headerWidth * 0.4, headerWidth - typeWidth),
     overflow: 'ellipsis',
   });
   const provider = measurePortableText(presentation.providerLabel, {

@@ -43,7 +43,7 @@ export function createServerWithDeps(options: ServerOptions = {}): CreatedServer
   registerAnalyzeCodebase(server);
   registerListTemplates(server);
   registerGetTemplate(server);
-  registerDiscoveryTools(server);
+  registerDiscoveryTools(server, bridge);
   registerArchitectureTools(server, store);
   registerDocumentTools(server, deps);
   registerOpTools(server, deps);

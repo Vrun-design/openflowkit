@@ -52,8 +52,23 @@ for (const format of ['GIF', 'MP4', 'WebM'] as const) {
     test.setTimeout(180_000);
     await openAnimation(page, DSL, 5);
     await page.getByRole('radio', { name: format, exact: true }).check();
-    await page.getByRole('radio', { name: '720p' }).check();
+    await page.getByRole('radio', { name: '720 px' }).check();
     await page.getByRole('radio', { name: '12 fps' }).check();
+    // The display's own frame before the export starts: a laptop on low battery (Chrome's energy
+    // saver) or a 30 Hz screen paints every 33 ms with nothing running, which is not a dropped frame.
+    const frameMs = await page.evaluate(() => new Promise<number>((resolve) => {
+      const gaps: number[] = [];
+      let last = performance.now();
+      const tick = () => {
+        const now = performance.now();
+        gaps.push(now - last);
+        last = now;
+        if (gaps.length < 21) requestAnimationFrame(tick);
+        else resolve(gaps.slice(1).sort((a, b) => a - b)[10]!);
+      };
+      requestAnimationFrame(tick);
+    }));
+    const dropped = Math.max(32, frameMs * 1.5);
     await page.evaluate(() => {
       (window as unknown as { __long: number[] }).__long = [];
       new PerformanceObserver((list) => {
@@ -92,12 +107,12 @@ for (const format of ['GIF', 'MP4', 'WebM'] as const) {
         longOver32: long.filter((duration) => duration > 32).length,
       };
     });
-    console.log(`[motion] ${format} 720p export:`, JSON.stringify(stats));
+    console.log(`[motion] ${format} 720p export (display frame ${frameMs.toFixed(1)} ms):`, JSON.stringify(stats));
     // Encoding stays in the worker, so the main thread has at most the one
     // cold-start raster as a blocking task.
     expect(stats.longOver32).toBeLessThanOrEqual(1);
-    // Rasterising the frames can nudge the odd frame; never many of them.
-    expect(stats.gaps.filter((gap) => gap > 32).length / stats.gaps.length).toBeLessThan(0.15);
+    // Rasterising the frames can nudge the odd frame past the display's own; never many of them.
+    expect(stats.gaps.filter((gap) => gap > dropped).length / stats.gaps.length).toBeLessThan(0.15);
     expect(Math.max(...stats.gaps)).toBeLessThan(150);
   });
 }
@@ -115,7 +130,7 @@ Costs: Jan 8, Feb 9, Mar 7, Apr 11, May 12
 `;
   await openAnimation(page, chart, 0);
   await page.getByRole('radio', { name: 'GIF', exact: true }).check();
-  await page.getByRole('radio', { name: '720p' }).check();
+  await page.getByRole('radio', { name: '720 px' }).check();
   await page.getByRole('radio', { name: '12 fps' }).check();
   const download = page.waitForEvent('download', { timeout: 120_000 });
   await page.getByRole('button', { name: /Export GIF/ }).click();
@@ -151,7 +166,7 @@ test('a 1080p export keeps the canvas painting and the dialog live', { tag: '@lo
   await clip.blur();
   await page.getByRole('radio', { name: 'Custom', exact: true }).check();
   await page.getByRole('radio', { name: 'MP4' }).check();
-  await page.getByRole('radio', { name: '1080p' }).check();
+  await page.getByRole('radio', { name: '1080 px' }).check();
   await page.getByRole('radio', { name: '30 fps' }).check();
   await expect.poll(async () => page.evaluate(() => document.querySelector('.ofk-motion-transport output')?.textContent ?? '')).toContain('5.0s');
   await page.evaluate(() => {

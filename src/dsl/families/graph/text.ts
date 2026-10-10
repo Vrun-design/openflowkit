@@ -3,7 +3,7 @@ import { nodePaletteName, paletteResolver } from '../../../opencanvas/domain/nod
 import { dslConnectorMeta, dslFrameRaw, dslNodeMeta, type CanonicalAttribute, type DslFrameScene } from '../../sceneMeta';
 import {
   attributeText, commentLines, compareNodes, connectorAttrs, connectorDashed, markerName,
-  nodeAttributes, nodeName, nodeReference, quote, slugifyDslId,
+  labelKey, nodeAttributes, nodeName, nodeReference, quote, slugifyDslId,
 } from '../../text';
 
 export interface GraphTextOptions {
@@ -63,8 +63,8 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   // Two nodes may share a label (`API`, `api-2 = API`); then each is declared with its id
   // and edges name it by that id, so a re-read can never fold one into the other.
   const labelCount = new Map<string, number>();
-  for (const node of nodes) labelCount.set(nodeReference(node), (labelCount.get(nodeReference(node)) ?? 0) + 1);
-  const shared = (node: SceneNode) => nodes.includes(node) && (labelCount.get(nodeReference(node)) ?? 0) > 1;
+  for (const node of nodes) labelCount.set(labelKey(nodeReference(node)), (labelCount.get(labelKey(nodeReference(node))) ?? 0) + 1);
+  const shared = (node: SceneNode) => nodes.includes(node) && (labelCount.get(labelKey(nodeReference(node))) ?? 0) > 1;
   const declared = (node: SceneNode) => shared(node) ? `${node.id} = ${quote(nodeReference(node))}` : nodeName(node);
   const nodeNames = new Set(nodes.map(nodeReference));
   const nameOf = (node: SceneNode): string => {

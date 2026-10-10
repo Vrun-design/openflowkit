@@ -8,9 +8,6 @@ import { paletteSwatch } from './nodePalette';
 // the control. This module turns a widget into a renderer-neutral list of
 // primitives (rects, circles, paths, text) that Pixi and the SVG export both
 // paint, so the canvas and the file can never disagree. Pure TypeScript.
-//
-// The control names are Koboyo's wireframe vocabulary, so `wireframe` text
-// written for Koboyo compiles here unchanged.
 
 export const WIDGET_KINDS = [
   'button', 'input', 'search', 'checkbox', 'radio', 'toggle', 'dropdown', 'slider',
@@ -37,7 +34,7 @@ interface WidgetSpec {
   /** Its label is `A | B | C`: one entry per item. */
   readonly items?: true;
   readonly state?: WidgetStateKey;
-  /** Keeps its own width in a frame; everything else spans the column (Koboyo). */
+  /** Keeps its own width in a frame; everything else spans the column. */
   readonly intrinsic?: true;
   /** What a fresh one shows, so an inserted widget reads at a glance. */
   readonly initial?: { readonly checked?: boolean; readonly value?: number; readonly active?: number; readonly variant?: WidgetVariant };

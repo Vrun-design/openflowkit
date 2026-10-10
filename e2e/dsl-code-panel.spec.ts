@@ -42,7 +42,8 @@ test('a generated diagram fits the canvas the open panel leaves free @gate', asy
   await page.waitForSelector('[data-testid="v2-canvas"]');
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const source = page.getByRole('textbox', { name: 'Diagram source' });
-  await source.fill('flowchart right\nA -> B -> C -> D -> E -> F -> G -> H -> I -> J');
+  // Short enough to fit readably beside the panel: a longer one lands readable on its start and runs under it (readable-views).
+  await source.fill('flowchart right\nA -> B -> C -> D -> E -> F');
   await source.press('ControlOrMeta+Enter');
   await expect.poll(() => count(page)).toBeGreaterThan(5);
   const panelLeft = (await page.getByRole('textbox', { name: 'Diagram source' }).boundingBox())!.x;

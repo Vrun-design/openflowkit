@@ -28,21 +28,23 @@ Point your client at that command. In Claude Desktop's `claude_desktop_config.js
 }
 ```
 
-Node 18 or newer is required.
+Node 20.11 or newer is required.
 
 ## Two modes
 
 - **Live** — open the app, click **Connect agent**, and every op runs against the document
-you see. The bridge listens on `127.0.0.1:43119` by default (change it in Settings), checks
-the request origin, and can be gated with a shared token. Edits land as one undo step per
+you see. The bridge listens on `127.0.0.1:43119` by default (change it in the Connect agent panel;
+the server reads `OPENFLOWKIT_BRIDGE_PORT`), checks the request's host and origin, and can be gated
+with a shared token (`OPENFLOWKIT_BRIDGE_TOKEN` on the server, the same token in the panel). Edits land as one undo step per
 call; `screenshot` returns a real PNG; `fit_view` moves your view.
 - **File** — `openflow_open` a `.openflow.json` path and the same ops run headlessly on
 that document, with `openflow_save` writing it back. There is no canvas here, so PNG/GIF/
-MP4/WebM export and `screenshot` ask you to connect the live editor; SVG, animated SVG and
-JSON export work.
+MP4/WebM export and `screenshot` ask you to connect the live editor; SVG, animated SVG,
+JSON and PDF (a print-ready HTML page) export work.
 
 If no editor is paired, pass `documentId` (from `openflow_open`) to target a file-mode
-document; without it, tools use the paired editor or the first open document.
+document; without it, tools use the paired editor or, in file mode, the document opened or
+created last. Page-scoped ops take a `pageId` from `list_pages`.
 
 ## Document and server tools
 
@@ -53,7 +55,7 @@ document; without it, tools use the paired editor or the first open document.
 | `drift_report` | Compare a model against the repository; matches by name and tech only |
 | `explain_element` | What the model says about one element, plus linked ADR markdown |
 | `get_starter_template` | One starter template, by name |
-| `get_syntax` | Remote endpoint only: the DSL grammar, whole or one family, for `render_diagram` |
+| `get_syntax` | The DSL grammar, whole or one family (unknown families are rejected); also listed as an op below |
 | `list_diagram_node_types` | Family names, shape words and edge styles |
 | `list_starter_templates` | List the starter DSL templates |
 | `openflow_create` | Create an empty file-mode document |
@@ -97,6 +99,7 @@ Update diagram — mirrors **Regenerate a diagram frame** in the code panel; cha
 | `frameId` | string |
 | `dsl` | string |
 | `palette` | `pastel` \| `paper` \| `builder` \| `mono` *(optional)* |
+| `pageId` | string (MCP tool; the CLI says `--page`) |
 
 ### `get_diagram`
 
@@ -119,7 +122,7 @@ Read the grammar — an agent-only lookup; read-only.
 
 | Argument | Type |
 | --- | --- |
-| `family` | string *(optional)* |
+| `family` | `architecture` \| `flowchart` \| `gitgraph` \| `sequence` \| `state` \| `erd` \| `class` \| `mindmap` \| `bpmn` \| `org` \| `gantt` \| `wireframe` \| `chart` \| `sankey` \| `journey` \| `timeline` *(optional)* |
 
 ### `search_icons`
 
@@ -141,13 +144,14 @@ Find icons for a concept — an agent-only lookup; read-only.
 
 ### `move`
 
-Move shapes — mirrors **Move / nudge shapes** in a canvas gesture; changes the document (one undo step in live mode).
+Move shapes — mirrors **Move / nudge shapes** in a canvas gesture; changes the document (one undo step in live mode). Pass exactly one of `to` or `delta`.
 
 | Argument | Type |
 | --- | --- |
 | `ids` | string[] |
 | `to` | object: x (number), y (number) *(optional)* |
 | `delta` | object: x (number), y (number) *(optional)* |
+| `pageId` | string (MCP tool; the CLI says `--page`) |
 
 ### `style`
 
@@ -162,6 +166,7 @@ Style shapes — mirrors **Fill / stroke / width / dash / opacity** in the conte
 | `strokeStyle` | `solid` \| `dashed` \| `dotted` *(optional)* |
 | `opacity` | number *(optional)* |
 | `textColor` | string *(optional)* |
+| `pageId` | string (MCP tool; the CLI says `--page`) |
 
 ### `delete`
 
@@ -171,6 +176,7 @@ Delete shapes — mirrors **Delete selection** in a keyboard action; changes the
 | --- | --- |
 | `ids` | string[] |
 | `kind` | `node` \| `connector` \| `any` *(default `"any"`)* |
+| `pageId` | string (MCP tool; the CLI says `--page`) |
 
 ### `add_shape`
 
@@ -178,7 +184,7 @@ Add shape — mirrors **Create rectangle / ellipse / text** in the toolbar; chan
 
 | Argument | Type |
 | --- | --- |
-| `kind` | `rectangle` \| `ellipse` \| `text` \| `rounded` \| `capsule` \| `circle` \| `ellipse` \| `diamond` \| `triangle` \| `trapezoid` \| `parallelogram` \| `hexagon` \| `octagon` \| `pentagon-tag` \| `chevron` \| `plus` \| `star` \| `heart` \| `cloud` \| `lightning` \| `bookmark` \| `speech-bubble` \| `page` \| `folder` \| `list-card` \| `filled-bar` \| `half-round` \| `cylinder` \| `document` \| `cube` \| `prism` \| `layer-stack` \| `target` \| `check-circle` \| `cross-circle` \| `numbered-circle` \| `brace` \| `bracket` \| `pin` \| `actor` \| `arrow-up` \| `arrow-down` \| `arrow-left` \| `arrow-right` \| `venn` \| `process` \| `start` \| `decision` \| `end` \| `custom` \| `text` \| `image` \| `annotation` \| `sticky` \| `callout` \| `pen` \| `highlighter` \| `line` \| `arrow` \| `architecture` \| `provider_icon` \| `group` \| `section` \| `swimlane` \| `class` \| `er_entity` \| `mindmap` \| `journey` \| `sequence_participant` \| `sequence_note` \| `sequence_fragment` \| `browser` \| `mobile` \| "chart" \| "widget" \| "frame" *(default `"process"`)* |
+| `kind` | `rectangle` \| `ellipse` \| `text` \| `rounded` \| `capsule` \| `circle` \| `diamond` \| `triangle` \| `trapezoid` \| `parallelogram` \| `hexagon` \| `octagon` \| `pentagon-tag` \| `chevron` \| `plus` \| `star` \| `heart` \| `cloud` \| `lightning` \| `bookmark` \| `speech-bubble` \| `page` \| `folder` \| `list-card` \| `filled-bar` \| `half-round` \| `cylinder` \| `document` \| `cube` \| `prism` \| `layer-stack` \| `target` \| `check-circle` \| `cross-circle` \| `numbered-circle` \| `brace` \| `bracket` \| `pin` \| `actor` \| `arrow-up` \| `arrow-down` \| `arrow-left` \| `arrow-right` \| `venn` \| `process` \| `start` \| `decision` \| `end` \| `custom` \| `image` \| `annotation` \| `sticky` \| `callout` \| `pen` \| `highlighter` \| `line` \| `arrow` \| `architecture` \| `provider_icon` \| `group` \| `section` \| `swimlane` \| `class` \| `er_entity` \| `mindmap` \| `journey` \| `sequence_participant` \| `sequence_note` \| `sequence_fragment` \| `browser` \| `mobile` \| "chart" \| "widget" \| "frame" *(default `"process"`)* |
 | `label` | string *(optional)* |
 | `x` | number *(default `0`)* |
 | `y` | number *(default `0`)* |
@@ -187,6 +193,7 @@ Add shape — mirrors **Create rectangle / ellipse / text** in the toolbar; chan
 | `widget` | object: kind (`button` \| `input` \| `search` \| `checkbox` \| `radio` \| `toggle` \| `dropdown` \| `slider` \| `navbar` \| `tabs` \| `image` \| `avatar` \| `heading` \| `paragraph` \| `divider` \| `link` \| `textarea` \| `stepper` \| `badge` \| `progress` \| `breadcrumbs` \| `pagination` \| `rating` \| `card` \| `list` \| `alert` \| `menu` \| `tooltip` \| `accordion` \| `datepicker` \| `sidebar` \| `segmented` \| `tabbar` \| `statusbar` \| `fab`), checked (boolean *(optional)*), value (number *(optional)*), active (number *(optional)*), variant (`primary` \| `info` \| `success` \| `warning` \| `error` *(optional)*) *(optional)* |
 | `preset` | `frame` \| `phone` \| `tablet` \| `browser` \| `window` *(optional)* |
 | `parentId` | string *(optional)* |
+| `pageId` | string (MCP tool; the CLI says `--page`) |
 
 ### `export`
 

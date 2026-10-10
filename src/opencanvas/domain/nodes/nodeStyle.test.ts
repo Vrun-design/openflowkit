@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { SceneNode } from '../document/types';
-import { mixHex, getLuminance } from '../../../lib/colorUtils';
+import { contrastRatio as contrast, mixHex } from '../../../lib/colorUtils';
 import { darkWashFill } from '../color/adaptiveColor';
 import { nodeStyleFont, resolveNodeStyle } from './nodeStyle';
-
-const contrast = (a: string, b: string) => {
-  const [hi, lo] = [getLuminance(a), getLuminance(b)].sort((x, y) => y - x);
-  return (hi! + 0.05) / (lo! + 0.05);
-};
+import { PALETTE_KEYS, paletteResolver } from './nodePalette';
 
 function node(overrides: Partial<SceneNode>): SceneNode {
   return {
@@ -19,6 +15,22 @@ function node(overrides: Partial<SceneNode>): SceneNode {
 }
 
 describe('resolveNodeStyle', () => {
+  it('gives the sub-label of a dark authored fill an ink that reads on it, light canvas or dark', () => {
+    for (const canvas of [undefined, '#f7f7f5', '#191b19']) {
+      const style = resolveNodeStyle(node({ content: { shape: 'actor', label: 'Ops', subLabel: '[Person]' }, appearance: { fill: '#08427b', textColor: '#ffffff' } }), canvas);
+      expect(contrast(style.fill, style.textColor), String(canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(style.fill, style.subTextColor!), String(canvas)).toBeGreaterThanOrEqual(4.5);
+    }
+    // A light fill keeps the palette's own sub-label ink.
+    expect(resolveNodeStyle(node({ appearance: { fill: '#f5f3ff', textColor: '#5b21b6' } })).subTextColor).toBeUndefined();
+    // Palette swatches and architecture cards render exactly as before.
+    for (const key of PALETTE_KEYS) {
+      const solid = paletteResolver()(key, 'solid');
+      expect(resolveNodeStyle(node({ appearance: { fill: solid.fill, textColor: solid.textColor } })).subTextColor, key).toBeUndefined();
+    }
+    const card = node({ kind: 'architecture', content: { label: 'API', assetPresentation: 'card' }, appearance: { fill: '#08427b', textColor: '#ffffff' } });
+    expect(resolveNodeStyle(card).subTextColor).toBeUndefined();
+  });
   it('adapts unpinned text ink to canvas but preserves explicit ink', () => {
     expect(resolveNodeStyle(node({ kind: 'text' }), '#191b19').textColor).toBe('#ffffff');
     expect(resolveNodeStyle(node({ kind: 'text', appearance: { textColor: '#ef4444' } }), '#191b19').textColor).toBe('#ef4444');

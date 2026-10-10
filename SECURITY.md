@@ -31,24 +31,37 @@ OpenFlowKit is a browser-first, local-first application. Relevant security areas
 - imported files (`.json`, Mermaid, D2, Structurizr) and exports
 - AI provider API key handling
 - the local agent bridge between the editor and the MCP server
+- encrypted share links and the share Worker (`worker/`)
+- reading public GitHub repositories in the browser (repo → diagram, repo maps)
 - rendering of third-party icon artwork
 
 ## Data Storage Model
 
-There are no OpenFlowKit servers. No diagram, key or user content is sent to the project.
+Documents and keys stay in your browser. The only OpenFlowKit server is the share-link store, and it only
+ever holds ciphertext of a diagram you chose to share (below). No key and no readable diagram is sent to the
+project. A hosted remote MCP endpoint is planned; it is not running today.
 
 ### Diagram data
 
 Documents live in this browser's **IndexedDB** (`openflowkit-persistence`), with the last good copy kept for
-crash recovery. They leave the browser only when you export them, or when you send a diagram to an AI provider
-or connect an agent (below).
+crash recovery. They leave the browser only when you export them, make a share link, send a diagram to an AI
+provider, or connect an agent (below).
+
+### Share links
+
+**Copy share link** encrypts the whole document in your browser (AES-GCM, a fresh 256-bit key per link) and uploads
+only the ciphertext to `share.openflowkit.com`. The key sits in the link's `#` fragment, which browsers never send
+to a server, so the store cannot read the diagram. The human check is Cloudflare Turnstile: its script loads from
+`challenges.cloudflare.com` only when you make a link, never on page load. Opening a link downloads the ciphertext
+and decrypts it locally. Details: [share links](docs-site/src/content/docs/share-links.md).
 
 ### AI provider API keys (bring your own key)
 
 - Keys are entered in the AI assistant's provider dialog and stored in this browser's **localStorage**
   (`openflowkit-v2-ai`).
-- Requests go **directly from your browser to the provider you chose** (Anthropic, OpenAI, Google, OpenRouter,
-  Ollama or any OpenAI-compatible endpoint). Nothing is proxied.
+- Requests go **directly from your browser to the provider you chose** (Anthropic, OpenAI, Google Gemini, Groq,
+  NVIDIA, Cerebras, Mistral, OpenRouter, Ollama or any OpenAI-compatible endpoint), and only to that one.
+  Nothing is proxied.
 - Keys are never logged and never written into exports or documents.
 
 ### Agent bridge (MCP)
@@ -60,7 +73,12 @@ When you press **Connect** in the Connect agent panel, the editor long-polls the
 ### Other network requests
 
 - Icon artwork (AWS, Azure, GCP, CNCF, developer icons) ships with the app; no icon request leaves the site.
-- Home asks GitHub's public API for the repository's star count at most once a day, without credentials.
+- Home asks GitHub's public API (`api.github.com`) for the repository's star count at most once a day, without
+  credentials.
+- Repo → diagram (`#/from/github/…`) and repo maps (`#/map/github/…`) read a public repository from
+  `api.github.com` (the file list) and `raw.githubusercontent.com` (the files). An optional GitHub token you paste
+  is kept in this tab's sessionStorage and sent to `api.github.com` only, never to raw file downloads.
+- An image you insert by URL is loaded from that URL.
 
 ## Response Policy
 

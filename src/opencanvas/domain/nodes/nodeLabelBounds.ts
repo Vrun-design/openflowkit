@@ -5,7 +5,12 @@ import { basicNodeOutlinePoints } from './basicNodeOutline';
 import { resolveArchitectureNodePresentation } from './architectureNodePresentation';
 import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveBasicNodePresentation, type BasicNodeShape } from './basicNodePresentation';
-import { FRAME_NAME_HEIGHT, FRAME_NAME_OFFSET } from './framePreset';
+import { applyMatrixToPoint } from '../geometry/matrix';
+import { measurePortableText } from '../text/measurement';
+import { resolveNodeStyle } from './nodeStyle';
+import type { SceneIndex } from '../scene/types';
+import { getIndexedSceneObject } from '../scene/queries';
+import { FRAME_NAME_HEIGHT, FRAME_NAME_OFFSET, framePresetOf } from './framePreset';
 import { widgetLabelBox } from './widgetNodePresentation';
 
 /** Height of a container's title band; the frame boundary below it is the body. */
@@ -98,6 +103,32 @@ export function nodeLabelBounds(node: SceneNode): Bounds2d {
   }
   const basic = resolveBasicNodePresentation(node);
   return insetBounds(node, (basic && SHAPE_LABEL_INSETS[basic.shape]) || FULL);
+}
+
+/**
+ * The preset frame whose name (drawn above its top edge, outside its box) is
+ * under a world point: grabbing the name grabs the frame, as in Figma.
+ */
+export function frameNameAt(index: SceneIndex, point: Point2d): string | null {
+  let found: SceneNode | null = null;
+  for (const node of index.nodesById.values()) {
+    const matrix = index.worldMatricesByNodeId.get(node.id);
+    if (!matrix || !framePresetOf(node) || !getIndexedSceneObject(index, 'container', node.id)?.visible) continue;
+    // Only the name's own width: the rest of the strip above the frame stays canvas (marquee, connectors).
+    const band = nodeLabelBounds(node);
+    const style = resolveNodeStyle(node);
+    const label = resolveContainerNodePresentation(node)?.label ?? '';
+    const width = Math.min(band.width, measurePortableText(label || ' ', {
+      fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight,
+    }).width + style.textPadding * 2);
+    const left = style.textAlign === 'end' ? band.x + band.width - width
+      : style.textAlign === 'center' ? band.x + (band.width - width) / 2 : band.x;
+    const origin = applyMatrixToPoint(matrix, { x: left, y: band.y });
+    const inside = point.x >= origin.x && point.x <= origin.x + width * matrix.a
+      && point.y >= origin.y && point.y <= origin.y + band.height * matrix.d;
+    if (inside && (!found || node.zIndex >= found.zIndex)) found = node;
+  }
+  return found?.id ?? null;
 }
 
 // The painted silhouette in node-local coordinates, shared by the SVG exporter

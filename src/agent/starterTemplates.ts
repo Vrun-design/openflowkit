@@ -72,7 +72,7 @@ title: User authentication
     summary: 'Edge, application and data tiers with real AWS icon slugs.',
     dsl: `%% ofk 1
 architecture right
-title: Three-tier architecture
+title: Three-tier AWS architecture
 
   Users [person] -> CDN [icon: aws/networking-content-delivery-cloudfront]
   CDN -> Gateway [icon: aws/networking-content-delivery-api-gateway]
@@ -111,7 +111,7 @@ title: Request lifecycle
     summary: 'Draft, review, fulfilment and terminal states.',
     dsl: `%% ofk 1
 state right
-title: Order lifecycle
+title: Order state machine
 
   [*] -> Draft
   Draft -> Review : submit
@@ -136,6 +136,22 @@ title: Event pipeline
   Stream -> Archiver [cylinder, slate]
   Enricher -> Warehouse [cylinder, emerald]
   Enricher --> Dead Letter [note, red] : failed
+`,
+  },
+  {
+    name: 'simple-process',
+    title: 'Simple process flow',
+    family: 'flowchart',
+    summary: 'A purchase approval in plain steps: request, review, a yes/no decision.',
+    dsl: `%% ofk 1
+flowchart right
+title: Simple process flow
+
+  Request [rounded, emerald, label: "Request received"] -> Review [label: "Manager reviews"]
+  Review -> Decision [diamond, amber, label: "Approved?"]
+  Decision -> Done [rounded, emerald, label: "Order placed"] : Yes
+  Decision -> Revise [label: "Ask for changes"] : No
+  Revise -> Review
 `,
   },
 ];

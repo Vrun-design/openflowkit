@@ -46,6 +46,15 @@ describe('migrateLegacyWorkspace on captured v1 workspaces', () => {
     expect(idMap[deleted]).toBeUndefined();
   });
 
+  it('opens a diagram whose edge outlived its node in v1, without that edge', async () => {
+    const row = structuredClone(indexedDb.documents.find((candidate: Json) => candidate.pages?.[0]?.content?.nodes?.length > 0)) as Json;
+    const content = row.pages[0].content;
+    content.edges = [...content.edges, { id: 'ghost-edge', source: content.nodes[0].id, target: 'deleted-node' }];
+    const { documents, failures } = await migrateLegacyWorkspace({ documents: [row], fallback: null, tabStates: [] });
+    expect(failures).toEqual([]);
+    expect(documents[0]!.pages[0]!.connectors.some(({ id }) => id === 'ghost-edge')).toBe(false);
+  });
+
   it('keeps both pages of a multi-page document', async () => {
     const id = Object.keys(manifest).find((key) => manifest[key] === 'multi-page')!;
     const document = byId((await migrateLegacyWorkspace(sources)).documents, `v1-${id}`)!;

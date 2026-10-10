@@ -35,6 +35,16 @@ describe('group / ungroup', () => {
     expect(ungrouped.nodes.map((n) => [n.id, n.parentId])).toEqual([['a', null], ['b', null]]);
     expect(ungrouped.nodes.find((n) => n.id === 'b')!.transform.translation).toEqual({ x: 300, y: 200 });
   });
+  it('ungroups two groups in one step and undoes it', () => {
+    const four = createTestDocument({ nodes: ['a', 'b', 'c', 'd'].map((id, index) => createTestNode(id, {
+      transform: { translation: { x: (index % 2) * 100, y: Math.floor(index / 2) * 300 }, rotationRadians: 0, scale: { x: 1, y: 1 } }, size: { width: 50, height: 50 },
+    })) }).pages[0];
+    const one = run(four, buildGroupCommand(four, ['a', 'b'], 'g1')).document.pages[0];
+    const two = run(one, buildGroupCommand(one, ['c', 'd'], 'g2')).document.pages[0];
+    const applied = run(two, buildUngroupCommand(two, ['g1', 'g2']));
+    expect(applied.document.pages[0].nodes.map((n) => [n.id, n.parentId])).toEqual([['a', null], ['b', null], ['c', null], ['d', null]]);
+    expect(applyDocumentCommand(applied.document, applied.inverse).document.pages[0]).toEqual(two);
+  });
   it('duplicate and delete take the subtree; members keep their local transform', () => {
     const grouped = run(page(), buildGroupCommand(page(), ['a', 'b'], 'g')).document.pages[0];
     let n = 0;

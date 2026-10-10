@@ -26,7 +26,7 @@ test('v2 workspace shell supports panels, view controls, and canvas creation @ga
   await page.screenshot({ animations: 'disabled', path: '/tmp/v2-shell-layers.png' });
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Keyboard shortcuts', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Keyboard shortcuts' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Zoom 100%', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Zoom in', exact: false }).click();

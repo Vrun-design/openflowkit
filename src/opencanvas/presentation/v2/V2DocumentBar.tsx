@@ -16,7 +16,7 @@ import {
   IconLock,
   IconShare2,
 } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import { documentFromFileText } from '../../../services/storage/v2/openDocumentFile';
@@ -24,6 +24,7 @@ import { buildV1Backup, isV1Backup, openV1Backup, readV1ImportMarker } from '../
 import { downloadTextFile } from './v2Export';
 import type { HomeNotice } from './V2LegacyRoutes';
 import { mintV2Id } from './v2Document';
+import { copyName } from './homeLibrary';
 import {
   Button,
   FloatingRegion,
@@ -85,8 +86,9 @@ function saveLabel(status: V2SaveStatus): { tone: 'neutral' | 'success' | 'warni
     case 'saved':
       return { tone: 'success', text: 'Saved', icon: IconCloudCheck };
     case 'conflict':
-      return { tone: 'warning', text: 'Conflict — reload to continue', icon: IconCloudOff };
+      return { tone: 'warning', text: 'Another tab saved first — reload, or save yours as a copy', icon: IconCloudOff };
     case 'failed':
+      if (status.reason === 'invalid') return { tone: 'danger', text: status.message, icon: IconCloudOff };
       return status.reason === 'quota'
         ? { tone: 'danger', text: 'Save failed — storage is full', icon: IconCloudOff }
         : status.reason === 'unavailable'
@@ -183,7 +185,25 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       toast('Could not save the opened file.', 'danger');
       return;
     }
-    navigate(`/d/${opened.document.id}`);
+    navigate(`/d/${opened.document.id}`, opened.notice ? { state: { openedNotice: opened.notice } } : undefined);
+  };
+  // What opening the file had to change, told once in the new document's editor.
+  const location = useLocation();
+  const openedNotice = (location.state as { openedNotice?: unknown } | null)?.openedNotice;
+  useEffect(() => {
+    if (typeof openedNotice !== 'string') return;
+    props.onToast({ id: `toast-${Date.now()}`, tone: 'warning', title: 'Opened, with a repair.', description: openedNotice });
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened file
+  }, [openedNotice]);
+
+  // A conflict's other way out: this tab's version, kept as a diagram of its own, instead of reloading it away.
+  const saveCopy = async (): Promise<void> => {
+    const id = mintV2Id('doc');
+    const now = new Date().toISOString();
+    const copy = { ...props.document, id, name: copyName(props.document.name, []), createdAt: now, updatedAt: now };
+    const saved = await createV2Repository(window.indexedDB).saveDocument(id, copy, 1);
+    if (saved.status === 'saved') navigate(`/d/${id}`);
   };
 
   const hasV1Diagrams = Object.keys(readV1ImportMarker()?.docs ?? {}).length > 0;
@@ -265,15 +285,26 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               <span className="ofk-visually-hidden">{props.readOnly ? 'Read-only' : save.text}</span>
             </span>
           </Tooltip>
-          {props.saveStatus.state === 'failed' ? (
+          {props.saveStatus.state === 'failed' && props.saveStatus.reason === 'invalid' ? (
+            // Retry cannot help here: the way out is taking the work away as a file.
+            <Button variant="quiet" onClick={() => props.onOpenExport(settingsRef.current)}>
+              Export…
+            </Button>
+          ) : props.saveStatus.state === 'failed' ? (
             <Button variant="quiet" onClick={props.onRetrySave}>
               Retry
             </Button>
           ) : null}
           {props.saveStatus.state === 'conflict' ? (
-            <Button variant="quiet" onClick={props.onReload}>
-              Reload
-            </Button>
+            <>
+              <Button variant="quiet" onClick={props.onReload}>
+                Reload
+              </Button>
+              <Button variant="quiet" onClick={() => void saveCopy().catch((error: unknown) =>
+                toast(error instanceof Error ? error.message : 'Could not save a copy.', 'danger'))}>
+                Save as copy
+              </Button>
+            </>
           ) : null}
         </Toolbar>
       </FloatingRegion>

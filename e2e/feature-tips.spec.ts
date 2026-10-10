@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './test';
-import { drawShape, openCanvas } from './helpers';
+import { drawShape, openCanvas, state } from './helpers';
 
 // Feature tips: one hint when it pays off, at most one a session, never the same one twice.
 // npm run e2e:headed -- e2e/feature-tips.spec.ts
@@ -43,14 +43,16 @@ test('the tip’s action opens what it names @gate', async ({ page }) => {
   await expect(tip(page)).toHaveCount(0);
 });
 
-test('Mermaid pasted on the canvas offers to draw it @gate', async ({ page }) => {
+test('Mermaid pasted on the canvas is drawn in place, its source open beside it, one undo step @gate', async ({ page }) => {
   await openCanvas(page);
   await page.getByTestId('v2-canvas').evaluate((canvas) => {
     const data = new DataTransfer();
     data.setData('text/plain', 'flowchart LR\n  A[Cart] --> B[Paid]');
     canvas.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
   });
-  await expect(tip(page)).toContainText('That’s Mermaid');
-  await tip(page).getByRole('button', { name: 'Draw it' }).click();
   await expect(page.getByRole('textbox', { name: 'Diagram source' })).toContainText('Cart');
+  await expect.poll(async () => (await state(page)).nodes.length).toBeGreaterThan(0);
+  await page.getByTestId('v2-canvas').focus();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(async () => (await state(page)).nodes.length).toBe(0);
 });

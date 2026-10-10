@@ -191,6 +191,13 @@ describe('architecture discovery', () => {
     const fromDocument = await call(target, 'drift_report', { path: root, documentId: created.id });
     expect(fromDocument.drift).toBe(false);
 
+    // An open document is used only when named: the repo's architecture.ofk wins over "whatever is open".
+    const fresh = await client();
+    await call(fresh, 'openflow_create', { name: 'Unrelated' });
+    await writeFile(join(root, 'architecture.ofk'), dsl, 'utf8');
+    const fromFile = await call(fresh, 'drift_report', { path: root });
+    expect(fromFile).toMatchObject({ drift: false, checked: drift.checked });
+
     const linkDsl = [
       '%% ofk 1', 'architecture', 'title: Fixture', '',
       'model {',

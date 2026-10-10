@@ -14,7 +14,7 @@ const dryRun = process.argv.includes('--dry-run');
 const env = process.env;
 const cli = env.OFK_CLI || 'npx -y -p @vrun-design/openflowkit-mcp@0.2.0 openflowkit';
 const commentAuthor = env.OFK_COMMENT_AUTHOR || 'github-actions[bot]';
-const refreshSvg = (env.OFK_REFRESH_SVG ?? 'true') !== 'false';
+const refreshSvg = env.OFK_REFRESH_SVG === 'true';
 const token = env.GITHUB_TOKEN || env.GH_TOKEN || '';
 const BIG = 256 * 1024 * 1024;
 

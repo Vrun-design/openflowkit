@@ -3,6 +3,7 @@ import type { ScenePage } from '../document/types';
 import type { Point2d } from '../geometry/types';
 import { buildNodeStateMap } from '../scene/nodeState';
 import { createIconNode, withIcon, type IconChoice } from '../nodes/iconNode';
+import { adoptOnInsert } from '../transforms/containment';
 
 /** Swap the icon on every unlocked selected node as one undo step. */
 export function buildSetIconCommand(page: ScenePage, ids: readonly string[], icon: IconChoice): DocumentCommand | null {
@@ -15,6 +16,6 @@ export function buildSetIconCommand(page: ScenePage, ids: readonly string[], ico
 }
 
 export function buildInsertIconCommand(page: ScenePage, options: { readonly id: string; readonly at: Point2d; readonly icon: IconChoice }): InsertNodeCommand {
-  const node = createIconNode(page, options);
+  const node = adoptOnInsert(page, createIconNode(page, options));
   return { kind: 'insert-node', id: `create-node:${node.id}`, label: `Add ${options.icon.label}`, pageId: page.id, index: page.nodes.length, node };
 }

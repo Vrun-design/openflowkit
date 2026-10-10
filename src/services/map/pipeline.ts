@@ -6,15 +6,23 @@ import { buildMap } from '../../dsl/map/build';
 import { compare } from '../../dsl/discovery/imports/paths';
 import { CONFIG, factsFromFiles, isMapSource } from '../../dsl/map/facts';
 import type { MapModel } from '../../dsl/map/types';
-import { fetchRepoFiles, type FetchRepoOptions, type RepoRef } from '../discovery/githubRepo';
-import { cacheKey, readCache, touchCache, writeCache, type CacheStore, type CachedFacts } from './cache';
+import { fetchRepoFiles, RepoError, type FetchRepoOptions, type RepoRef } from '../discovery/githubRepo';
+import { cacheKey, latestCache, readCache, touchCache, writeCache, type CacheStore, type CachedFacts } from './cache';
 import { breadthOrder, mapPriority, selectMapFile, SOURCE_CAP } from './select';
 
 export interface MapProgress {
   read: number;
   total: number;
-  /** Set when the repo had more sources than the cap: `read` of `total` were chosen (by folder breadth). */
-  sampled?: { read: number; total: number };
+  /**
+   * Set when the map is not the whole repo: `read` of the `total` sources in the tree are on it. Past the source cap
+   * or the 8 MB budget the sample is what fits (by folder breadth); once done, files that would not load (or were too
+   * big to read) are out of `read`, and `truncated` says GitHub listed only part of the tree.
+   */
+  sampled?: { read: number; total: number; truncated?: boolean };
+  /** GitHub's limit stopped the read and this is the last map cached for the repo: it may be out of date. */
+  stale?: boolean;
+  /** …and it was read at this other ref (none cached at the one asked for). */
+  staleRef?: string;
 }
 
 export interface PipelineOptions {
@@ -44,6 +52,7 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
   let treePaths: string[] = []; // the map's file list
   let allPaths: string[] = []; // every selected path: what imports may point at
   let sampled: MapProgress['sampled'];
+  let sourceCount = 0;
   let ranks = new Map<string, number>();
   let configTotal = 0;
   let configSettled = 0;
@@ -77,7 +86,7 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
     opts.onSnapshot(preview(), progress());
   }
 
-  const result = await fetchRepoFiles(ref, {
+  const read$ = fetchRepoFiles(ref, {
     maxFiles: MAX_FILES,
     select: selectMapFile,
     // Sources in sample order (breadth first). Past the cap they rank after the deploy files, so sampling limits the
@@ -95,9 +104,9 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
       if (treeSha) source.sha = treeSha; // the tree's sha, not the commit's: a cache key, not a blob link
       allPaths = [...paths];
       const sources = paths.filter(isMapSource);
+      sourceCount = sources.length;
       if (sources.length > SOURCE_CAP) {
         const order = breadthOrder(sources);
-        sampled = { read: SOURCE_CAP, total: sources.length };
         ranks = new Map(order.map((p, i) => [p, i]));
         treePaths = order.slice(0, SOURCE_CAP).sort();
       } else treePaths = sources;
@@ -106,14 +115,20 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
       const hit = cachedKey && opts.cache ? await readCache(opts.cache, cachedKey) : undefined;
       if (hit) {
         cached = buildMap({ ...hit, externals: hit.services, source });
-        opts.onSnapshot(cached, { read: hit.files.length, total: hit.files.length, ...(sampled ? { sampled } : {}) });
+        sampled = hit.sampled;
         return false;
       }
-      opts.onSnapshot(preview(), progress());
       return undefined;
     },
-    // Only configs that will really be fetched can hold the gate shut (an oversize one never arrives).
-    onChosen: (chosen) => { configTotal = chosen.filter((p) => CONFIG.test(p)).length; },
+    onChosen: (chosen, left) => {
+      // Only configs that will really be fetched can hold the gate shut (an oversize one never arrives).
+      configTotal = chosen.filter((p) => CONFIG.test(p)).length;
+      // Sources the cap or the byte budget left unread are not drawn: a box nobody read would have no arrows.
+      const out = new Set(left);
+      treePaths = treePaths.filter((p) => !out.has(p));
+      if (treePaths.length < sourceCount) sampled = { read: treePaths.length, total: sourceCount };
+      opts.onSnapshot(preview(), progress());
+    },
     onFile: (file) => {
       read.push(file);
       if (CONFIG.test(file.path)) configSettled++;
@@ -127,7 +142,22 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
       opts.onProgress?.(progress());
     },
   });
+  const result = await read$.catch(async (error: unknown) => {
+    // Rate-limited with this repo cached: its last map beats a wall, said to be possibly out of date.
+    const limited = error instanceof RepoError && (error.problem.kind === 'rate-limited' || error.problem.kind === 'slow-down');
+    const last = limited && opts.cache ? await latestCache(opts.cache, ref.owner, ref.repo, ref.ref) : undefined;
+    if (!last) throw error;
+    return last;
+  });
+  if (!('wanted' in result)) {
+    const model = buildMap({ ...result, externals: result.services, source });
+    opts.onSnapshot(model, { read: model.stats.files, total: model.stats.files, ...(result.sampled ? { sampled: result.sampled } : {}), stale: true,
+      ...(result.ref && result.ref !== ref.ref ? { staleRef: result.ref } : {}) });
+    opts.onDone?.(model);
+    return model;
+  }
   if (cached) {
+    opts.onSnapshot(cached, { read: cached.stats.files, total: cached.stats.files, ...(sampled ? { sampled } : {}) });
     opts.onDone?.(cached);
     if (opts.cache && cachedKey) await touchCache(opts.cache, cachedKey);
     return cached;
@@ -140,14 +170,18 @@ export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promi
   const model = buildMap({ ...facts, source });
   done = result.files.length + result.failed;
   total = done;
+  // What the map really holds: the sources read, of all the tree listed (a failed or oversize file is a box with no lines).
+  const readSources = read.filter((f) => isMapSource(f.path) && listedSet.has(f.path)).length;
+  sampled = readSources < sourceCount || result.truncated
+    ? { read: readSources, total: sourceCount, ...(result.truncated ? { truncated: true } : {}) } : undefined;
   opts.onSnapshot(model, progress());
   opts.onDone?.(model);
-  // A file that failed to load makes the read partial: do not remember it as the repo. (The byte budget is
-  // deterministic for a tree sha, so a budget skip is fine to cache.)
+  // A file that failed to load makes the read partial: do not remember it as the repo. (The cap, the byte budget and
+  // GitHub's truncation are deterministic for a tree sha, so they are cached with the note that says so.)
   if (source.sha && opts.cache && result.failed === 0) {
     const stored: CachedFacts = {
       files: facts.files, imports: facts.imports, parts: facts.parts ?? [], links: facts.links ?? [],
-      services: facts.externals ?? [], unresolvedImports: facts.unresolvedImports ?? 0,
+      services: facts.externals ?? [], unresolvedImports: facts.unresolvedImports ?? 0, ...(sampled ? { sampled } : {}), ref: ref.ref,
     };
     await writeCache(opts.cache, cacheKey(ref.owner, ref.repo, source.sha), stored);
   }

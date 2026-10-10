@@ -1,222 +1,15 @@
 # OFK grammar — version 1
 
 Status: v1 implemented by slice 2.1 (2026-09-21); later-family sections remain forward specs.
-This file is the language. `src/dsl/grammar.md` is gone: the parser, the MCP
-`get_syntax` tool, the docs-site reference and the BYOK prompt all read this file
-(or a build-time copy of it), so there is exactly one grammar.
+This file is the language: the parser, the MCP `get_syntax` tool, the docs-site reference and
+the BYOK prompt all read this file (or a build-time copy of it), so there is exactly one
+grammar.
 
-Contents: §0 prior art · §1 goals and where we lose · §2 lexical rules · §3 header and
+Contents: §1 goals and where we lose · §2 lexical rules · §3 header and
 directives · §4 core statements · §5 attributes · §6 ids, ordering, canonical form,
 round-trip · §7 layout hints · §8 families · §9 model layer (phase 5 reservations) ·
 §10 error model · §11 import loss tables · §12 versioning · §13 agent contract ·
 §14 worked examples (golden tests) · Appendix A `get_syntax` cheat-sheet.
-
----
-
-## 0. Prior art (verified 2026-09-21 by fetching each page listed)
-
-### 0.1 Koboyo — https://koboyo.com/docs
-
-Pages read: `/docs/syntax`, `/docs/attributes`, `/docs/reference`, `/docs/architecture`,
-`/docs/flowcharts`, `/docs/sequence-diagrams`, `/docs/state-machines`,
-`/docs/entity-relationship`, `/docs/class-diagrams`, `/docs/mind-maps`, `/docs/git-graphs`,
-`/docs/editing`, `/docs/error-handling`, `/docs/import-mermaid`, `/docs/import-eraser`,
-`/docs/mcp-server`.
-
-What they have: first line optionally names the family (`flowchart`, `bpmn`, `orgchart`,
-`statemachine`, `sequence`, `erd`, `class`, `wireframe`, `mindmap`, `gitgraph`, `gantt`,
-`sankey`, `timeline`, `journey`, `cycle`, `funnel`, `pyramid`, `venn`, `matrix`, `chart bar`),
-default `architecture`. Nodes `Name [attrs]` / `id = Name [attrs]`, labels slugified to
-ids. Quote a name only when it contains `->`, `<->`, `-->`, `:`, `=`, `,`, `[`, `]`, `{`,
-`}`, `//`. Edges `->`, `<-`, `<->`, `-->`, `<--`, `<-->`, label after `:` to end of line
-(or to a trailing `[…]`), fans `A -> B, C` and `A, B -> C`, chains. `group Name [color] { }`
-nests; `[group: Name]` also places. Directives `title:`, `direction:` (right/down/left/up),
-`icons:` (inside/badge), `colorMode:`. Positional attribute vocabulary: 45+ shapes with
-aliases, nine palette colours (hex/CSS snap to nearest), fill modes `pastel|bold|outline`,
-`shadow`, `rounded|sharp`, icons `set/name` (`aws/lambda`) or bare known names, key:value
-escape hatch (`icon`, `color`, `shape`, `fill`, `label`, `link`, `head:` circle/cross/arrow,
-`flow`, `invisible`). Unknown attribute word = diagnostic, rest of the line still applies.
-Diagnostics keyed to line; warning = something ignored, error = whole line unparseable;
-nothing stops rendering. Duplicate ids: first wins, later ones fill unset attributes.
-Editing: "Manual shape edits … do not update the stored source"; serializer is "a pure
-function of the diagram", "re-serializing reproduces the text byte for byte". Mermaid
-import covers every Mermaid type, flips `-->`→`->`, `-.->`→`-->`, drops `init` directives,
-image nodes, sequence `box`/`rect`. Eraser import maps `>`→`->`, `[icon: aws-ec2]`→
-`[aws/ec2]`, comments out `styleMode`/`typeface`. MCP: `get_syntax` = "cheatsheet for one
-diagram kind, with examples that work"; `update_diagram` redraws a frame from new code,
-keeps id; parameters and patch model undocumented.
-
-| Feature | They | We | Why |
-|---|---|---|---|
-| Family = optional first line, default architecture | yes | adopt | zero-ceremony sketches; `architecture` default matches our icon-first product |
-| Names double as ids, slugified | yes | adopt | agents and humans write labels, not ids |
-| Quote only when reserved token present | yes | adopt + extend | same list plus reserved keywords in statement position (§2.4) |
-| Edges auto-declare nodes | yes | adopt | forgiveness |
-| Positional attrs typed by vocabulary | yes | adopt | no key soup; LLMs emit `[cylinder, red]` reliably |
-| key:value escape hatch | yes | adopt | needed for `label:`, `pin:`, `tech:` |
-| Unknown attr word = warning, rest applies | yes | adapt | we also **keep** unknown words (re-emitted at tail) so round-trip never silently loses text |
-| Duplicate declaration: first wins, later fills gaps | yes | adopt | forgiving, deterministic |
-| Fans `A -> B, C` | yes | adopt (input only) | canonical form expands to one edge per line (§6.4) |
-| `[group: Name]` placement attr | yes | reject | two ways to say membership breaks canonical uniqueness; blocks only |
-| `icons: badge/inside` directive | yes | reject in v1 | renderer concern, not language; per-node `[badge]` style later if asked |
-| Nine-colour palette, hex snaps to nearest | yes | adapt | palette names canonical; `#hex` kept verbatim (we render true colour, they snap) |
-| Manual edits don't rewrite code | yes | adopt | README §2 contract |
-| Byte-for-byte deterministic serializer | yes | adopt + define | we write down the canonical form (§6); they don't publish it |
-| Diagnostics per line, never fatal | yes | adopt + codes | we add stable codes + col + hint (§10) so MCP clients can branch on them |
-| 20 families incl. venn/funnel/pyramid | yes | later | phase 3 ships 8; the rest are header-only reservations |
-| Legends `legend { key: meaning }` | yes | later | reserve keyword, no semantics in v1 |
-
-### 0.2 LikeC4 — https://likec4.dev
-
-Pages read: `/dsl/model/`, `/dsl/views/`, `/dsl/views/predicates/`, `/dsl/views/dynamic/`,
-`/dsl/deployment/model/`, `/dsl/styling/`.
-
-What they have: `specification { element kind; relationship kind; deploymentNode kind }`
-then `model { }` with `kind name 'Title' 'tech'` or `name = kind 'Title'`, unlimited
-nesting, dotted paths (`cloud.api`), properties in a block (`title`, `summary`,
-`description`, `technology`, `#tag` first, `link`, `metadata {}`), relations `a -> b`,
-`a -[kind]-> b`, nested `this -> x`. `views { view name of element { include/exclude … } }`;
-predicates: `element`, `element.*` (children), `element.**` (descendants), `element._`
-(expand), `a -> b`, `-> a`, `a ->`, `-> a ->`, `a <-> b`, `where kind is X and tag is not
-#y`, `with { title color navigateTo }`, `style * { }`, `group 'name' { include }`,
-`autoLayout LeftRight 120 110`, `rank same { a, b }`, `extends`. Dynamic views: `dynamic
-view name { a -> b 'label'; a <- b; par {}; alt { when 'x' {} else {} }; loop; opt; break;
-try/catch }`, variants `diagram|sequence`. Deployment: `deployment { environment prod { zone
-eu { api = instanceOf backend.api } } }`, relations between instances. Styling: colours
-`primary secondary muted amber gray green indigo red`, shapes `rectangle component storage
-cylinder browser mobile person queue bucket document`, `border`, `opacity`, `multiple`,
-icons `aws: azure: gcp: tech:`, relation `line`, `head`, `tail`.
-
-| Feature | They | We | Why |
-|---|---|---|---|
-| Model / views split | yes | adopt (phase 5) | one object many views is the whole point of C4 tooling |
-| Element kinds user-defined in `specification` | yes | reject | fixed C4 vocabulary (`person system container component store queue external`) — agents can't guess a bespoke spec; `[kind: x]` attr covers custom |
-| Dotted paths `cloud.api` | yes | adopt (model only) | needed for nested reuse; `.` reserved in explicit ids (§2.5) |
-| `name = kind 'Title'` | yes | adapt | ours is `kind Title [attrs]` / `id = kind Title [attrs]` — label-first like the rest of the language |
-| `#tag` prefix | yes | adapt | `@tag` (`#` collides with `#hex` colours in our attr lists) |
-| include/exclude predicates with `*`, `.*`, `.**`, `->` | yes | adopt subset | `.*`, `.**`, `->` forms; `where` clauses only `kind is`/`tag is`; no `._`, `with {}` in v1 |
-| `where` on metadata | yes | reject | metadata filtering is a query language; YAGNI |
-| Dynamic views with `par/alt/loop/opt/break` | yes | adopt as `flow` | maps 1:1 onto IcePanel's 8 step kinds + sequence family |
-| `try/catch/finally` blocks | yes | reject | no diagramming tool renders them distinctly |
-| Deployment model + `instanceOf` | yes | adopt (`deployment {}` + `instance`) | Structurizr refugees need it |
-| `rank same {}` / `autoLayout dir` | yes | adopt | our `align` statement and family-line direction |
-| Manual layout in `.snap` sidecar that fights model | yes | reject | pins live in text (`[pin:]`) or in the frame; never a sidecar |
-| Graphviz layout | yes | reject | ELK in worker; their #1 pain |
-
-### 0.3 Structurizr DSL — https://docs.structurizr.com/dsl/language, /dsl/expressions, /dsl/cookbook/*
-
-What they have: `workspace [name] [desc] { model { } views { } }`; `person`, `softwareSystem`,
-`container name [desc] [tech] [tags] { component … }`, `deploymentEnvironment { deploymentNode
-{ containerInstance id } infrastructureNode }`; identifiers `x = container "Name"`,
-`!identifiers hierarchical|flat`; relationships `a -> b [desc] [tech] [tags]` and scoped
-`-> b`; `!impliedRelationships true|false` using
-`CreateImpliedRelationshipsUnlessAnyRelationshipExistsStrategy` (a child→child relation
-implies parent→parent unless any relation already exists there); `!include file|url`;
-views `systemLandscape`, `systemContext id`, `container id`, `component id`, `dynamic scope`,
-`deployment scope env`, each with `include *|id|expr`, `exclude`, `autoLayout tb|lr …`;
-expressions `element.type==Container && element.parent==x`, `->id`, `id->`, `->id->`,
-`*->*`, `relationship.tag==`; `styles { element "Tag" { } }` with `light/dark`; `properties`,
-`perspectives`, `!docs`, `!adrs`, `group`, `url`. Strings quoted with `"`.
-Cloud EOL: workspaces read-only since 1 Jul 2026, shutdown 30 Sep 2026
-(https://www.patreon.com/posts/cloud-service-of-142577083,
-https://www.archyl.com/blog/structurizr-cloud-shutdown-what-to-do).
-
-| Feature | They | We | Why |
-|---|---|---|---|
-| workspace/model/views | yes | adopt shape, drop `workspace` | our file *is* the workspace; `model {}` and `views {}` blocks reserved |
-| C4 element kinds | yes | adopt | same names minus `softwareSystem` → `system`; importer renames |
-| `desc tech tags` positional strings | yes | adapt | ours are attrs `[tech: Go, desc: "…"]` and `@tag` — one attr syntax everywhere |
-| Implied relations | yes | adopt same strategy | proven rule; importer parity |
-| `!include` | yes | reject in v1 | local-first single file; phase 5.7 workspace folder revisits |
-| `!identifiers hierarchical` | yes | adopt as the only mode | dotted paths; flat mode is a footgun the importer resolves |
-| View kinds by C4 level | yes | adopt | `view context of X`, `view container of X`, `view component of X`, `view landscape`, `view deployment of X in Env` |
-| Expression language `element.type==` | yes | adapt | `where kind is container` — words, not operators, so LLMs emit it right |
-| `styles` by tag | yes | later | `[…]` attrs on elements cover 90 %; tag styles phase 5.5 |
-| `!docs`, `!adrs`, `perspectives` | yes | reject / phase 5.5 | `[link:]` attr covers ADR pointers |
-| Dynamic view step numbering by order | yes | adopt | `flow` steps numbered in line order |
-
-### 0.4 Mermaid — https://mermaid.js.org/syntax/*
-
-Pages read: `flowchart`, `sequenceDiagram`, `stateDiagram`, `classDiagram`,
-`entityRelationshipDiagram`, `gitgraph`, `mindmap`, `userJourney`, `architecture`.
-
-What must transpile losslessly (per type, verified against the pages):
-- **flowchart/graph**: directions `TD TB LR RL BT`; shapes `[ ] ( ) ([ ]) [[ ]] [( )] (( ))
-  > ] { } {{ }} [/ /] [\ \] [/ \] [\ /] ((( )))` and `@{ shape: … }` (≈50 names incl.
-  `cyl`, `diam`, `hex`, `doc`, `docs`, `person`, `cloud`, `bolt`, `flag`, `fork`, `st-rect`);
-  links `--> --- -.-> -.- ==> === ~~~ --o --x <-->`, lengths by extra dashes, text
-  `-- t -->` / `-->|t|`; chains; `&` fans; `subgraph id[title] … end` with `direction`;
-  `style`, `classDef`, `class`, `:::`, `linkStyle`, `click`, `%%` comments, `---config---`
-  front-matter, markdown strings.
-- **sequenceDiagram**: `participant/actor X as Y`, stereotypes (boundary, control, entity,
-  database, collections, queue), `create/destroy`, `box`, arrows `-> --> ->> -->> <<->> -x
-  --x -) --)`, `+`/`-` activation, `note over|left of|right of`, `loop alt else opt par and
-  critical option break`, `rect`, `autonumber`, `link`.
-- **stateDiagram-v2**: `[*]`, `state "desc" as id`, `id : desc`, `a --> b : label`,
-  `state id { }`, `--` concurrency, `<<fork>> <<join>> <<choice>>`, notes, `direction`,
-  `classDef`.
-- **classDiagram**: `class X { }`, `X : +int id`, visibility `+ - # ~`, `$` static, `*`
-  abstract, generics `~T~`, `<<interface>>`, arrows `<|-- *-- o-- --> -- ..> ..|> ..`,
-  cardinality `"1" -- "*"`, `: label`, `namespace { }`, `note for`.
-- **erDiagram**: `E { type name PK "comment" }`, keys `PK FK UK`, `?` nullable, crow's foot
-  `|o || }o }|` with `--`/`..`, word aliases (`one or zero`, `many(0)`), `["Display"]`
-  aliases, `direction`.
-- **gitGraph**: `commit id: type: NORMAL|REVERSE|HIGHLIGHT tag:`, `branch x order: n`,
-  `checkout|switch`, `merge x id: tag: type:`, `cherry-pick id: parent:`, orientation
-  `LR|TB|BT`, config `mainBranchName parallelCommits showBranches showCommitLabel`.
-- **mindmap**: relative indentation, `root(( ))`, shapes `[ ] ( ) (( )) )( ) ( {{ }}`,
-  `::icon()`, `:::class`, `tidy-tree` layout.
-- **journey**: `title`, `section`, `Task: score: Actor1, Actor2` (score 1–5).
-- **architecture-beta**: `group id(icon)[title] in parent`, `service id(icon)[title] in g`,
-  `junction`, edges `a:L -- R:b`, `<-- -->`, `{group}` suffix, `align row|column`, icons
-  `cloud database disk internet server` + iconify `pack:name`.
-
-| Feature | They | We | Why |
-|---|---|---|---|
-| Node shape by bracket type `A[( )]` | yes | reject | unreadable, un-emittable; positional word attrs instead |
-| `-->` solid arrow | yes | flip | `->` solid, `-->` dashed — Koboyo/D2/Eraser agree; importer flips |
-| `&` fans, chains | yes | adopt (`,` fans) | input sugar; canonical expands |
-| `subgraph … end` | yes | adapt | `group … { }` |
-| `classDef`/`style`/`linkStyle` | yes | adapt | folded into attrs where a palette/shape matches; else loss |
-| `%%{init}%%` / front-matter config | yes | reject (loss) | renderer config, not diagram content |
-| `click` | yes | adapt | `[link: url]`; callbacks dropped |
-| sequence `box`, `rect`, `critical/option` | partial | adapt | `box` → `group` of participants; `rect` dropped; `critical/option` → `alt/else` |
-| `autonumber` | yes | adopt | `autonumber` directive line |
-| state `[*]` | yes | adopt | verbatim; it is the one token everyone knows |
-| ER word aliases (`one or zero`) | yes | reject | crow's-foot glyphs only in canonical; importer converts |
-| gitgraph `order:`, `parallelCommits` | yes | reject | lane order = declaration order |
-| mindmap bracket shapes | yes | adapt | `[circle]` etc. attrs on the bullet |
-| `architecture-beta` edge sides `a:L -- R:b` | yes | adapt | `[from: left, to: right]` attrs — port hints survive round-trip |
-| Markdown in labels | yes | reject in v1 | plain text; `\n` for line breaks |
-
-### 0.5 D2, Eraser, PlantUML-C4 — one paragraph each
-
-**D2** (https://d2lang.com/tour/connections, /tour/composition, verified 2026-09-21).
-Better than all of the above at: composition — `layers` (new base), `scenarios` (inherit
-base), `steps` (inherit previous step) give multi-board documents from one file; connections
-referenced by index `(a -> b)[0]` so styling a specific edge is precise; repeated
-connections create new edges instead of overriding; crow's-foot arrowheads on any edge
-(`cf-one`, `cf-many`); `d2 fmt` autoformatter. We adopt: repeated edges = new edges;
-`format()` as a first-class function; the idea that a view/step inherits (our `flow` steps,
-phase 5). We reject D2's `key: label` container-by-dot addressing (`a.b.c`) for free-text
-nodes — labels are our keys — but use dotted paths for model elements only.
-
-**Eraser** (https://docs.eraser.io/docs/syntax, verified 2026-09-21). Better at: the
-tersest connector set (`>`, `<`, `<>`, `-`, `--`, `-->`) and `Name { }` as a group with no
-keyword; `colorMode`/`styleMode`/`typeface` document directives; no header — family is
-detected from content. We adopt: `Name { }` as group shorthand in graph families (canonical
-still emits `group`). We reject `>` arrows (they collide with `->`/`->>` and with nothing
-an LLM already knows) and family auto-detection (an explicit header is one line and makes
-`get_diagram` unambiguous; the Eraser importer prepends it).
-
-**C4-PlantUML** (https://github.com/plantuml-stdlib/C4-PlantUML, verified 2026-09-21).
-Better at: a fixed macro vocabulary an LLM has memorised (`Person(alias, label, descr)`,
-`Container(alias, label, techn, descr)`, `System_Boundary(alias, label) { }`, `Rel(from,
-to, label, techn)`, `Rel_D/U/L/R`, `BiRel`, `Deployment_Node`, `Lay_D/Lay_R`); legends
-(`SHOW_LEGEND`); sprites from any icon set; entirely offline. We adopt: positional
-`[tech]`/`desc` on elements and relations; `Lay_*` becomes `align`/`[rank:]`. We reject
-the macro syntax itself (parentheses and commas make every label need escaping) and
-positional description strings (ours are keyed attrs).
 
 ---
 
@@ -231,7 +24,7 @@ Where we are consciously worse:
 - **Terser than Eraser? No.** Every edge is a full `A -> B` line in canonical form; chains
   and fans are accepted but expanded. Cost: longer canonical text. Gain: line = statement,
   so patches, diffs and diagnostics are one-to-one.
-- **Fewer shapes than Koboyo (45+).** v1 ships 16 shape words (§5.1). Cost: some Mermaid
+- **Fewer shapes than some rival DSLs (45+).** v1 ships 16 shape words (§5.1). Cost: some Mermaid
   `@{shape}` names degrade to `rect` with a warning. Gain: every shape has a Pixi renderer
   before the word exists in the grammar (README §3 "honest").
 - **No user-defined element kinds (LikeC4 `specification`).** Cost: bespoke taxonomies use
@@ -283,7 +76,10 @@ an arrow treats it as text and warns W111.
 - Quote with `"…"` when a name contains reserved punctuation or **starts with a reserved
   keyword** (§2.5): `"Cache: L2"`, `"group"`, `"state machine"`. Inside quotes `\"` is a
   quote and `\\` a backslash; `\n` is a line break in the label. Nothing else is escaped.
-- Names are trimmed and internal whitespace collapsed to one space.
+- Bare names are trimmed and internal whitespace collapsed to one space; a quoted name keeps
+  its spacing exactly. The serializer quotes every label that would not lex back to itself as
+  plain single-spaced words (reserved punctuation, `"`, doubled, leading or trailing
+  whitespace, tabs, a keyword as its first word).
 - The **escape rule for reserved words**: a keyword is only a keyword as the first token of a
   statement (after optional `-` bullet in mindmap). Anywhere else it is a name. `A -> group`
   is an edge to a node named "group". At statement start, `group` is the keyword; write
@@ -442,7 +238,8 @@ by vocabulary; the same word means the same thing everywhere. Two words of the s
   `decision`→`diamond`, `database`/`db`/`storage`→`cylinder`, `document`→`doc`,
   `actor`/`user`→`person`, `io`/`data`→`parallelogram`, `start`/`end`/`terminator`→`ellipse`.
 - **colour**: `blue green red orange violet teal pink yellow gray` or `#rgb`/`#rrggbb`.
-  Aliases `grey`→`gray`, `purple`→`violet`. Hex kept verbatim (lowercase canonical).
+  Aliases `grey`/`slate`→`gray`, `purple`→`violet`, `emerald`→`green`, `amber`→`orange`,
+  `cyan`→`teal`. Hex kept verbatim (lowercase canonical).
 - **fill**: `pastel` (default, not emitted), `bold`, `outline`.
 - **style flags**: nodes `shadow`; edges `dashed` (same as `-->`; canonical uses the arrow),
   `thick`, `invisible`, `flow` (animated). Text: `italic`, `bold-text` — reserved, W131 in v1.
@@ -678,7 +475,12 @@ Members are lines; `(` in a member makes it a method. `---` is accepted on input
 emitted only when a class has both attributes and methods. Member text canonicalises
 spacing (`+id: int`, `+go(): void`); `[interface|abstract|enum]` sets the stereotype.
 Reversed relations normalise by swapping endpoints (`Order <|-- Base` → `Base --|> Order`);
-multiplicity is quoted beside the arrow (`Order "1" --> "*" Item`).
+multiplicity is quoted beside the arrow (`Order "1" --> "*" Item`) and stays with its end when
+the relation is reversed. A quoted token is a multiplicity only when it has that shape (`1`, `*`,
+`0..1`, `1..*`, `n`, `many`) and a name remains on its side: `"store" --> B` relates the
+entity named store. One relation per line in erd and class: `A, B --> C` and `A --> B --> C`
+are W112 and dropped. A relation names an entity by its name, or by its id when the id is not
+the name's slug.
 `group Zoo { … }` boxes the classes declared inside it (groups nest; erd takes it too), like a
 Mermaid `namespace`. Canonical: classes and groups in line order as blocks, relations after.
 Nodes are `class` tables with attribute/method compartments sized so every member is visible.
@@ -736,7 +538,7 @@ chart data panel serializes through `Edit as code` (grammar §6.7), because movi
 a data edit, not a layout edit. Unknown kinds warn W131 and fall back to `bar`.
 
 ### 8.10 wireframe — implemented (slices 6.6–6.7, 2026-09-24)
-Koboyo's syntax, so their wireframe text compiles unchanged.
+Screens of controls, one per line, laid out down each screen's column.
 ```
 wireframe
 title: Onboarding
@@ -855,7 +657,8 @@ helper (agent reports, `explain`) and is never serialized.
 X -> Y`, `include -> X`, `include X ->`, `exclude …` same forms, `where kind is
 container`, `where kind is not container`, `where tag is @core`, `where tag is not @deprecated`,
 `and`/`or` (AND binds before OR; quote tag values containing those words). Order matters
-(later overrides). Anything else → W160 "unsupported predicate, skipped and kept verbatim".
+(later overrides). An unsupported `where` clause or view statement → W160 "skipped and kept
+verbatim"; a subject that names no element matches nothing, with no diagnostic.
 A landscape starts with top-level people, systems and external systems; explicit descendant rules
 can add detail. Parallel authored relationships keep separate connectors and protocols.
 
@@ -917,6 +720,7 @@ test: random bytes → diagnostics only).
 | E001 | empty document | — |
 | E002 | > 20 000 lines, rest ignored | — |
 | E003 | import: unknown source header | — |
+| E004 | import: a source line could not be read (line is the source's); nothing converted | fix that line |
 
 The code panel lists diagnostics under the editor keyed to line and underlines `col..endCol`.
 MCP returns the array as-is plus `summary: { info, warning, error }` counts.
@@ -980,14 +784,14 @@ conversion. Losses are surfaced as W180 diagnostics in the code panel.
 | scoped `-> b` inside element | resolved to `this -> b` | 1:1 |
 | `!impliedRelationships true` | default behaviour | 1:1; `false` → W180 |
 | `deploymentEnvironment`, `deploymentNode`, `containerInstance`, `infrastructureNode` | `deployment Env { node X { instance a.b } }`, infra → `node` | 1:1 |
-| `group "name" { }` | `group name { }` | 1:1 |
+| `group "name" { }`, `deploymentGroup` | members kept, group flattened | W180 |
 | `systemLandscape`, `systemContext x`, `container x`, `component x`, `deployment x env`, `dynamic x` | `view landscape|context of x|container of x|component of x|deployment of x in env`, dynamic → `flow` | 1:1 |
 | `include *`, `include a b`, `exclude a`, `->a->`, `a->`, `->a` | same forms | 1:1 |
-| `element.type==`, `element.tag==`, `&&`, `\|\|` | `where kind is`, `where tag is`, `and`, `or` | 1:1 for these; `element.parent==`, `technology==`, `relationship.*` → W160 |
+| `element.type==`, `element.tag==`, `&&`, `\|\|` | `where kind is`, `where tag is`, `and`, `or` | 1:1 for these; any other expression (`element.parent==`, `relationship.tag==`, …) → W180, kept verbatim in the view, not applied |
 | `autoLayout lr 300 300` | view direction `[right]`; separations dropped | degrades |
 | `styles { element "Tag" { background shape icon } }` | phase 5.5 tag styles; today attrs copied onto every tagged element | degrades |
-| `!include`, `!docs`, `!adrs`, `properties`, `perspectives`, `url` | `!include` inlined if local file given, else W180; `url` → `[link:]`; rest dropped | degrades / dropped |
-| `theme`, `branding`, `terminology`, `configuration` | — | dropped |
+| `!include`, `!docs`, `!adrs`, `properties`, `perspectives`, `url` | — | dropped, W180 each |
+| `theme`, `branding`, `terminology`, `configuration` | — | dropped, W180 |
 
 ### 11.3 LikeC4
 | LikeC4 | OFK | fidelity |
@@ -1697,7 +1501,7 @@ commit Label [tag: v1, highlight|revert]   branch name   checkout name   merge n
 chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant
 Revenue: Jan 12, Feb 19        // one series per line: Category value pairs
 chart quadrant:  x: low, high   y: low, high   quadrants: tl, tr, bl, br   Feature A [0.32, 0.78]
---- wireframe (Koboyo syntax) ---
+--- wireframe ---
 screen Login [phone|tablet|browser|window] {   heading: Hi   input: Email [half]   button: Go [half, primary]   }
 toggle: Dark mode [on]   slider [60%]   tabs: A | B | C [active: 1]   alert: Low disk [warning]   tabbar: Home | Me
 controls: button input search checkbox radio toggle dropdown slider navbar tabs image avatar heading paragraph divider

@@ -183,3 +183,82 @@ Loose --> Cage
     expect(stray.diagnostics.map((item) => item.code)).toContain('W101');
   });
 });
+
+describe('structured relations (launch pass 2026-10-10)', () => {
+  const ends = (result: Awaited<ReturnType<typeof compile>>) => result.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`);
+  const warnings = (result: Awaited<ReturnType<typeof compile>>) => result.diagnostics.filter((item) => item.severity !== 'info').map((item) => item.code);
+
+  it.each(['erd\nusers { id int pk }\norders { id int pk }\nusers ||--o{ orders', 'class\nusers { +id: int }\norders { +id: int }\nusers --> orders'])(
+    'names an entity whose id is not its slug by a reference the relation reads back: %s', async (source) => {
+      const scene = await compile(source);
+      const [first, ...rest] = scene.nodes;
+      const again = await compile(serialize({ ...scene, nodes: [{ ...first!, content: { ...first!.content, label: 'Person record' } }, ...rest] }));
+      expect(again.nodes.map((node) => node.content.label)).toEqual(['Person record', 'orders']);
+      expect(ends(again)).toEqual(['users->orders']);
+      expect(warnings(again)).toEqual([]);
+    });
+
+  it.each(['person', 'store', 'queue', 'node', 'system', 'deployment', '1'])('keeps a table named %s (quoted) as a table, not a multiplicity', async (name) => {
+    for (const family of ['erd', 'class']) {
+      const text = family === 'erd' ? `erd\n"${name}" { id int pk }\nB { id int pk }\n"${name}" ||--o{ B : has` : `class\n"${name}" { +id: int }\nB { +id: int }\n"${name}" --> B : has\nB --> "${name}"`;
+      const result = await compile(text);
+      expect(result.nodes.map((node) => node.content.label)).toEqual([name, 'B']);
+      expect(result.connectors.length).toBe(family === 'erd' ? 1 : 2);
+      const again = await compile(serialize(result));
+      expect(again.nodes.length).toBe(2);
+      expect(ends(again)).toEqual(ends(result));
+    }
+  });
+
+  it('keeps entities whose names share a slug apart (CJK, Arabic, emoji)', async () => {
+    const result = await compile('erd\n用户 ||--o{ 订单\nعميل ||--o{ 订单');
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['用户', '订单', 'عميل']);
+    expect(new Set(result.nodes.map((node) => node.id)).size).toBe(3);
+    expect(result.connectors).toHaveLength(2);
+    const again = await compile(serialize(result));
+    expect(again.nodes.map((node) => node.content.label)).toEqual(['用户', '订单', 'عميل']);
+    expect(ends(again)).toEqual(ends(result));
+  });
+
+  it.each(['erd\nA { id int pk }\nB { id int pk }\nC { id int pk }\nA, B ||--o{ C', 'class\nX { }\nY { }\nZ { }\nX --> Y --> Z', 'class\nX { }\nY { }\nZ { }\nX --> Y, Z'])(
+    'refuses a chain or fan with W112 instead of inventing an entity: %s', async (source) => {
+      const result = await compile(source);
+      expect(result.nodes).toHaveLength(3);
+      expect(result.connectors).toHaveLength(0);
+      expect(warnings(result)).toEqual(['W112']);
+    });
+
+  it('keeps multiplicities on their ends when a relation is written reversed', async () => {
+    const result = await compile('class\nBase { }\nOrder { }\nOrder "1" <|-- "*" Base');
+    expect(result.connectors[0]).toMatchObject({ source: { nodeId: 'base' }, target: { nodeId: 'order' } });
+    expect(result.connectors[0]!.metadata.dsl).toMatchObject({ sourceCardinality: '*', targetCardinality: '1' });
+    expect(serialize(result)).toContain('Base "*" --|> "1" Order');
+  });
+});
+
+describe('structured relations, review follow-ups', () => {
+  const ends = (result: Awaited<ReturnType<typeof compile>>) => result.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`);
+
+  it('reads any quoted word beside the arrow as a multiplicity while a name remains', async () => {
+    const result = await compile('class\nA "0..n" -- "one" B');
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['A', 'B']);
+    expect(result.connectors[0]!.metadata.dsl).toMatchObject({ sourceCardinality: '0..n', targetCardinality: 'one' });
+    const again = await compile(serialize(result));
+    expect(again.connectors[0]!.metadata.dsl).toMatchObject({ sourceCardinality: '0..n', targetCardinality: 'one' });
+  });
+
+  it('quotes an entity whose name ends or starts with a number, so it is not read as a multiplicity', async () => {
+    const result = await compile('class\n"Phase 1" --> "2 Step"\n"Phase 1" "1" --> "*" "2 Step"');
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['Phase 1', '2 Step']);
+    const again = await compile(serialize(result));
+    expect(again.nodes.map((node) => node.content.label)).toEqual(['Phase 1', '2 Step']);
+    expect(ends(again)).toEqual(ends(result));
+    expect(again.connectors[1]!.metadata.dsl).toMatchObject({ sourceCardinality: '1', targetCardinality: '*' });
+  });
+
+  it('reads a comma inside generics as part of the name, not a fan', async () => {
+    const result = await compile('class\nMap<K,V> --> Entry');
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['Map<K, V>', 'Entry']);
+  });
+});

@@ -1,5 +1,6 @@
 import type { Insights } from '../../dsl/map/insights';
 import type { AggEdge, MapModel, Talk } from '../../dsl/map/types';
+import { MAP_KIND_WORDS } from '../../dsl/map/repoLook';
 import { Button, Panel } from '../../opencanvas/presentation/design-system';
 import { MapEvidence, type EvidenceLink } from './MapEvidence';
 import { labelsFor, type Selected } from '../../opencanvas/application/map/navigate';
@@ -60,7 +61,7 @@ function NodeDetail({ model, id, talks, onReveal }: { model: MapModel; id: strin
   return (
     <>
       <p className="map-lead">{n.name}</p>
-      <p className="map-muted">{`${n.kind} · ${fmt(n.files)} ${n.files === 1 ? 'file' : 'files'} · ${fmt(n.loc)} lines`}</p>
+      <p className="map-muted">{`${MAP_KIND_WORDS[n.kind]} · ${fmt(n.files)} ${n.files === 1 ? 'file' : 'files'} · ${fmt(n.loc)} lines`}</p>
       {n.path ? <p className="map-path">{n.path}</p> : null}
       {n.desc ? <p>{n.desc}</p> : null}
       <section className="map-sec"><h3>Talks to</h3>

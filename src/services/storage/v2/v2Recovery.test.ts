@@ -12,6 +12,7 @@ import {
 import { V2StorageQuotaError, V2StorageUnavailableError } from './v2Errors';
 import {
   createV2Repository,
+  readRawV2Records,
   type LoadV2DocumentResult,
   type V2DocumentRecord,
 } from './v2Repository';
@@ -122,8 +123,14 @@ describe('v2 document recovery', () => {
     database.close();
 
     const record = requireStatus(await repository.loadDocument('document-1'), 'recovered').record;
-    expect(record.revision).toBe(1);
     expect(nodeLabel(record)).toBe('One');
+    // Under the damaged primary's revision, so the first edit saves instead of reporting a conflict.
+    expect(record.revision).toBe(2);
+    expect(await repository.saveDocument('document-1', labeledDocument('Edited'), 3, record.revision)).toMatchObject({ status: 'saved' });
+    // The damaged copy it replaced may hold work the backup lacks: kept aside, and in the raw download.
+    expect((await readRawV2Records(indexedDB, 'document-1')).damaged).toMatchObject({ revision: 2, document: { bogus: true } });
+    await repository.deleteDocument('document-1');
+    expect((await readRawV2Records(indexedDB, 'document-1')).damaged).toBeNull();
   });
 
   it('never promotes a corrupt primary to last-known-good on the next save', async () => {
@@ -171,6 +178,12 @@ describe('v2 document recovery', () => {
     expect(loaded.status).toBe('corrupt');
     if (loaded.status !== 'corrupt') throw new Error('Expected a corrupt load.');
     expect(loaded.issues.length).toBeGreaterThan(0);
+    // The person can still take the data away, exactly as stored.
+    expect(await readRawV2Records(indexedDB, 'document-1')).toEqual({
+      primary: expect.objectContaining({ document: { bogus: true } }),
+      lastKnownGood: null,
+      damaged: null,
+    });
   });
 
   it('rejects reads and writes when IndexedDB is unavailable', async () => {

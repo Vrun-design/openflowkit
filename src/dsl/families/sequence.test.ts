@@ -121,6 +121,22 @@ describe('sequence family', () => {
     const broken = await compile('sequence\nAlpha -> : no receiver');
     expect(broken.diagnostics.map((item) => item.code)).toContain('W101');
   });
+  it('keeps participants whose names slug alike apart (CJK, Arabic, emoji)', async () => {
+    const result = await compile('sequence\n用户 -> 服务 : 请求\nخادم -> 😀 : hi');
+    expect(result.nodes.filter((node) => node.kind !== 'text').map((node) => node.content.label)).toEqual(expect.arrayContaining(['用户', '服务', 'خادم', '😀']));
+    const ends = (scene: typeof result) => scene.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`);
+    expect(new Set(ends(result).flatMap((end) => end.split('->'))).size).toBe(4);
+    expect(ends(await compile(serialize(result)))).toEqual(ends(result));
+  });
+
+  it('refuses a message chain or fan with W112 instead of naming a participant after it', async () => {
+    for (const line of ['A ->> B ->> C', 'A -> B -> C : x', 'A -> B, C']) {
+      const result = await compile(`sequence\n${line}`);
+      expect(result.diagnostics.filter((item) => item.severity !== 'info').map((item) => item.code)).toEqual(['W112']);
+      expect(result.connectors).toHaveLength(0);
+    }
+  });
+
   describe('readable layout', () => {
     const login = 'sequence\nparticipant Browser\nparticipant API Gateway\nparticipant Auth Service\nparticipant Database\n'
       + 'Browser -> API Gateway : POST /login (email, password)\nAPI Gateway -> Auth Service : validate credentials\n'
@@ -139,10 +155,44 @@ describe('sequence family', () => {
       }
     });
 
+    // Persona P03: an alt's top edge ran into its first arrow; a loop's label sat on the block edge above it.
+    // Persona P06 (Request lifecycle starter): the ALT border struck through the ELSE guard and the reply below.
+    it.each([
+      ['mixed blocks', 'sequence\nBrowser -> CDN : HTTPS\nalt cached {\n  CDN -> API : GET /me\n  API --> CDN : 200\n} else miss {\n  CDN -> Origin : fetch\n}\n'
+        + 'loop every 30s {\n  Browser -> API : heartbeat\n}\nopt retry {\n  loop backoff {\n    API -> Origin : ping\n  }\n}\nBrowser -> CDN : done'],
+      ['request lifecycle', 'sequence\nparticipant Browser\nparticipant Gateway\nparticipant Service\nBrowser -> Gateway : POST /orders\nGateway -> Service : order.create\n'
+        + 'alt accepted {\n  Service --> Gateway : "202 {orderId}"\n} else rejected {\n  Service --> Gateway : "409 {reason}"\n}\nGateway --> Browser : response'],
+      ['empty branch', 'sequence\nA -> B : one\nalt yes {\n} else no {\n  B --> A : two\n}\nA -> B : three'],
+    ])('keeps every fragment edge and header clear of every message label and arrow: %s', async (_name, source) => {
+      const result = await compile(source);
+      const style = resolveConnectorLabelStyle(result.connectors[0]!);
+      const bands = result.connectors.map((connector) => {
+        const lineY = 132 + Number(connector.semantics.seqMessageRow ?? connector.semantics.seqMessageOrder) * 52;
+        const plate = connectorLabelPlate(connector.labels[0]!.text, style, { x: 0, y: connector.labels[0]!.offset.y });
+        return { text: connector.labels[0]!.text, top: lineY + plate.y, bottom: lineY + 2 };
+      });
+      const overlaps: string[] = [];
+      for (const fragment of result.nodes.filter((node) => node.kind === 'annotation')) {
+        const top = fragment.transform.translation.y;
+        const edges = [{ name: 'header', from: top, to: top + 24 }, { name: 'bottom', from: top + fragment.size.height - 1, to: top + fragment.size.height + 1 }];
+        for (const edge of edges) {
+          for (const band of bands) if (edge.from < band.bottom && edge.to > band.top) overlaps.push(`${fragment.id} ${edge.name} / ${band.text}`);
+        }
+        // No other block's border crosses this header (its tag and guard text).
+        for (const other of result.nodes.filter((node) => node.kind === 'annotation' && node !== fragment)) {
+          const bottom = other.transform.translation.y + other.size.height;
+          if (bottom > top + 1 && bottom < top + 24) overlaps.push(`${other.id} bottom / ${fragment.id} header`);
+        }
+      }
+      const headers = result.nodes.filter((node) => node.kind === 'annotation').map((node) => node.transform.translation.y).sort((a, b) => a - b);
+      for (let index = 1; index < headers.length; index += 1) if (headers[index]! - headers[index - 1]! < 24) overlaps.push(`headers at ${headers[index - 1]} and ${headers[index]}`);
+      expect(overlaps).toEqual([]);
+    });
+
     it('keeps a fragment header above the label of its first message', async () => {
       const result = await compile(login);
       const style = resolveConnectorLabelStyle(result.connectors[0]!);
-      const rowTop = (index: number) => Number(result.connectors[index]!.semantics.seqMessageOrder) * 52;
+      const rowTop = (index: number) => Number(result.connectors[index]!.semantics.seqMessageRow ?? result.connectors[index]!.semantics.seqMessageOrder) * 52;
       for (const fragment of result.nodes.filter((node) => node.kind === 'annotation')) {
         const first = result.connectors[Number(fragment.content.seqMessageOrder)]!;
         const plate = connectorLabelPlate(first.labels[0]!.text, style, { x: 0, y: first.labels[0]!.offset.y });

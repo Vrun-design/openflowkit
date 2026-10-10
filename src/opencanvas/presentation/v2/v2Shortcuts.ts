@@ -19,6 +19,11 @@ export const isApplePlatform = (): boolean =>
 /** `⌘` on Apple platforms, `Ctrl` everywhere else. */
 export const COMMAND = (): string => (isApplePlatform() ? '⌘' : 'Ctrl');
 
+const PC_KEYS: Readonly<Record<string, string>> = { '⌘': 'Ctrl+', '⌥': 'Alt+', '⇧': 'Shift+', '⌫': 'Backspace', '↵': 'Enter' };
+/** A hint written in Mac glyphs (`⌘⌥]`), as this platform names the keys: unchanged on Apple, `Ctrl+Alt+]` elsewhere. */
+export const platformKeys = (glyphs: string, apple = isApplePlatform()): string =>
+  (apple ? glyphs : glyphs.replace(/[⌘⌥⇧⌫↵]/g, (glyph) => PC_KEYS[glyph]!));
+
 export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
   const meta = command === '⌘' ? 'meta' : 'ctrl';
   return [
@@ -38,6 +43,8 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Laser pointer', keys: 'K', tokens: ['k'] },
         { label: 'Frame', keys: 'F', tokens: ['f'] },
         { label: 'Sticky note', keys: 'N', tokens: ['n'] },
+        { label: 'Place the armed shape at the centre', keys: 'Enter', tokens: [] },
+        { label: 'Connect two selected shapes', keys: 'A', tokens: [] },
         { label: 'Insert: media, charts, frames, wireframe', keys: 'Shift + S', tokens: ['KeyS'] },
         { label: 'Icons and emoji', keys: 'I / E', tokens: ['i', 'e'] },
         { label: 'Image', keys: 'Shift + I', tokens: ['KeyI'] },
@@ -54,7 +61,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Zoom in / out', keys: `${command} + = / −`, tokens: ['=', '+', '-'] },
         { label: 'Find on canvas', keys: `${command} + F`, tokens: ['f', meta] },
         { label: 'Layers', keys: 'L', tokens: ['l'] },
-        { label: 'Canvas / Map (pages with a model)', keys: 'M', tokens: ['m'] },
+        { label: 'Canvas / Map', keys: 'M', tokens: ['m'] },
         { label: 'Move between boxes (Map)', keys: 'Arrows', tokens: [] },
         { label: 'Edit map as drawing (Map)', keys: 'Shift + M', tokens: ['KeyM'] },
         // The dispatcher reads metaKey/ctrlKey for this, never altKey: Alt is
@@ -74,6 +81,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Remove from model', keys: `${command} + Shift + Backspace`, tokens: [] },
         { label: 'Nudge (10 px with Shift)', keys: 'Arrows', tokens: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] },
         { label: 'Edit label', keys: 'Enter / F2', tokens: ['Enter', 'F2'] },
+        { label: 'With one shape selected, typing edits its label', keys: 'Any letter', tokens: [] },
         { label: 'Select all', keys: `${command} + A`, tokens: [] },
         { label: 'Lock / unlock', keys: `${command} + L`, tokens: [] },
         { label: 'Bold / italic / underline', keys: `${command} + B / I / U`, tokens: ['b', 'i', 'u'] },
@@ -86,6 +94,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
       title: 'Arrange',
       rows: [
         { label: 'Group / ungroup', keys: `${command} + G / Shift + G`, tokens: ['g', 'KeyG'] },
+        { label: 'Wrap in a section', keys: `${command} + Alt + G`, tokens: [] },
         { label: 'Align left/right/top/bottom', keys: 'Alt + A / D / W / S', tokens: ['KeyA', 'KeyD', 'KeyW', 'KeyS', 'alt'] },
         { label: 'Align centre', keys: 'Alt + H / V', tokens: ['KeyH', 'KeyV'] },
         { label: 'Distribute', keys: 'Alt + Shift + H / V', tokens: [] },
@@ -103,11 +112,13 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
       title: 'Panels',
       rows: [
         { label: 'Architecture model', keys: 'Alt + M', tokens: ['KeyM'] },
-        { label: 'Diagram as code', keys: 'Alt + D', tokens: ['KeyD'] },
+        { label: 'Diagram as code', keys: 'Alt + C', tokens: ['KeyC'] },
+        { label: 'Convert pasted Mermaid / Structurizr / D2 (code panel)', keys: `${command} + Shift + M`, tokens: [] },
         { label: 'Inspect selection', keys: 'Alt + I', tokens: ['KeyI'] },
         { label: 'AI assistant', keys: `${command} + J`, tokens: ['j'] },
         { label: 'This cheatsheet', keys: '?', tokens: ['?'] },
         { label: 'Dismiss panel', keys: 'Esc', tokens: ['Escape'] },
+        { label: 'Leave the code editor (again: close it)', keys: 'Esc', tokens: [] },
       ],
     },
   ];

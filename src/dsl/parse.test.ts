@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { compile } from './compile';
 import { parse } from './parse';
 
 describe('parse', () => {
@@ -100,5 +101,43 @@ describe('parse for non-graph families', () => {
 
   it('still reports shared diagnostics for them', () => {
     expect(parse('sequence\nA -> B : "open').diagnostics.map((item) => item.code)).toContain('W102');
+  });
+
+  it('reads a crow-foot or class operator in a graph family as a foreign arrow, once (W111)', async () => {
+    for (const family of ['flowchart', 'state', 'architecture']) {
+      for (const line of ['A ||--o{ api', 'A --|| B', 'A o--o B']) {
+        const result = await compile(`${family}\n${line}`);
+        expect([...result.nodes, ...result.connectors]).toEqual([]);
+        expect(result.diagnostics.filter((item) => item.severity !== 'info').map((item) => item.code)).toEqual(['W111']);
+      }
+    }
+  });
+
+  it('reports a line with an arrow and no endpoints once', () => {
+    for (const line of ['A ->', '-> B', 'A -> [', 'A -> B {']) {
+      const codes = parse(`flowchart\n${line}`).diagnostics.filter((item) => item.severity !== 'info').map((item) => item.code);
+      expect(codes.filter((code) => code === 'W101')).toHaveLength(1);
+    }
+  });
+
+  it('reads a quoted label with extra spaces and its single-spaced form as one node', async () => {
+    const result = await compile('flowchart\n"API  Gateway" -> B\nAPI Gateway -> C');
+    expect(result.nodes).toHaveLength(3);
+  });
+
+  it('warns on Mermaid subgraph / end lines and draws no box for either', async () => {
+    for (const family of ['flowchart', 'architecture']) {
+      const result = await compile(`${family}\nsubgraph Region us-east-1\nALB -> EKS\nend`);
+      expect(result.nodes.map((node) => node.content.label).sort()).toEqual(['ALB', 'EKS']);
+      const warnings = result.diagnostics.filter((item) => item.severity === 'warning');
+      expect(warnings.map((item) => [item.code, item.line])).toEqual([['W101', 2], ['W101', 4]]);
+      expect(warnings[0]!.message).toContain("Mermaid's subgraph");
+      expect(warnings[0]!.hint).toBe('group Region us-east-1 { … }');
+    }
+  });
+
+  it('keeps a node named end when no subgraph opened', async () => {
+    const result = await compile('flowchart\nend');
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['end']);
   });
 });

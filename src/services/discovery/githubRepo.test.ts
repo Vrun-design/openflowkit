@@ -46,14 +46,14 @@ describe('parseRepoPath', () => {
   it('reads owner/repo, a github.com URL and a /tree/ branch with slashes', () => {
     expect(parseRepoPath('octocat/Hello-World')).toEqual({ owner: 'octocat', repo: 'Hello-World', ref: 'HEAD' });
     expect(parseRepoPath('https://github.com/GoogleCloudPlatform/microservices-demo.git')).toEqual({ owner: 'GoogleCloudPlatform', repo: 'microservices-demo', ref: 'HEAD' });
-    expect(parseRepoPath('github.com/acme/shop/tree/release/2.0/')).toBeNull();
+    expect(parseRepoPath('github.com/acme/shop/tree/release/2.0/')).toEqual({ owner: 'acme', repo: 'shop', ref: 'release' });
     expect(parseRepoPath('https://github.com/acme/shop/tree/release%2F2.0')).toEqual({ owner: 'acme', repo: 'shop', ref: 'release/2.0' });
     expect(parseRepoPath('https://gitlab.com/acme/shop')).toBeNull();
     expect(parseRepoPath('acme')).toBeNull();
   });
 
   it('rejects dot segments, which could climb out of the repo path', () => {
-    for (const bad of ['./shop', '../shop', 'acme/.', 'acme/..', 'acme/.github', 'acme/shop/tree/..', 'acme/shop/tree/.hidden', 'acme/shop/tree/a%2F..%2Fb', 'acme/shop/tree/%2E%2E', 'acme/shop/tree/%zz']) {
+    for (const bad of ['./shop', '../shop', 'acme/.', 'acme/..', 'acme/shop/tree/..', 'acme/shop/tree/.hidden', 'acme/shop/tree/a%2F..%2Fb', 'acme/shop/tree/%2E%2E', 'acme/shop/tree/%zz']) {
       expect(parseRepoPath(bad), bad).toBeNull();
     }
   });
@@ -73,10 +73,40 @@ describe('parseRepoPath', () => {
   });
 });
 
+describe('parseRepoPath forms people paste', () => {
+  const shop = { owner: 'acme', repo: 'shop', ref: 'HEAD' };
+  it.each([
+    ['github.com/acme/shop', shop],
+    ['www.github.com/acme/shop', shop],
+    ['http://www.github.com/acme/shop/', shop],
+    ['https://github.com/acme/shop.git', shop],
+    ['git@github.com:acme/shop.git', shop],
+    ['git@github.com:acme/shop', shop],
+    ['https://github.com/acme/shop/blob/main/README.md', { ...shop, ref: 'main' }],
+    ['github.com/acme/shop/blob/v2/src/a.ts#L10', { ...shop, ref: 'v2' }],
+    ['https://github.com/acme/shop/tree/main/services', { ...shop, ref: 'main' }],
+    ['ssh://git@github.com/acme/shop.git', shop],
+    ['https://someone@github.com/acme/shop', shop],
+    ['github.com/acme/.github', { ...shop, repo: '.github' }],
+  ])('%s', (input, want) => expect(parseRepoPath(input)).toEqual(want));
+  it.each(['https://gitlab.com/acme/shop', 'github.com/acme', 'acme/shop/pulls', 'git@gitlab.com:acme/shop.git', 'https://github.com/acme/shop/blob/..',
+    'github.com/settings/tokens', 'https://github.com/marketplace/actions', 'github.com/orgs/acme', 'github.com/sponsors/acme', 'github.com/notifications/beta',
+    'github.com/login/oauth', 'github.com/explore/x', 'github.com/topics/go', 'github.com/collections/x', 'github.com/features/copilot', 'github.com/about/careers',
+    'github.com/pricing/x', 'github.com/apps/x'])('rejects %s', (input) => {
+    expect(parseRepoPath(input)).toBeNull();
+  });
+});
+
 describe('githubEvidenceLink', () => {
   it('points at the line, with every segment encoded', () => {
     const link = githubEvidenceLink({ owner: 'acme', repo: 'shop', ref: 'feat/a#b' });
     expect(link({ file: 'web app/package.json', line: 7 })).toBe('https://github.com/acme/shop/blob/feat/a%23b/web%20app/package.json#L7');
+  });
+});
+
+describe('links for a dot-named repo', () => {
+  it('link into acme/.github like any other repo', () => {
+    expect(githubPathLink({ owner: 'acme', repo: '.github', ref: 'main' }, 'profile/README.md', false)).toBe('https://github.com/acme/.github/blob/main/profile/README.md');
   });
 });
 
@@ -121,6 +151,62 @@ describe('fetchRepoFiles', () => {
     expect(requested.filter((url) => url.includes('raw.githubusercontent.com'))).toHaveLength(2);
   });
 
+  it('reads the files that define a deployable unit before any source, whatever they are called', async () => {
+    const sources = Array.from({ length: 50 }, (_, i) => `src/m${i}.ts`);
+    const get = fakeGitHub({ 'https://api.github.com/': tree([...sources, 'worker/wrangler.toml', 'api/pyproject.toml']), 'https://raw.githubusercontent.com/': raw('x') });
+    const result = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get, maxFiles: 2 });
+    expect(result.files.map((file) => file.path)).toEqual(['api/pyproject.toml', 'worker/wrangler.toml']);
+  });
+
+  it('pins the ref to its commit when asked: the tree, the files and the result all name that commit', async () => {
+    const requested: string[] = [];
+    const sha = 'a'.repeat(40);
+    const get = fakeGitHub({
+      'https://api.github.com/repos/acme/shop/commits/HEAD': { status: 200, headers: { 'content-type': 'application/vnd.github.sha' }, body: sha },
+      [`https://api.github.com/repos/acme/shop/git/trees/${sha}?recursive=1`]: tree(['Dockerfile']),
+      [`https://raw.githubusercontent.com/acme/shop/${sha}/Dockerfile`]: raw('FROM node:20\n'),
+    }, requested);
+    const result = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get, pinCommit: true });
+    expect(result.commit).toBe(sha);
+    expect(result.files).toEqual([{ path: 'Dockerfile', content: 'FROM node:20\n' }]);
+    expect(requested).toHaveLength(3);
+  });
+
+  it('skips the commits call when the ref is already a commit', async () => {
+    const requested: string[] = [];
+    const sha = 'b'.repeat(40);
+    const get = fakeGitHub({ 'https://api.github.com/': tree(['Dockerfile']), 'https://raw.githubusercontent.com/': raw('FROM node:20\n') }, requested);
+    const result = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: sha }, { fetch: get, pinCommit: true });
+    expect(result.commit).toBe(sha);
+    expect(requested.filter((url) => url.includes('/commits/'))).toEqual([]);
+  });
+
+  it('a commits call that cannot reach GitHub fails offline at once, not after a second timeout', async () => {
+    let calls = 0;
+    const offline = (async () => { calls++; throw new TypeError('Failed to fetch'); }) as typeof fetch;
+    const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: offline, pinCommit: true }).catch((caught: unknown) => caught) as RepoError;
+    expect(error.problem).toEqual({ kind: 'offline' });
+    expect(calls).toBe(1);
+  });
+
+  it('pinned: concludes private only when the token resolved the commit; otherwise the plain retryable problem', async () => {
+    const sha = 'd'.repeat(40);
+    const files = { [`https://api.github.com/repos/acme/shop/git/trees/`]: tree(['Dockerfile', 'a/Dockerfile']) };
+    const resolved = fakeGitHub({ 'https://api.github.com/repos/acme/shop/commits/': { status: 200, headers: {}, body: sha }, ...files });
+    await expect(fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: resolved, pinCommit: true, token: 't' })).rejects.toMatchObject({ problem: { kind: 'private' } });
+    const unresolved = fakeGitHub(files);
+    await expect(fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: unresolved, pinCommit: true, token: 't' })).rejects.toMatchObject({ problem: { kind: 'http', status: 404 } });
+  });
+
+  it('reads at the ref when the commit cannot be resolved, and lets the tree call name any problem', async () => {
+    const get = fakeGitHub({ 'https://api.github.com/repos/acme/shop/git/trees/HEAD?recursive=1': tree(['Dockerfile']), 'https://raw.githubusercontent.com/acme/shop/HEAD/': raw('FROM node:20\n') });
+    const result = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get, pinCommit: true });
+    expect(result.commit).toBeUndefined();
+    expect(result.files).toHaveLength(1);
+    const gone = await fetchRepoFiles({ owner: 'acme', repo: 'secret', ref: 'HEAD' }, { fetch: fakeGitHub({ 'https://api.github.com/': NOT_FOUND }), pinCommit: true }).catch((caught: unknown) => caught) as RepoError;
+    expect(gone.problem).toEqual({ kind: 'not-found' });
+  });
+
   it('reads a branch with a slash in its name', async () => {
     const requested: string[] = [];
     const get = fakeGitHub({
@@ -140,7 +226,7 @@ describe('fetchRepoFiles', () => {
     const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: fakeGitHub({ 'https://api.github.com/': RATE_LIMITED }) }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(RepoError);
     expect((error as RepoError).problem).toEqual({ kind: 'rate-limited', resetAt: new Date(1791396922 * 1000) });
-    expect((error as RepoError).message).toMatch(/60 repo reads an hour.*resets at /);
+    expect((error as RepoError).message).toMatch(/hourly limit for reads from your network is used up.*resets at /);
   });
 
   it('says what a 404 is, with no advice (the page adds that)', async () => {
@@ -175,14 +261,23 @@ describe('fetchRepoFiles', () => {
     expect(result.failed).toBe(1);
   });
 
-  it('throws rate-limited when most raw files fail with 429', async () => {
+  it('a token that lists the tree but whose files 404 is a private repo the browser cannot read', async () => {
+    const get = fakeGitHub({ 'https://api.github.com/': tree(['Dockerfile', 'a/Dockerfile', 'b/Dockerfile']) });
+    const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get, token: 'ghp_x' }).catch((caught: unknown) => caught) as RepoError;
+    expect(error.problem).toEqual({ kind: 'private' });
+    // No token: the tree of a private repo is a 404 already, so files that vanish are a plain http problem.
+    const without = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get }).catch((caught: unknown) => caught) as RepoError;
+    expect(without.problem).toEqual({ kind: 'http', status: 404 });
+  });
+
+  it('throws slow-down when most raw files fail with 429: a token would not help', async () => {
     const get = fakeGitHub({
       'https://api.github.com/': tree(['Dockerfile', 'a/Dockerfile', 'b/Dockerfile']),
       'https://raw.githubusercontent.com/acme/shop/HEAD/Dockerfile': raw('FROM node:20\n'),
       'https://raw.githubusercontent.com/': { status: 429, headers: {}, body: 'slow down' },
     });
     const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get }).catch((caught: unknown) => caught) as RepoError;
-    expect(error.problem.kind).toBe('rate-limited');
+    expect(error.problem).toEqual({ kind: 'slow-down', retryAfter: null });
   });
 
   it('throws http when most raw files fail with a server error', async () => {
@@ -209,11 +304,13 @@ describe('fetchRepoFiles', () => {
     expect(error.problem).toEqual({ kind: 'empty' });
   });
 
-  it('reads 403 and 429 with retry-after (a secondary limit) as rate-limited', async () => {
+  it('reads 403 and 429 with retry-after (a secondary limit) as slow-down with the wait, never as the hourly limit', async () => {
     for (const status of [403, 429]) {
-      const get = fakeGitHub({ 'https://api.github.com/': { status, headers: { 'retry-after': '60', 'x-ratelimit-remaining': '12' }, body: '{"message":"secondary rate limit"}' } });
-      const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get }).catch((caught: unknown) => caught) as RepoError;
-      expect(error.problem.kind, String(status)).toBe('rate-limited');
+      const get = fakeGitHub({ 'https://api.github.com/': { status, headers: { 'retry-after': '60', 'x-ratelimit-remaining': '4000' }, body: '{"message":"secondary rate limit"}' } });
+      const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get, token: 'ghp_x' }).catch((caught: unknown) => caught) as RepoError;
+      expect(error.problem, String(status)).toEqual({ kind: 'slow-down', retryAfter: 60 });
+      expect(error.message).toContain('Wait 60 seconds');
+      expect(error.message).not.toMatch(/5,000|60 repo reads/);
     }
   });
 
@@ -315,7 +412,7 @@ describe('fetchRepoFiles', () => {
   it('words a raw 429 without the API hourly limit', async () => {
     const get = fakeGitHub({ 'https://api.github.com/': tree(['Dockerfile']), 'https://raw.githubusercontent.com/': { status: 429, headers: {}, body: '' } });
     const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: get }).catch((caught: unknown) => caught) as RepoError;
-    expect(error.problem.kind).toBe('rate-limited');
+    expect(error.problem.kind).toBe('slow-down');
     expect(error.message).not.toMatch(/60 repo reads/);
   });
 
@@ -382,9 +479,9 @@ describe('fetchRepoFiles token', () => {
     const withToken = await fetchRepoFiles(ref, { fetch: limited, token: 't' }).catch((error: RepoError) => error);
     expect(withToken).toMatchObject({ problem: { kind: 'rate-limited' } });
     expect((withToken as RepoError).message).toContain("That token's GitHub limit");
-    expect((withToken as RepoError).message).not.toContain('60 repo reads');
+    expect((withToken as RepoError).message).not.toContain('from your network');
     const without = await fetchRepoFiles(ref, { fetch: limited }).catch((error: RepoError) => error);
-    expect((without as RepoError).message).toContain('60 repo reads');
+    expect((without as RepoError).message).toContain('hourly limit for reads from your network');
   });
 });
 

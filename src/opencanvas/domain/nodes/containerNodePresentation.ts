@@ -29,6 +29,11 @@ export function isContainerNodeKind(kind: string): kind is ContainerNodeKind {
   return CONTAINER_KIND_SET.has(kind);
 }
 
+/** The canvas's bottom layer, painted under the connectors: containers and a sequence's fragment bands. */
+export function isBackdropNode(node: SceneNode): boolean {
+  return isContainerNodeKind(node.kind) || typeof node.content.seqFragmentId === 'string';
+}
+
 function fallbackColorKey(node: SceneNode, kind: ContainerNodeKind): string {
   if (kind === 'group') return 'violet';
   if (kind === 'frame') return 'slate';

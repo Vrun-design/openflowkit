@@ -2,10 +2,9 @@ import { useCallback, useMemo, useState } from 'react';
 import type { LinkKind, MapModel } from '../../../../dsl/map/types';
 import { aggregate } from '../../../../dsl/map/view';
 import { edgeLayerCounts } from '../../../application/map/mapNavigation';
-import type { V2MapToolbarProps } from './V2MapToolbar';
+import { MAP_LINK_WORDS as LABEL, type V2MapToolbarProps } from './V2MapToolbar';
 
 const KINDS: readonly LinkKind[] = ['import', 'call', 'data', 'build'];
-const LABEL: Readonly<Record<LinkKind, string>> = { import: 'import', call: 'call', data: 'data', build: 'build' };
 const NONE: ReadonlySet<LinkKind> = new Set();
 interface Held { readonly key: string; readonly off: ReadonlySet<LinkKind>; readonly all: boolean }
 

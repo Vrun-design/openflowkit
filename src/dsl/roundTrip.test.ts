@@ -55,10 +55,13 @@ describe('round-trip laws over fixtures', () => {
     expect(normalize(second)).toEqual(normalize(first));
   });
 
-  it.each(names)('%s: serialized text re-parses without new errors', async (path) => {
+  // Canonical text is clean text: it may lose a warning the source earned, never gain one.
+  it.each(names)('%s: serialized text re-parses without new diagnostics', async (path) => {
     const first = await compile(fixtures[path]!);
     const recompiled = await compile(serialize(first));
-    const errors = (scene: CompileResult) => scene.diagnostics.filter((item) => item.severity === 'error').length;
-    expect(errors(recompiled)).toBe(errors(first));
+    const codes = (scene: CompileResult) => scene.diagnostics.filter((item) => item.severity !== 'info').map((item) => item.code);
+    const added = codes(recompiled);
+    for (const code of codes(first)) if (added.includes(code)) added.splice(added.indexOf(code), 1);
+    expect(added).toEqual([]);
   });
 });

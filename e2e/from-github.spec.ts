@@ -14,6 +14,10 @@ const REPO: Readonly<Record<string, string>> = {
 };
 
 async function serveGitHub(page: Page, repo: Readonly<Record<string, string>> | null): Promise<void> {
+  // Repo → diagram pins the ref to its commit first; a missing repo 404s here too and the tree call names the problem.
+  await page.route('https://api.github.com/repos/*/*/commits/**', (route) => repo
+    ? route.fulfill({ status: 200, contentType: 'application/vnd.github.sha', body: 'c0ffee'.padEnd(40, '0'), headers: { 'access-control-allow-origin': '*' } })
+    : route.fulfill({ status: 404, json: { message: 'Not Found' }, headers: { 'access-control-allow-origin': '*' } }));
   await page.route('https://api.github.com/repos/acme/shop/git/trees/**', (route) => repo
     ? route.fulfill({
       json: { sha: 'abc', truncated: false, tree: Object.entries(repo).map(([path, text]) => ({ path, type: 'blob', mode: '100644', sha: 'x', size: text.length })) },

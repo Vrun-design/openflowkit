@@ -30,4 +30,34 @@ describe('Panel focus', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('gives focus back to the opener when it closes with focus inside (⌘J, a toggle), not to <body>', () => {
+    const opener = document.createElement('button');
+    document.body.append(opener);
+    opener.focus();
+    const { rerender } = render(<Panel title="Model" onClose={vi.fn()}>text</Panel>);
+    expect(screen.getByRole('button', { name: 'Close panel' })).toHaveFocus();
+    rerender(<></>);
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+  it('leaves focus where it was when it opens with autoFocus off', () => {
+    const opener = document.createElement('button');
+    document.body.append(opener);
+    opener.focus();
+    render(<Panel title="Model" onClose={vi.fn()} autoFocus={false}>text</Panel>);
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+  it('as a modal it is a dialog that keeps Tab inside', () => {
+    render(<Panel title="Keys" onClose={vi.fn()} modal><button type="button">Last</button></Panel>);
+    const dialog = screen.getByRole('dialog', { name: 'Keys' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    const close = screen.getByRole('button', { name: 'Close panel' });
+    const last = screen.getByRole('button', { name: 'Last' });
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+    expect(last).toHaveFocus();
+  });
 });

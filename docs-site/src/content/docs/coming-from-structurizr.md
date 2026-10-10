@@ -3,8 +3,7 @@ title: Coming from Structurizr
 description: Move a Structurizr DSL workspace into OpenFlowKit, see what is reported as lost, and keep the diagrams in your repository and CI.
 ---
 
-Structurizr Cloud shut down on 2026-09-30. If you have a `workspace.dsl`, you can bring it
-here. The import runs on your machine. Nothing is uploaded.
+If you have a `workspace.dsl`, you can bring it here. The import runs on your machine. Nothing is uploaded.
 
 Structurizr DSL becomes an `architecture` workspace: one model, many views
 ([C4 architecture](/architecture-c4/)). Most of a normal workspace converts. What does not
@@ -15,7 +14,7 @@ is reported, never dropped silently.
 Pick one way.
 
 - **In the app.** On the home page choose **Import a file…** and pick the `.dsl` file. Text
-  files open one at a time, in the editor. Or paste the text into the code panel (⌥D).
+  files open one at a time, in the editor. Or paste the text into the code panel (⌥C).
   The panel says "Structurizr DSL detected". Choose **Convert** (⌘⇧M). The draft is
   rewritten as OpenFlow DSL and the losses show up as warnings in the panel.
 - **With the CLI.** This writes an editable file with every view in it, and an SVG next to it:
@@ -27,7 +26,8 @@ Pick one way.
   The CLI prints one line per loss to stderr. Add `--strict` to exit 1 when anything was
   lost. Add `--json` for a machine-readable report. `--svg` needs `-o`.
 
-The CLI ships in the MCP server package. See [MCP Server](/mcp-server/).
+The `openflowkit` CLI ships in the MCP server package (`npx -p @vrun-design/openflowkit-mcp
+openflowkit convert …`). See [MCP Server](/mcp-server/).
 
 ## A worked example
 
@@ -125,8 +125,9 @@ Each of these produces a warning with its line number:
 - relations or instances that point at an unknown element, or across environments;
 - `!impliedRelationships false` (implied relations are always derived).
 
-A view expression outside the supported subset (for example `element.parent ==` or
-`relationship.*`) is kept as text and warns W160, but it is not applied.
+A view expression outside the supported subset (for example `element.parent==x` or
+`relationship.tag==x`) is reported as a loss (W180) and kept as text in the view, but it is
+not applied.
 
 ## How views become pages
 
@@ -146,9 +147,9 @@ duplicated.
 
 ## Edit the model
 
-Open the model panel from the canvas. It has four tabs: Elements, Views, Flows and Tags.
-Edit an element's name, technology, description, tags and links there, or remove it from the
-model. Rename a label on the canvas and it changes in every view, as one undo step. The
+Open the model panel with **Architecture model** in the workspace rail (`⌥M`). It has three
+tabs: Elements, Flows and Tags. Pick an element to edit its name, technology, description, tags
+and links on its card, or remove it from the model. Rename a label on the canvas and it changes in every view, as one undo step. The
 panel is marked beta. The same model is plain text in the code panel if you prefer typing.
 
 ## Keep it in the repository

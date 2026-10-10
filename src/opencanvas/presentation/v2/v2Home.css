@@ -35,10 +35,10 @@
 .ofk-home-sidebar-section h2 { margin: 0 0 4px; padding-inline: 8px; color: var(--ofk-muted); font-size: 12px; font-weight: 500; }
 .ofk-home-sidebar-section ul { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
 .ofk-home-sidebar-foot { display: grid; gap: 1px; margin-top: auto; padding-top: 16px; }
-.ofk-home-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-primary) 20%, transparent); }
+.ofk-home-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-brand) 20%, transparent); }
 .ofk-home-nav-item > svg:last-child:not(:first-child) { width: 14px; height: 14px; opacity: .7; }
 .ofk-home-stars { display: inline-flex; flex: none; align-items: center; gap: 3px; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--ofk-border) 85%, transparent); border-radius: 999px; color: var(--ofk-secondary); font-size: 11.5px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums; }
-.ofk-home-stars svg { width: 11px; height: 11px; color: var(--ofk-primary); }
+.ofk-home-stars svg { width: 11px; height: 11px; color: var(--ofk-brand); }
 /* Local-first, said once and quietly: a small card above the footer links. */
 .ofk-home-local { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 10px; border: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--ofk-surface) 70%, transparent); }
 .ofk-home-local-icon { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--ofk-successSoft); color: var(--ofk-success); }
@@ -178,7 +178,7 @@
 .ofk-home-card:not(:hover, :focus-within) .ofk-home-card-actions:has(.ofk-home-star[data-on]) { background: none; box-shadow: none; }
 .ofk-home-card:not(:hover, :focus-within) .ofk-home-card-actions:has(.ofk-home-star[data-on]) > :not(:has(.ofk-home-star)) { opacity: 0; }
 /* A star is a toggle, not a selected pill: the filled glyph is the cue. */
-.ofk-system .ofk-button.ofk-home-star[aria-pressed='true'], .ofk-system .ofk-button.ofk-home-star[aria-pressed='true']:hover:not([aria-disabled='true']) { border-color: transparent; background: none; color: var(--ofk-primary); }
+.ofk-system .ofk-button.ofk-home-star[aria-pressed='true'], .ofk-system .ofk-button.ofk-home-star[aria-pressed='true']:hover:not([aria-disabled='true']) { border-color: transparent; background: none; color: var(--ofk-brand); }
 .ofk-home-rename { width: 100%; margin: -3px -6px; padding: 2px 6px; border: 1px solid var(--ofk-focus); border-radius: 6px; background: var(--ofk-surface); color: var(--ofk-text); font: inherit; font-size: 13px; font-weight: 500; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-focus) 18%, transparent); }
 .ofk-home-rename:focus { outline: none; }
 .ofk-home-nomatch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--ofk-secondary); font-size: 13px; }

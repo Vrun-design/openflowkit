@@ -87,6 +87,14 @@ describe('canonical SVG export', () => {
     expect(first).not.toContain('<Alpha & beta>');
   });
 
+  it('stays well-formed XML when a label carries control characters (a PowerPoint soft break)', () => {
+    const node = createTestNode('a', { content: { label: 'line\u000Bbreak nul\u0000 bad\uD800 ok 😀' } });
+    const svg = exportCanonicalSvg(createTestDocument({ nodes: [node] }));
+    const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    expect(parsed.getElementsByTagName('parsererror')).toHaveLength(0);
+    expect(svg).toContain('linebreak nul bad ok 😀');
+  });
+
   it('draws icon art where the canvas draws it, and only art it was given', () => {
     const card = createTestNode('db', {
       kind: 'architecture', size: { width: 148, height: 116 },

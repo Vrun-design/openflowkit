@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FakeBucket } from '../../../worker/fakeBucket';
 import { handle, type Env } from '../../../worker/index';
 import { createTestDocument, createTestNode } from '../../opencanvas/testing/builders/documentBuilder';
@@ -81,13 +81,35 @@ describe('share client against a real server', () => {
   });
 
   it('opened with no connection: offline, retryable (a port nobody listens on)', async () => {
-    const result = await loadSharedDocument('0'.repeat(32), 'k'.repeat(43), deadOrigin);
-    expect(result).toMatchObject({ problem: { title: 'You’re offline.', retry: true } });
+    vi.stubGlobal('navigator', { onLine: false });
+    try {
+      const result = await loadSharedDocument('0'.repeat(32), 'k'.repeat(43), deadOrigin);
+      expect(result).toMatchObject({ problem: { title: 'You’re offline.', retry: true } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('sharing with no connection: a readable offline error', async () => {
-    await expect(createShareLink(doc(), { appUrl: 'x', getTurnstileToken: async () => 't', origin: deadOrigin }))
-      .rejects.toMatchObject({ code: 'offline', message: expect.stringMatching(/Check your connection/) });
+    vi.stubGlobal('navigator', { onLine: false });
+    try {
+      await expect(createShareLink(doc(), { appUrl: 'x', getTurnstileToken: async () => 't', origin: deadOrigin }))
+        .rejects.toMatchObject({ code: 'offline', message: expect.stringMatching(/Check your connection/) });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('online but the service is down: blames the service, not the connection', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    try {
+      await expect(createShareLink(doc(), { appUrl: 'x', getTurnstileToken: async () => 't', origin: deadOrigin }))
+        .rejects.toMatchObject({ code: 'unreachable', message: 'The share service isn’t reachable right now.' });
+      expect(await loadSharedDocument('0'.repeat(32), 'k'.repeat(43), deadOrigin))
+        .toMatchObject({ problem: { title: 'The share service isn’t reachable right now.', retry: true } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('an old link whose envelope version is unknown names the version problem', async () => {

@@ -1,5 +1,9 @@
+import { request } from 'node:http';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LiveBridge } from '../src/lib/bridge.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createServerWithDeps } from '../src/server.js';
 import {
   bridgeTokenHeader, bridgeUrls, type BridgeRequest,
 } from '../src/lib/agent.js';
@@ -158,5 +162,73 @@ describe('live bridge', () => {
 
     const foreign = await fetch(bridgeUrls(port).hello, { method: 'OPTIONS', headers: { origin: 'https://evil.example' } });
     expect(foreign.status).toBe(403);
+  });
+  it('refuses a request whose Host is not this machine (DNS rebinding)', async () => {
+    bridge = new LiveBridge({ port: 0 });
+    const port = await bridge.start();
+    // fetch may not set Host, so a raw request says exactly what a rebound page would send.
+    const statusFor = (host: string) => new Promise<number>((done, fail) => {
+      request({ host: '127.0.0.1', port, path: '/health', headers: { host } }, (res) => { res.resume(); done(res.statusCode ?? 0); })
+        .on('error', fail).end();
+    });
+    for (const host of [`evil.example:${port}`, 'localhost.evil.example', `127.0.0.1.nip.io:${port}`]) expect(await statusFor(host), host).toBe(403);
+    // Only the name matters: an SSH or devcontainer forward arrives as localhost on its own port.
+    for (const host of [`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`, 'LOCALHOST:9000', 'localhost']) expect(await statusFor(host), host).toBe(200);
+  });
+
+  it('refuses a malformed hello instead of pairing a phantom editor', async () => {
+    bridge = new LiveBridge({ port: 0, log: () => undefined });
+    const port = await bridge.start();
+    for (const document of [{ documentId: 'x' }, { documentId: 'x', name: 'n', revision: 1, pageId: 'p', pages: 'none', app: 'a' }]) {
+      const response = await fetch(bridgeUrls(port).hello, { method: 'POST', body: JSON.stringify({ document }) });
+      expect(response.status).toBe(400);
+    }
+    expect(bridge.connected).toBe(false);
+    expect(bridge.health()).toMatchObject({ connected: false, documentId: null });
+  });
+  it('says at once that the editor tab went away, instead of waiting out the call', async () => {
+    bridge = new LiveBridge({ port: 0, log: () => undefined });
+    const port = await bridge.start();
+    const editor = await startEditor(port);
+    await editor.hello();
+    const tab = new AbortController();
+    const parked = fetch(`${bridgeUrls(port).next}?wait=20`, { signal: tab.signal }).catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    tab.abort();
+    await parked;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(bridge.connected).toBe(false);
+    const started = Date.now();
+    await expect(bridge.call('get_document', {})).rejects.toThrow('The editor tab was closed or reloaded. Reopen it and press Connect.');
+    expect(Date.now() - started).toBeLessThan(500);
+    // Pairing again clears it.
+    await editor.hello();
+    expect(bridge.connected).toBe(true);
+  });
+  it('a second server on a taken port says so in whoami, server_info and its errors', async () => {
+    bridge = new LiveBridge({ port: 0, log: () => undefined });
+    const port = await bridge.start();
+    expect(bridge.status()).toEqual({ port, state: 'listening' });
+    const second = new LiveBridge({ port, log: () => undefined });
+    await expect(second.start()).rejects.toThrow(/EADDRINUSE/);
+    expect(second.status()).toEqual({ port, state: 'port-in-use' });
+
+    const { server } = createServerWithDeps({ bridge: second, log: () => undefined });
+    const client = new Client({ name: 'test', version: '0' });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(b), client.connect(a)]);
+    const json = async (name: string, args = {}) => {
+      const result = await client.callTool({ name, arguments: args });
+      return { isError: result.isError, text: (result.content as { text: string }[])[0]!.text };
+    };
+    expect(JSON.parse((await json('whoami')).text)).toMatchObject({ bridge: { port, state: 'port-in-use' } });
+    expect(JSON.parse((await json('server_info')).text)).toMatchObject({ bridge: { port, state: 'port-in-use' } });
+    expect(await json('list_pages')).toEqual({
+      isError: true, text: `Another OpenFlowKit MCP server already owns port ${port}; this one can only edit files (openflow_open).`,
+    });
+
+    const editor = await startEditor(port);
+    await editor.hello();
+    expect(bridge.status()).toEqual({ port, state: 'paired' });
   });
 });

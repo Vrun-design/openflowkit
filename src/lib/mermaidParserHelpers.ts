@@ -522,6 +522,8 @@ export function parseEdgeLine(line: string): Array<{
     remaining = remaining.slice(nextIndex);
   }
   groups.push(splitOnUnquotedAmpersand(remaining).map(sanitizeEdgeEndpoint).filter(Boolean));
+  // `A -->> B` leaves `> B`: no Mermaid id starts with arrow punctuation, so the line is not an edge.
+  if (groups.some((group) => group.some((endpoint) => /^[<>=.~-]/.test(endpoint)))) return [];
   return links.flatMap(({ arrow, label }, index) => groups[index]!.flatMap((sourceRaw) =>
     groups[index + 1]!.map((targetRaw) => ({ sourceRaw, targetRaw, label, arrowType: arrow }))));
 }

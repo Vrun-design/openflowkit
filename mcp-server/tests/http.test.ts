@@ -1,6 +1,9 @@
 // Real HTTP server on an ephemeral port, driven by the SDK's own client: no stubs.
-import { readFileSync } from 'node:fs';
-import { request, type IncomingHttpHeaders, type Server } from 'node:http';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createServer, request, type IncomingHttpHeaders, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -122,6 +125,11 @@ describe('remote MCP endpoint', () => {
     const result = await client.callTool({ name: 'get_syntax', arguments: {} });
     expect(result.isError).toBeFalsy();
     expect((result.content as { text: string }[])[0]!.text.length).toBeGreaterThan(50);
+    const unknown = await client.callTool({ name: 'get_syntax', arguments: { family: 'flowchrt' } });
+    expect(unknown.isError).toBe(true);
+    expect((unknown.content as { text: string }[])[0]!.text).toContain('flowchart');
+    const cased = await client.callTool({ name: 'get_syntax', arguments: { family: 'Flowchart' } });
+    expect(cased.isError).toBeFalsy();
     await client.close();
   });
 
@@ -212,6 +220,33 @@ describe('remote MCP endpoint', () => {
     for (const res of await Promise.all(four)) expect(res.status).toBe(200);
     expect((await call(6)).status).toBe(200);
     await local.close();
+  });
+});
+
+describe('start:http entry', () => {
+  it('starts when invoked through a symlink, the way npm installs bins', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'openflowkit-http-bin-'));
+    const bin = join(dir, 'openflowkit-http');
+    symlinkSync(new URL('../src/http.ts', import.meta.url).pathname, bin);
+    const free = createServer();
+    await new Promise<void>((done) => free.listen(0, '127.0.0.1', done));
+    const freePort = (free.address() as AddressInfo).port;
+    await new Promise<void>((done) => free.close(() => done()));
+    const child = spawn(process.execPath, ['--import', 'tsx', bin], {
+      cwd: new URL('..', import.meta.url).pathname, env: { ...process.env, PORT: String(freePort) },
+    });
+    try {
+      const stderr = await new Promise<string>((done) => {
+        let text = '';
+        const timer = setTimeout(() => done(text), 8000);
+        child.stderr.on('data', (chunk) => { text += chunk; if (text.includes('listening')) { clearTimeout(timer); done(text); } });
+        child.on('exit', () => { clearTimeout(timer); done(text); });
+      });
+      expect(stderr).toContain(`listening on http://127.0.0.1:${freePort}/mcp`);
+    } finally {
+      child.kill();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

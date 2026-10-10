@@ -16,6 +16,8 @@ interface V2LabelEditingOptions {
   readonly page: ScenePage | null;
   readonly camera: CanvasCamera;
   readonly commit: (command: DocumentCommand) => void;
+  /** A node made for this edit: its label (or its removal) joins the undo step that created it. */
+  readonly amendNewNode: (nodeId: string, command: DocumentCommand) => void;
   readonly announce: (message: string) => void;
   readonly focusCanvas: () => void;
   /**
@@ -101,10 +103,10 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   // A node created for this edit and left blank is removed, so a double-click
   // on empty canvas followed by Escape/blur leaves nothing invisible behind.
   const removeIfNew = useCallback((): boolean => {
-    const { commit, page: currentPage } = optionsRef.current;
+    const { amendNewNode, page: currentPage } = optionsRef.current;
     const current = editingStateRef.current;
     if (!current?.isNew || !currentPage?.nodes.some((node) => node.id === current.nodeId)) return false;
-    commit(buildDeleteSelectionCommand(currentPage, [current.nodeId], []));
+    amendNewNode(current.nodeId, buildDeleteSelectionCommand(currentPage, [current.nodeId], []));
     return true;
   }, []);
 
@@ -115,7 +117,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   }, [removeIfNew]);
 
   const commitLabel = useCallback((value: string) => {
-    const { commit, announce, focusCanvas, page: currentPage } = optionsRef.current;
+    const { commit, amendNewNode, announce, focusCanvas, page: currentPage } = optionsRef.current;
     const current = editingStateRef.current;
     const node = current && currentPage?.nodes.find((candidate) => candidate.id === current.nodeId);
     const previous = typeof node?.content.label === 'string' ? node.content.label : '';
@@ -128,7 +130,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
         const command = buildSetNodeLabelCommand(currentPage, node.id, value);
         // An inferred icon follows the new label (or leaves with it).
         const after = refreshAutoIcon(command.after, value, nodeTechHint(command.after), resolveDslIcon, (plain) => withoutIcon(plain, false));
-        commit({ ...command, after });
+        if (current.isNew) amendNewNode(node.id, { ...command, after }); else commit({ ...command, after });
         announce('Label saved');
       }
     }

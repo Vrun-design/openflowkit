@@ -1,6 +1,7 @@
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import {
+  amendNewNode,
   commitDocumentCommand,
   createDocumentHistory,
   redoDocumentCommand,
@@ -52,6 +53,26 @@ export function commitSessionCommand(
 ): DocumentSession {
   requireCurrentRevision(session, expectedRevision);
   return advance(session, commitDocumentCommand(session.history, command));
+}
+
+/** See amendNewNode: a new node's first label (or its removal when left blank) joins the step that made it. */
+export function amendSessionNewNode(
+  session: DocumentSession,
+  nodeId: string,
+  command: DocumentCommand,
+  expectedRevision: number
+): DocumentSession {
+  requireCurrentRevision(session, expectedRevision);
+  return advance(session, amendNewNode(session.history, nodeId, command));
+}
+
+/**
+ * A template's step becomes the document's start: nothing to undo back to "Untitled". Only when it is the one step:
+ * an edit made while the template generated keeps its undo, and so does the template's.
+ */
+export function forgetSessionHistory(session: DocumentSession): DocumentSession {
+  if (session.history.past.length !== 1) return session;
+  return { ...session, history: createDocumentHistory(session.document, session.history.limit) };
 }
 
 export function undoSessionCommand(

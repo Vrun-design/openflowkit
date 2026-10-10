@@ -6,7 +6,7 @@ import {
 import type { DslDiagnostic } from '../ast';
 import { tokenDiagnostic } from '../diagnostics';
 import { joinTokens, type DslSegment } from '../segments';
-import type { DslFrameScene } from '../sceneMeta';
+import { dslFrameMeta, type DslFrameScene } from '../sceneMeta';
 import { quote } from '../text';
 import type { Family, FamilyContext, FamilyScene } from './types';
 
@@ -175,13 +175,20 @@ export const chartFamily: Family = {
     };
   },
 
+  // The title lives twice (the frame label and the title the chart draws). The one that differs
+  // from the compiled title is the canvas edit; if both were edited, the drawn one wins.
+  title(scene: DslFrameScene): string | undefined {
+    const compiled = dslFrameMeta(scene.frame).title ?? '';
+    const edited = [scene.nodes[0]?.content.title, scene.frame.content.label]
+      .find((title): title is string => typeof title === 'string' && title !== compiled);
+    return (edited ?? compiled) || undefined;
+  },
+
   serialize(scene: DslFrameScene): string[] {
     const node = scene.nodes[0];
     if (!node) return [];
     const kind = chartKindOf(node);
-    const title = typeof node.content.title === 'string' ? node.content.title : undefined;
     const lines: string[] = [];
-    if (title) lines.push(`title: ${quote(title)}`);
     if (kind === 'quadrant') {
       const quadrant = quadrantContent(node);
       if (!quadrant) return lines;

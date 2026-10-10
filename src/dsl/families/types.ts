@@ -66,4 +66,6 @@ export interface Family {
   compileViews?(segments: readonly DslSegment[], context: FamilyContext): Promise<readonly FamilyViewScene[]>;
   /** Body lines after the pragma, family line and title. Pure function of the scene. */
   serialize(scene: DslFrameScene): string[];
+  /** The `title:` to write, when the family's own scene carries it (a chart draws its title). */
+  title?(scene: DslFrameScene): string | undefined;
 }

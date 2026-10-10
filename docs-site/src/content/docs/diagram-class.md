@@ -55,7 +55,8 @@ serializer can round-trip either spelling to the same canonical line.
 
 - **No type checking.** `Item[]`, `Money` and `int` are text; nothing resolves them.
 - **No generics or stereotypes beyond the three words.** An unknown attribute is warning W131.
-- **No self-relations.** A class relating to itself is dropped with warning W170.
+- **No special self-relations.** `Node --> Node : next` is kept as an ordinary relation from the
+  class to itself; nothing about it is checked.
 - Members are one per line; there is no multi-line signature syntax.
 
 ## Where to go next

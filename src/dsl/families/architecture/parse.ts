@@ -4,7 +4,7 @@ import { canonicalizeAttributes, readAttributes } from '../../attributes';
 import type { CanonicalAttribute } from '../../sceneMeta';
 import { joinTokens, type DslSegment } from '../../segments';
 import { slugifyDslId } from '../../text';
-import { DIRECTIONS } from '../../vocabulary';
+import { attributeSlot, DIRECTIONS } from '../../vocabulary';
 import type { DslToken } from '../../tokenize';
 import { createArchIndex, resolveElementRef, viewDisplayName } from '../../model/model';
 import {
@@ -225,10 +225,16 @@ export function parseArchitectureWorkspace(
 
   const declare = (declaration: Declaration, parent: string | null, extra: Partial<ArchElement> = {}): ArchElement => {
     const typed = splitAttributes(declaration.attrs, TYPED_ELEMENT_KEYS);
+    // A bare colour (`[#08427b]`, `[blue]`) is the canonical spelling of `color:`: the text writes it back that way.
+    const bareColor = typed.attrs.find((entry) => !entry.key && attributeSlot(entry) === 'color');
+    if (bareColor && typed.values.has('color')) {
+      diagnostics.push(tokenDiagnostic('W130', 'warning', declaration.first, 'Two color attributes; `color:` wins'));
+    } else if (bareColor) typed.values.set('color', bareColor.value);
+    const kept = typed.attrs.filter((entry) => entry !== bareColor);
     // `store` implies `cylinder` (§14.17 says it is emitted) so v1 renderers agree.
-    const attrs = declaration.kind === 'store' && !typed.attrs.some((entry) => entry.value === 'cylinder')
-      ? [{ value: 'cylinder' } as const, ...typed.attrs]
-      : typed.attrs;
+    const attrs = declaration.kind === 'store' && !kept.some((entry) => entry.value === 'cylinder')
+      ? [{ value: 'cylinder' } as const, ...kept]
+      : kept;
     const element: ArchElement = {
       id: uniquePath(parent, declaration.localId),
       kind: declaration.kind,

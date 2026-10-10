@@ -4,7 +4,7 @@ import { measurePortableText } from '../../opencanvas/domain/text/measurement';
 import { nonVisualAttributes, readAttributes, typedFrom } from '../attributes';
 import { tokenDiagnostic } from '../diagnostics';
 import { attrsToJson, dslFrameRaw, dslNodeMeta, type CanonicalAttribute, type DslFrameScene } from '../sceneMeta';
-import type { DslSegment } from '../segments';
+import { joinTokens, type DslSegment } from '../segments';
 import { attributeText, commentLines, quote, slugifyDslId } from '../text';
 import { COLOR_WORDS, isHexColor, sortAttributes } from '../vocabulary';
 import type { Family, FamilyContext, FamilyScene } from './types';
@@ -124,7 +124,7 @@ function parseMindmap(segments: readonly DslSegment[], context: FamilyContext): 
     const bullet = keyword === '-' || keyword === '*';
     const bodyTokens = explicitRoot ? tokens.slice(tokens[1]?.value === ':' ? 2 : 1) : bullet ? tokens.slice(1) : tokens;
     const parsed = readAttributes(bodyTokens, context.diagnostics);
-    const label = parsed.body.filter((token) => token.kind !== 'comment').map((token) => token.value).join(' ').replace(/[^\S\n]+/g, ' ').trim();
+    const label = joinTokens(parsed.body.filter((token) => token.kind !== 'comment'), true);
     if (!label) {
       fail(segment, 'W101', 'Bullet needs a label', '- Growth');
       continue;

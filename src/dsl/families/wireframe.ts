@@ -19,7 +19,7 @@ import { quote, slugifyDslId } from '../text';
 import type { DslToken } from '../tokenize';
 import type { Family, FamilyContext, FamilyScene } from './types';
 
-// The `wireframe` family, in Koboyo's syntax so their text compiles unchanged:
+// The `wireframe` family:
 //
 //   wireframe
 //   screen Login [phone] {

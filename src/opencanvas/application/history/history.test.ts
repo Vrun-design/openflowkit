@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import {
+  amendNewNode,
   canRedoDocument,
   canUndoDocument,
   commitDocumentCommand,
@@ -90,5 +91,37 @@ describe('canonical document history', () => {
   it('rejects invalid limits', () => {
     expect(() => createDocumentHistory(createTestDocument(), 0)).toThrow(/positive integer/);
     expect(() => createDocumentHistory(createTestDocument(), 1.5)).toThrow(/positive integer/);
+  });
+});
+
+describe('a new node and its first label', () => {
+  const created = createTestNode('new', { content: { label: '' } });
+  const insert: DocumentCommand = { kind: 'insert-node', id: 'insert-new', label: 'Add text', pageId: 'page-1', index: 1, node: created };
+  const labelled: DocumentCommand = {
+    kind: 'set-node', id: 'label-new', label: 'Edit label', pageId: 'page-1', before: created, after: { ...created, content: { label: 'Hello' } },
+  };
+  const removed: DocumentCommand = { kind: 'remove-node', id: 'remove-new', label: 'Delete', pageId: 'page-1', index: 1, node: created };
+  const start = () => createDocumentHistory(createTestDocument({ nodes: [createTestNode('node-1')] }));
+
+  it('the label folds into the step that created the node: one undo removes both', () => {
+    const history = amendNewNode(commitDocumentCommand(start(), insert), 'new', labelled);
+    expect(history.past).toHaveLength(1);
+    expect(history.present.pages[0].nodes.find((node) => node.id === 'new')?.content.label).toBe('Hello');
+    const undone = undoDocumentCommand(history);
+    expect(undone.present).toEqual(start().present);
+    expect(redoDocumentCommand(undone).present).toEqual(history.present);
+  });
+
+  it('a new node left blank leaves no undo step behind', () => {
+    const history = amendNewNode(commitDocumentCommand(start(), insert), 'new', removed);
+    expect(history.past).toHaveLength(0);
+    expect(history.future).toHaveLength(0);
+    expect(history.present).toEqual(start().present);
+  });
+
+  it('commits on its own when the last step did not create that node', () => {
+    const before = commitDocumentCommand(start(), editLabelCommand('Edited'));
+    const history = amendNewNode(commitDocumentCommand(before, insert), 'other', labelled);
+    expect(history.past).toHaveLength(3);
   });
 });

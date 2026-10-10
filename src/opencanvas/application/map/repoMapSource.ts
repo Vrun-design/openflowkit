@@ -66,5 +66,12 @@ export function repoMapDocumentId({ owner, repo, ref }: RepoMapSource): string {
   return `${id}@${(h >>> 0).toString(36)}`;
 }
 
+/** The repo a default-branch map id names (`map-<owner>_<repo>`), or null: a ref is hashed into the id and cannot be read back. */
+export function repoMapAddressOfId(id: string): { owner: string; repo: string } | null {
+  const match = /^map-([^_@]+)_([^@]+)$/.exec(id);
+  const address = match ? { owner: match[1]!, repo: match[2]! } : null;
+  return address && isRepoMapAddress(address) ? address : null;
+}
+
 export const sameRepoMapAddress = (a: RepoMapSource, b: RepoMapSource): boolean =>
   a.owner === b.owner && a.repo === b.repo && (a.ref ?? 'HEAD') === (b.ref ?? 'HEAD');

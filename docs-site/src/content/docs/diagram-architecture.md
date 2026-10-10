@@ -35,7 +35,7 @@ a plain node.
 | --- | --- | --- |
 | Icon node | `Lambda [aws/lambda]` | resolved against the bundled packs |
 | Element metadata | `API [tech: Node.js, desc: "public edge"]` | read by the model panel |
-| Typed kind | `web = Web app [container]` | `person`, `system`, `container`, `component`, `store`, `queue`, `external`, `node`, `instance` |
+| Typed kind | `model { web = container Web app }` | the kind word comes before the name: `person`, `system`, `container`, `component`, `store`, `queue`, `external`, `node`, `instance` |
 | Boundary | `group Cloud [blue] { … }` | a group box |
 | Relation | `API -> DB : reads` | label and `tech:` both render |
 | Tag | `API [tags: critical]` | powers tag perspective in the model panel |

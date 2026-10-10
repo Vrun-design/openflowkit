@@ -173,7 +173,7 @@ test('the laser points without touching the document; N adds a sticky ready to t
   await expect.poll(async () => (await nodes(page))[0]!).toMatchObject({ kind: 'sticky', content: { label: 'Ship it' } });
 });
 
-test('Koboyo wireframe text generates screens of widgets from the code panel @gate', async ({ page }) => {
+test('wireframe text generates screens of widgets from the code panel @gate', async ({ page }) => {
   await openCanvas(page);
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const source = page.getByRole('textbox', { name: 'Diagram source' });

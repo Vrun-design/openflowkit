@@ -34,3 +34,16 @@ export function motionFrameTimes(durationMs: number, intervalMs: number): readon
   times.push(Math.round(durationMs));
   return times;
 }
+
+/**
+ * A file holds one pass of the clip, t = 0 → duration; looping is the container's job. A looping timeline would wrap
+ * the last frame back to t = 0 (an empty build), and GIF takes its palette from that frame.
+ */
+export function onePass<T extends { readonly loop: boolean }>(timeline: T): T {
+  return timeline.loop ? { ...timeline, loop: false } : timeline;
+}
+
+/** gifenc's repeat: 0 loops forever; -1 writes no loop block, so the GIF plays once and stays on its last frame. */
+export function gifRepeat(loop: boolean): number {
+  return loop ? 0 : -1;
+}

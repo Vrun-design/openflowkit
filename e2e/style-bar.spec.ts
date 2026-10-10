@@ -173,8 +173,9 @@ test('submenu flips at the right edge, Escape closes one level, outside closes a
   await page.setViewportSize({ width: 700, height: 720 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');
-  // Below the welcome: at 700px its stacked actions cover the middle of the canvas.
-  await page.mouse.click(400, 600);
+  // Focus by keyboard: at 700px the welcome's stacked actions and its Map repo field cover the
+  // canvas; an armed tool sends the welcome aside, so the click then draws.
+  await page.getByTestId('v2-canvas').focus();
   await page.keyboard.press('r');
   await page.mouse.click(400, 600);
   await expect.poll(() => count(page)).toBe(1);

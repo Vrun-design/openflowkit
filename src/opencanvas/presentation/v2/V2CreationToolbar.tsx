@@ -17,6 +17,7 @@ import {
   type V2ConnectorTool, type V2MoreItem, type V2Tool, type V2ToolConfig,
 } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
+import type { V2ShapeKind } from '../../domain/commands/sceneEdits';
 
 type V2FlyoutId = 'pointer' | 'shapes' | 'connector' | 'draw';
 
@@ -32,6 +33,8 @@ export function V2CreationToolbar(props: {
   readonly toolConfig: V2ToolConfig;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onPickShape: (shape: ShapeKind) => void;
+  /** A keyboard pick in Shapes places the shape at the view centre: the keyboard has no canvas to click. */
+  readonly onPlaceShape: (shape: V2ShapeKind) => void;
   readonly onPickConnector: (kind: V2ConnectorTool) => void;
   /** Icon library pick: the page inserts the icon node and opens its label. */
   readonly onInsertIcon: (icon: IconChoice) => void;
@@ -76,10 +79,11 @@ export function V2CreationToolbar(props: {
           selected={shapeArmed} open={flyout === 'shapes'}
           onOpenChange={setFlyoutOpen('shapes')} options={SHAPE_SECTIONS} columns={6}
           selectedId={shapePick}
-          onPick={(id) => {
+          onPick={(id, keyboard) => {
             if (id === 'tool:rectangle') props.onToolChange('rectangle');
             else if (id === 'tool:ellipse') props.onToolChange('ellipse');
             else props.onPickShape(id);
+            if (keyboard) props.onPlaceShape(id === 'tool:rectangle' ? 'rectangle' : id === 'tool:ellipse' ? 'ellipse' : id);
           }} />
         <FlyoutButton label="Connector" shortcut="A" icon={<Icon icon={IconArrowUpRight} />}
           selected={tool === 'connector'} open={flyout === 'connector'}

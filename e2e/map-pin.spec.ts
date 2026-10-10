@@ -41,7 +41,7 @@ for (const how of ['the toolbar button', 'Shift+M']) {
     await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveCount(0);
     await expect(page.getByRole('toolbar', { name: 'Map depth', exact: true })).toHaveCount(0);
     const pinned = (await pagesOf(page)).at(-1)!;
-    expect(pinned.name).toBe('Shop (pinned)');
+    expect(pinned.name).toBe('Shop (drawing)');
     // The same boxes, as plain Canvas content: labels match the map's, and nothing ties it back to the model.
     const labels = pinned.nodes.map((node) => (node as unknown as { content?: { label?: string } }).content?.label ?? '').filter(Boolean).sort();
     expect(labels).toEqual(Object.values(map.labels).filter(Boolean).sort());
@@ -99,7 +99,7 @@ test('a repo map pins to an editable page; the repo page stays read-only @gate',
   await pin(page).click();
   await expect.poll(async () => (await pagesOf(page)).length).toBe(before + 1);
   const pinned = (await pagesOf(page)).at(-1)!;
-  expect(pinned.name).toMatch(/\(pinned\)$/);
+  expect(pinned.name).toMatch(/\(drawing\)$/);
   // The pinned page is an ordinary Canvas page: no Map switch there.
   await expect(mapSwitch()).toHaveCount(0);
 

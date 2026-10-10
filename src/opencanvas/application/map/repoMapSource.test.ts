@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
-import { isRepoMapAddress, repoMapDocumentId, repoMapPageOf, repoMapSourceOf, withRepoMapSource } from './repoMapSource';
+import { isRepoMapAddress, repoMapAddressOfId, repoMapDocumentId, repoMapPageOf, repoMapSourceOf, withRepoMapSource } from './repoMapSource';
 
 const SHA = 'a'.repeat(40);
 
@@ -41,5 +41,13 @@ describe('repoMapSource', () => {
     expect(dev).toBe(repoMapDocumentId({ owner: 'a', repo: 'b', ref: 'dev' }));
     expect(dev).not.toBe(repoMapDocumentId({ owner: 'a', repo: 'b', ref: 'main' }));
     expect(dev).toMatch(/^map-a_b@[a-z0-9]+$/);
+  });
+});
+
+describe('repoMapAddressOfId', () => {
+  it('reads back what repoMapDocumentId wrote for the default branch, and nothing else', () => {
+    expect(repoMapAddressOfId(repoMapDocumentId({ owner: 'GoogleCloudPlatform', repo: 'microservices-demo' }))).toEqual({ owner: 'GoogleCloudPlatform', repo: 'microservices-demo' });
+    expect(repoMapAddressOfId('map-a_b_c')).toEqual({ owner: 'a', repo: 'b_c' });
+    for (const id of ['doc_1', 'map-a', 'map-a_..', 'map-a_b@x1', 'map-settings_x']) expect(repoMapAddressOfId(id), id).toBeNull();
   });
 });

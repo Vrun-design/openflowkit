@@ -195,3 +195,24 @@ describe('relationships of an element with things inside', () => {
     expect(screen.queryByText(/No relationships yet/)).toBeNull();
   });
 });
+
+describe('an element this view does not show', () => {
+  it('offers Add to this view, and only asks for a connector when the element is drawn', () => {
+    const personModel = { ...model, elements: [el('c', 'Customer', 'person')], relations: [] } as unknown as ArchModel;
+    const personIndex = createArchIndex(personModel);
+    const onAddToView = vi.fn();
+    setup({ element: personIndex.byId.get('c')!, index: personIndex, inCurrentView: false, onAddToView }, 'c');
+    expect(screen.getByText('Not shown in this view.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add to this view' }));
+    expect(onAddToView).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('No relationships yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/Draw a connector/)).toBeNull();
+  });
+
+  it('names a container by what it is drawn as', () => {
+    const dbModel = { ...model, elements: [el('db', 'Ledger DB', 'container', null, { attrs: [{ value: 'cylinder' }] })], relations: [] } as unknown as ArchModel;
+    const dbIndex = createArchIndex(dbModel);
+    setup({ element: dbIndex.byId.get('db')!, index: dbIndex }, 'db');
+    expect(screen.getByText('Database')).toBeInTheDocument();
+  });
+});

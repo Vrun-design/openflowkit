@@ -18,17 +18,27 @@ export interface RepoProblemView {
   readonly retry: boolean;
   readonly hero: V2StateHeroKind;
   readonly askToken?: boolean;
+  /** Most often a typo: the screen offers the address field again. */
+  readonly retype?: boolean;
 }
 
 /** The CLI command a page names in its error screens: exactly once, with its own subcommand. */
 export const cliCommand = (sub: 'discover' | 'map'): string => `npx -p @vrun-design/openflowkit-mcp openflowkit ${sub} .`;
 
+/** A screen's text with its CLI command kept on one line (as code), so `npx -p` never breaks from what follows. */
+export function CliText({ text }: { readonly text: string }): React.JSX.Element {
+  const parts = text.split(/(npx -p \S+ openflowkit (?:discover|map) \.)/);
+  return <>{parts.map((part, i) => (i % 2 ? <code key={i} style={{ whiteSpace: 'nowrap' }}>{part}</code> : part))}</>;
+}
+
 export function describeRepoError(error: unknown, sub: 'discover' | 'map'): RepoProblemView {
   const cli = cliCommand(sub);
   if (!(error instanceof RepoError)) return { status: 'problem', title: 'Something went wrong reading this repo.', detail: `Try again, or use the CLI on a checkout: ${cli}`, retry: true, hero: 'torn-page' };
   switch (error.problem.kind) {
-    case 'not-found': return { status: 'problem', title: 'This repo was not found, or it is private.', detail: `${error.message} Check the spelling, or read a private repo with the CLI on a checkout: ${cli}`, retry: false, hero: 'lost-link' };
+    case 'not-found': return { status: 'problem', title: 'This repo was not found, or it is private.', detail: `${error.message} Check the spelling, or read a private repo with the CLI on a checkout: ${cli}`, retry: false, hero: 'lost-link', retype: true };
     case 'rate-limited': return { status: 'problem', title: 'GitHub is limiting reads from your network.', detail: `${error.message} The CLI reads a checkout with no limit: ${cli}`, retry: false, hero: 'torn-page', askToken: true };
+    case 'slow-down': return { status: 'problem', title: 'GitHub asked to wait before more reads.', detail: error.message, retry: true, hero: 'torn-page' };
+    case 'private': return { status: 'problem', title: 'This repo is private.', detail: `${error.message} Read it with the CLI on a checkout: ${cli}`, retry: false, hero: 'lost-link' };
     case 'token-rejected': return { status: 'problem', title: 'That GitHub token was rejected.', detail: error.message, retry: false, hero: 'lost-link', askToken: true };
     case 'offline': return { status: 'problem', title: 'GitHub could not be reached.', detail: 'Check your connection and try again.', retry: true, hero: 'torn-page' };
     case 'empty': return { status: 'problem', title: 'This repo is empty.', detail: 'There is nothing in it to draw yet.', retry: false, hero: 'no-canvas' };

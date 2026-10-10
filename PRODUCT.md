@@ -18,7 +18,7 @@ Precise, fast, and quietly confident. The product should feel like a trusted eng
 
 ## Anti-references
 
-Avoid generic AI dashboards, decorative glass, ornamental gradients, oversized rounding, modal-heavy workflows, and diagram editors whose connectors fight the user. Do not imitate Koboyo's surface; exceed its text pipeline while keeping FigJam/tldraw-class direct manipulation.
+Avoid generic AI dashboards, decorative glass, ornamental gradients, oversized rounding, modal-heavy workflows, and diagram editors whose connectors fight the user. Text is the hub and the canvas is a view of it, with FigJam/tldraw-class direct manipulation.
 
 ## Design Principles
 

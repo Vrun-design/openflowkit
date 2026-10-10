@@ -3,6 +3,7 @@ import {
   paletteKeyForFillIn, paletteKeyForStrokeIn, paletteSwatch, type SwatchResolver,
 } from '../opencanvas/domain/nodes/nodePalette';
 import { dslConnectorMeta, dslNodeMeta, type CanonicalAttribute } from './sceneMeta';
+import { tokenize } from './tokenize';
 import { COLOR_WORD_FOR_KEY, dslShapeWord, isHexColor, isIconWord, sortAttributes } from './vocabulary';
 
 /** Labels that must be quoted so a statement is never read as a keyword (grammar §2.4). */
@@ -20,12 +21,30 @@ export function slugifyDslId(label: string): string {
   return label.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'n';
 }
 
+/** Always a DSL string: escapes `\\`, `"` and line breaks (grammar §2.4). */
+export function quoted(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n?|\n/g, '\\n')}"`;
+}
+
+/** True when the lexer reads `value` back as exactly these words, single-spaced. */
+export function isBareWords(value: string): boolean {
+  const { tokens } = tokenize(value);
+  return tokens.length > 0 && tokens.every((token) => token.kind === 'word') && tokens.map((token) => token.value).join(' ') === value;
+}
+
 export function quote(value: string): string {
-  // Keywords are case-sensitive lowercase (grammar §2.5), so `Join` needs no quotes.
-  const mustQuote = RESERVED_LABELS.has(value) || /(?:->|-->|<->|<-->|<-|<--|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value)
+  if (value === '') return value;
+  // Keywords are case-sensitive lowercase (grammar §2.5), so `Join` needs no quotes; a statement that
+  // opens with one (`note x`) would be read as that keyword.
+  const bare = isBareWords(value) && !RESERVED_LABELS.has(value.split(' ')[0]!)
     // A label that does not open with a letter or digit (`...etc`, `(beta) API`) is not a word to the lexer.
-    || /^[^\p{L}\p{N}_]/u.test(value) || value.includes('\n') || value.includes('\r');
-  return mustQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n?|\n/g, '\\n')}"` : value;
+    && /^[\p{L}\p{N}_]/u.test(value);
+  return bare ? value : quoted(value);
+}
+
+/** How a bare reference finds a label: `"API  Gateway"` and `API Gateway` name one node. */
+export function labelKey(label: string): string {
+  return label.replace(/[^\S\n]+/g, ' ').trim();
 }
 
 export function nodeLabel(node: SceneNode): string {

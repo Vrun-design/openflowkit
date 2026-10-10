@@ -155,6 +155,23 @@ describe('streaming, cache and sampling', () => {
     expect(revisit.source.sha).toBe('tree1');
   });
 
+  it('GitHub\'s limit reached with this repo cached: the cached map, said to be possibly out of date', async () => {
+    const cache = memory();
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repoOf(30), { raw: 0, tree: 0 }), cache, onSnapshot: () => undefined });
+    const limited = (async () => new Response('{}', { status: 403, headers: { 'x-ratelimit-remaining': '0' } })) as typeof fetch;
+    const snaps: MapProgress[] = [];
+    const again = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: limited, cache, onSnapshot: (_m, p) => snaps.push(p) });
+    expect(again.stats).toEqual(model.stats);
+    expect(snaps.at(-1)!.stale).toBe(true);
+    // Only another ref cached: shown, and the note names the ref it is.
+    const tag: MapProgress[] = [];
+    await loadRepoMap({ owner: 'o', repo: 'r', ref: 'v1' }, { fetch: limited, cache, onSnapshot: (_m, p) => tag.push(p) });
+    expect(tag.at(-1)).toMatchObject({ stale: true, staleRef: 'main' });
+    expect(snaps.at(-1)!.staleRef).toBeUndefined();
+    // Nothing cached for that repo: the limit is the answer.
+    await expect(loadRepoMap({ owner: 'o', repo: 'other', ref: 'main' }, { fetch: limited, cache, onSnapshot: () => undefined })).rejects.toMatchObject({ problem: { kind: 'rate-limited' } });
+  });
+
   it('does not remember a partial read', async () => {
     const cache = memory();
     const flaky = (async (input: RequestInfo | URL) => {
@@ -175,6 +192,41 @@ describe('streaming, cache and sampling', () => {
     expect(model.stats.files).toBe(5000);
     expect(new Set(Object.values(model.nodes).filter((n) => n.kind === 'folder' || n.kind === 'part').map((n) => n.name)).size).toBeGreaterThanOrEqual(200);
   }, 60_000);
+
+  const sized = (sources: number, size: number, extra: { truncated?: boolean; missing?: string } = {}) => (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const paths = Array.from({ length: sources }, (_, i) => `src/d${i % 5}/f${i}.ts`);
+    if (url.includes('/git/trees/')) return new Response(JSON.stringify({ sha: 'big', truncated: extra.truncated ?? false, tree: [{ path: 'tsconfig.json', type: 'blob', size: 2 }, ...paths.map((path) => ({ path, type: 'blob', size }))] }), { status: 200 });
+    return extra.missing && url.endsWith(`/${extra.missing}`) ? new Response('nope', { status: 404 }) : new Response(url.endsWith('.json') ? '{}' : 'export const x = 1;\n', { status: 200 });
+  }) as typeof fetch;
+  const finalProgress = async (fetcher: typeof fetch, cache: CacheStore | null = null) => {
+    const snaps: MapProgress[] = [];
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: fetcher, cache, onSnapshot: (_m, p) => snaps.push(p) });
+    return { model, first: snaps[0]!, last: snaps.at(-1)! };
+  };
+
+  it('past the 8 MB budget the map is what fits, and says so (no boxes that were never read)', async () => {
+    const cache = memory();
+    // 60 sources of 200 KB: 40 fit in 8 MB.
+    const { model, first, last } = await finalProgress(sized(60, 200 * 1024), cache);
+    expect(model.stats.files).toBe(40);
+    expect(Object.values(model.nodes).filter((n) => n.kind === 'file').every((n) => n.loc > 0)).toBe(true);
+    expect(first.sampled).toEqual({ read: 40, total: 60 });
+    expect(last.sampled).toEqual({ read: 40, total: 60 });
+    // The same tree gives the same cut, so it is cached, and a revisit says it is partial too.
+    const again = await finalProgress(sized(60, 200 * 1024), cache);
+    expect(again.last.sampled).toEqual({ read: 40, total: 60 });
+  });
+
+  it('counts a file that would not load out of what was read', async () => {
+    const { last } = await finalProgress(sized(3, 10, { missing: 'src/d1/f1.ts' }));
+    expect(last.sampled).toEqual({ read: 2, total: 3 });
+  });
+
+  it('says when GitHub cut the file list short', async () => {
+    const { last } = await finalProgress(sized(3, 10, { truncated: true }));
+    expect(last.sampled).toEqual({ read: 3, total: 3, truncated: true });
+  });
 
   it('stops when aborted', async () => {
     const controller = new AbortController();

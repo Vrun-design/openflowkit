@@ -50,7 +50,8 @@ it against a database.
 ## What it does not do
 
 - **No SQL.** Types and constraints are labels; nothing is parsed into a real schema.
-- **No self-relations.** An entity that relates to itself is dropped with warning W170.
+- **No special self-relations.** `employees ||--o{ employees : manages` is kept as an ordinary
+  relation from the entity to itself; nothing about it is checked.
 - **No indexes, triggers or views.** The entity block is columns only.
 - Relations are drawn as straight connectors between entity boxes; there are no junction
   tables implied or created.

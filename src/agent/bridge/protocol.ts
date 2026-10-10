@@ -78,6 +78,20 @@ export function bridgeUrls(port: number, host = '127.0.0.1'): BridgeUrls {
   return { base, health: `${base}/health`, hello: `${base}/hello`, next: `${base}/next`, result: `${base}/result` };
 }
 
+const isPageSummary = (value: unknown): value is BridgePageSummary => {
+  const page = value as Record<string, unknown> | null;
+  return !!page && typeof page.pageId === 'string' && typeof page.name === 'string'
+    && typeof page.nodes === 'number' && typeof page.connectors === 'number';
+};
+
+/** A hello's document summary, whole: anything less would pair a phantom editor. */
+export function isBridgeClientInfo(value: unknown): value is BridgeClientInfo {
+  const info = value as Record<string, unknown> | null;
+  return !!info && typeof info.documentId === 'string' && typeof info.name === 'string'
+    && typeof info.revision === 'number' && typeof info.pageId === 'string' && typeof info.app === 'string'
+    && Array.isArray(info.pages) && info.pages.every(isPageSummary);
+}
+
 export function isBridgeRequest(value: unknown): value is BridgeRequest {
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;

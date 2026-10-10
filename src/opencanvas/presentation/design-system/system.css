@@ -1061,6 +1061,11 @@
 .ofk-tree-row[aria-selected='true'] .ofk-tree-trailing {
   opacity: 1;
 }
+@media (hover: none) {
+  .ofk-tree-trailing {
+    opacity: 1;
+  }
+}
 
 /* Visually hidden helper */
 .ofk-visually-hidden {

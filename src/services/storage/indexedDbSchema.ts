@@ -1,3 +1,5 @@
+import { V2StorageBlockedError } from './v2/v2Errors';
+
 export const FLOW_PERSISTENCE_DB_NAME = 'openflowkit-persistence';
 export const FLOW_PERSISTENCE_DB_VERSION = 5;
 export const FLOW_DOCUMENT_STORE_NAME = 'flowDocuments';
@@ -90,11 +92,16 @@ function ensureObjectStoreIndex(
   }
 }
 
+/** Opens still waiting on another tab; a second open would queue behind one and hang. */
+const blockedOpens = new WeakMap<IDBFactory, IDBOpenDBRequest>();
+
 export function openFlowPersistenceDatabase(indexedDbFactory: IDBFactory): Promise<IDBDatabase> {
+  if (blockedOpens.has(indexedDbFactory)) return Promise.reject(new V2StorageBlockedError());
   return new Promise((resolve, reject) => {
     const request = indexedDbFactory.open(FLOW_PERSISTENCE_DB_NAME, FLOW_PERSISTENCE_DB_VERSION);
 
     request.onerror = () => {
+      blockedOpens.delete(indexedDbFactory);
       reject(request.error ?? new Error('Failed to open IndexedDB persistence database.'));
     };
 
@@ -109,7 +116,21 @@ export function openFlowPersistenceDatabase(indexedDbFactory: IDBFactory): Promi
       }
     };
 
+    // An older tab that will not let go would otherwise leave this open waiting forever: say so instead.
+    let blocked = false;
+    request.onblocked = () => {
+      blocked = true;
+      blockedOpens.set(indexedDbFactory, request);
+      reject(new V2StorageBlockedError());
+    };
+
     request.onsuccess = () => {
+      // Opened after all, once the other tab closed: nobody is waiting for this connection now, and the next open goes through.
+      if (blocked) {
+        blockedOpens.delete(indexedDbFactory);
+        request.result.close();
+        return;
+      }
       // A newer tab upgrading the schema must not wait on this connection.
       request.result.onversionchange = () => request.result.close();
       resolve(request.result);

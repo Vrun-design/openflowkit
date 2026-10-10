@@ -2,10 +2,11 @@
 // The grammar and the icon manifest are build artifacts (scripts/build-*),
 // read once per process and cached.
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ICON_PACK_IDS, createFileCapabilities, headlessElkLayout, tablerSvg, type IconMatch, type OpCapabilities } from './agent.js';
 
-const HERE = import.meta.dirname ?? new URL('.', import.meta.url).pathname;
+const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(HERE, '..', '..', 'data');
 
 let grammarPromise: Promise<string> | null = null;

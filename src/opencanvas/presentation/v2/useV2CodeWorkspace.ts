@@ -44,17 +44,26 @@ export interface V2CodeWorkspaceOptions {
   readonly pushToast: (toast: ToastItem) => void;
   readonly dismissToast: (id: string) => void;
   readonly announce: (message: string) => void;
+  /** A template lands with the canvas focused, so keys act on the diagram, not the source. */
+  readonly focusCanvas?: () => void;
+  /** A template that starts a document is its first state: nothing to undo back to "Untitled". */
+  readonly forgetHistory?: () => void;
 }
+
+// Below this a phone: the source would cover the diagram it just drew.
+const PHONE_PX = 768;
 
 export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
   const {
     document, page, pageRef, hostRef, readOnly, palette, autoIcons, onPaletteChange,
-    commit, applySelection, fitView, openPanel, onViews, pushToast, dismissToast, announce,
+    commit, applySelection, fitView, openPanel, onViews, pushToast, dismissToast, announce, focusCanvas, forgetHistory,
   } = options;
   const [draft, setDraft] = useState(INITIAL_CODE);
   // The frame Generate replaces; null draws a new diagram.
   const [frameId, setFrameId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  // False while the panel was opened by a template beside its diagram (not asked for): it leaves focus on the canvas.
+  const [panelFocus, setPanelFocus] = useState(true);
   const [compileDiagnostics, setCompileDiagnostics] = useState<readonly DslDiagnostic[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const iconToastFramesRef = useRef(new Set<string>());
@@ -90,9 +99,14 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: conversion.error, source: 'parse' }]);
       return;
     }
-    setDraft(conversion.dsl);
+    // A line the converter could not read (E004) keeps the source text, so its line numbers still point at it.
     setCompileDiagnostics(conversion.diagnostics);
-    announce(`${foreign.label} converted${conversion.losses.length ? ` with ${conversion.losses.length} loss notes` : ''}.`);
+    if (conversion.diagnostics.some((item) => item.severity === 'error')) {
+      announce(`${foreign.label} not converted: fix the marked lines first.`);
+      return;
+    }
+    setDraft(conversion.dsl);
+    announce(`${foreign.label} converted${conversion.losses.length ? `. Not kept: ${conversion.losses.join('; ')}` : ''}.`);
   }, [draft, foreign, announce]);
   const canvasEdited = useMemo(() => {
     const scene = page && frameId ? frameScene(page, frameId) : null;
@@ -106,6 +120,7 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
   /** Opens the panel on a new diagram rather than the last bound frame. */
   const openNew = useCallback(() => {
     setFrameId(null);
+    setPanelFocus(true);
     openPanel();
   }, [openPanel]);
   const openFrame = useCallback((id: string) => {
@@ -120,6 +135,7 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
     if (isDiagramPalette(authored) && authored !== palette) onPaletteChange(authored);
     setDraft(source);
     setFrameId(id);
+    setPanelFocus(true);
     openPanel();
   }, [pageRef, palette, onPaletteChange, openPanel]);
 
@@ -148,10 +164,10 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
     });
   }, [pushToast, dismissToast, pageRef, commit]);
 
-  /** Compiles `text` (the draft by default) into `target`, the bound frame unless a new diagram is asked for. */
-  const generate = useCallback(async (text?: string, snaps?: Readonly<Record<string, WorkspaceSnap>>, target = frameId) => {
+  /** Compiles `text` (the draft by default) into `target`, the bound frame unless a new diagram is asked for. True when it committed. */
+  const generate = useCallback(async (text?: string, snaps?: Readonly<Record<string, WorkspaceSnap>>, target = frameId): Promise<boolean> => {
     const currentPage = pageRef.current;
-    if (!currentPage || !document || readOnly || generating) return;
+    if (!currentPage || !document || readOnly || generating) return false;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -163,9 +179,13 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       const attempt = foreignSource?.convert(written);
       if (attempt && 'error' in attempt) {
         setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: attempt.error, source: 'parse' }]);
-        return;
+        return false;
       }
       const conversion = attempt && 'dsl' in attempt ? attempt : undefined;
+      if (conversion?.diagnostics.some((item) => item.severity === 'error')) {
+        setCompileDiagnostics(conversion.diagnostics);
+        return false;
+      }
       const source = conversion ? conversion.dsl : written;
       if (conversion) setDraft(source);
       const bound = target ? currentPage.nodes.find((node) => node.id === target) : undefined;
@@ -187,14 +207,15 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
         if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
         workspaceTextRef.current = source;
         setFrameId(null);
-        const first = firstViewLanding(document, workspace, command, target ?? undefined);
+        // Regenerating from one of its view pages stays on that page; else land on the first view.
+        const first = firstViewLanding(document, workspace, command, target ?? undefined, currentPage.id);
         if (first) {
           onViews(first.pageId);
           // The first view may have taken the page the user is on: no page switch to fit it.
           if (!target) setFitFrameId(first.frameId);
         }
         announce(`Generated ${workspace.views.length} views. Every element is shared across them.`);
-        return;
+        return Boolean(command);
       }
       const command = buildDslPageCommand(currentPage, primary, target ?? undefined);
       if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
@@ -205,23 +226,29 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       setFrameId(targetId);
       applySelection(replaceSelection([targetId]));
       announce(`${primary.nodes.length} nodes generated${primary.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
+      return Boolean(command);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
         pushToast({ id: `dsl-${Date.now()}`, tone: 'danger', title: error instanceof Error ? error.message : 'Diagram generation failed.' });
       }
+      return false;
     } finally {
       if (abortRef.current === controller) { abortRef.current = null; setGenerating(false); }
     }
   }, [pageRef, document, readOnly, generating, frameId, draft, palette, autoIcons, commit, onViews, announce, offerIconRemoval, applySelection, pushToast]);
 
   /** One template path for the canvas welcome, home's cards and the starter gallery. The Model panel's own button keeps itself open (`openPanel: false`). */
-  const startFrom = useCallback((dsl: string, { openPanel: showPanel = true }: { openPanel?: boolean } = {}) => {
+  const startFrom = useCallback((dsl: string, { openPanel: showPanel = true, baseline = false }: { openPanel?: boolean; baseline?: boolean } = {}) => {
     setFrameId(null);
     setDraft(dsl);
-    if (showPanel) openPanel();
-    void generate(dsl, undefined, null);
-  }, [openPanel, generate]);
-  /** Writes the draft for a new diagram without opening the panel (the motion chips, a pasted Mermaid tip). */
+    if (showPanel) {
+      focusCanvas?.();
+      if (window.innerWidth >= PHONE_PX) { setPanelFocus(false); openPanel(); }
+    }
+    // A skipped generate committed nothing: the undo it would have replaced stays.
+    void generate(dsl, undefined, null).then((committed) => { if (baseline && committed) forgetHistory?.(); });
+  }, [openPanel, generate, focusCanvas, forgetHistory]);
+  /** Writes the draft for a new diagram without opening the panel (the motion chips). */
   const writeNew = useCallback((update: (current: string) => string) => {
     setDraft(update);
     setFrameId(null);
@@ -229,7 +256,7 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
   const cancel = useCallback(() => abortRef.current?.abort(), []);
 
   return {
-    draft, setDraft, edit, writeNew, generating, diagnostics, canvasEdited,
+    draft, setDraft, edit, writeNew, generating, diagnostics, canvasEdited, panelFocus,
     foreign: foreign ? { label: foreign.label, convert: convertForeign } : null,
     openNew, openFrame, generate, startFrom, cancel,
   };

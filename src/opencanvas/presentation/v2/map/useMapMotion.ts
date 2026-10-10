@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { LaidRect } from '../../../../dsl/map/elk';
 import type { MapModel } from '../../../../dsl/map/types';
 import { MOVE_MS } from '../../../application/map/geometry';
+import { topLeftFirst } from '../../../application/map/mapNavigation';
 import { absoluteRects } from '../../../application/map/motionFrame';
 import { cullMotion, movedView } from '../../../application/map/motionCull';
 import { MapMotionPlayer } from '../../../application/map/motionPlayer';
@@ -9,7 +10,7 @@ import { planMotion } from '../../../application/map/planMotion';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { SceneNode, ScenePage } from '../../../domain/document/types';
 import type { PixiRendererHost } from '../../../infrastructure/pixi/PixiRendererHost';
-import { clearance, landOn, mapCamera, sceneExtent, type TaggedScene } from './mapMode';
+import { clearance, fitAll, landOn, mapCamera, refitKind, sceneExtent, showsAll, type HeldFit, type TaggedScene } from './mapMode';
 
 interface Options {
   readonly mapPage: ScenePage | null;
@@ -24,7 +25,17 @@ interface Options {
   readonly markShown: (layout: 'asked' | 'landed') => void;
   /** The box a click just opened or closed: the camera brings it into view when its layout arrives; `id: null` re-fits the whole map like entering it (a depth preset). */
   readonly focusRef: RefObject<{ id: string | null } | null>;
+  /** A depth preset landed readable on a map too big to show whole: the reader may not know there is more. */
+  readonly onPartial?: () => void;
 }
+
+
+/** Where a reader starts on a map too big to show readable: its first top-level box in reading order. */
+const firstBox = (model: MapModel | null, rects: ReadonlyMap<string, LaidRect>): LaidRect | undefined => {
+  const top = model?.nodes[model.root]?.children.filter((id) => rects.has(id)) ?? [];
+  const first = top.sort(topLeftFirst(rects))[0];
+  return first ? rects.get(first) : undefined;
+};
 
 const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -33,7 +44,9 @@ const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMe
  * index is the target and clicks land on it. From here only the picture moves, from where each box is drawn to where it
  * now belongs, and the camera lands (a new map) or follows the focus (a box just opened).
  */
-export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef }: Options) {
+export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef, onPartial }: Options) {
+  const partialRef = useRef(onPartial);
+  useEffect(() => { partialRef.current = onPartial; });
   // How often the editor page rendered: a move must not add one per frame (counted for the test hook).
   const renders = useRef(0);
   useEffect(() => { renders.current += 1; });
@@ -66,6 +79,9 @@ export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, camera
   const shown = useRef<{ page: ScenePage; rects: Map<string, LaidRect>; chain: number | undefined } | null>(null);
   // Every box drawn now or still folding away, by id: the leaving ones are no longer in the scene.
   const drawn = useRef(new Map<string, SceneNode>());
+  // The whole-map fit the camera was last given, while the reader has not moved it or opened a box: a map that grows
+  // (a repo still streaming in, a layout that lands later) keeps fitting instead of keeping its first, smaller frame.
+  const fitted = useRef<HeldFit | null>(null);
 
   useEffect(() => {
     // Map off, or no scene for this page (another page's model, a layout error): nothing of an earlier map may keep moving or draw.
@@ -86,7 +102,10 @@ export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, camera
       // A map entered at an element (a drill from Canvas) frames that element; otherwise the whole map.
       const at = focusRef.current;
       focusRef.current = null;
-      updateCamera(at?.id && rects.has(at.id) ? landOn(extent, rects.get(at.id)!, clearance(host)) : mapCamera(extent, clearance(host)));
+      const whole = !(at?.id && rects.has(at.id));
+      const cam = whole ? mapCamera(extent, clearance(host), firstBox(model, rects)) : landOn(extent, rects.get(at!.id!)!, clearance(host));
+      fitted.current = whole ? { cam, all: false } : null;
+      updateCamera(cam);
       return;
     }
     const { items, gone } = planMotion(model, mapPage.nodes.map((node) => node.id), rects, before.rects, player.cur);
@@ -94,7 +113,12 @@ export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, camera
     mapPage.nodes.forEach((node) => drawn.current.set(node.id, node));
     const focus = focusRef.current;
     focusRef.current = null;
-    const camTo = !focus ? null : focus.id === null ? mapCamera(extent, clearance(host)) : rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), cameraRef.current) : null;
+    // A depth preset lands like entering; a box click follows the box; otherwise the fit the untouched camera holds is redone.
+    const kind = focus ? (focus.id === null ? 'start' : null) : refitKind(fitted.current, cameraRef.current, cameraRef.current === mine.current);
+    const camTo = kind === 'all' ? fitAll(extent, clearance(host)) : kind === 'start' ? mapCamera(extent, clearance(host), firstBox(model, rects))
+      : focus?.id && rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), cameraRef.current) : null;
+    fitted.current = kind && camTo ? { cam: camTo, all: kind === 'all' } : null;
+    if (focus?.id === null && camTo && !showsAll(extent, camTo, clearance(host))) partialRef.current?.();
     const moving = items.some((item) => item.fade || (['x', 'y', 'width', 'height'] as const).some((key) => item.from[key] !== item.to[key]));
     if (reducedMotion() || !moving) {
       // End state in one frame, arrows visible at once.
@@ -116,5 +140,17 @@ export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, camera
     }, () => renders.current);
   }, [mapPage, emptyPage, scene, model, hostRef, cameraRef, updateCamera, player, markShown, focusRef]);
 
-  return { player, shown };
+  /** Zoom to fit on a map: the whole map in the canvas the panels and floating chrome leave. */
+  const fit = useCallback(() => {
+    const host = hostRef.current;
+    const extent = shown.current && sceneExtent(shown.current.page);
+    if (!host || !extent) return;
+    player.stop();
+    // The reader asked for all of it: the whole map, even below the readable zoom a landing keeps.
+    const cam = fitAll(extent, clearance(host));
+    fitted.current = { cam, all: true };
+    updateCamera(cam);
+  }, [hostRef, player, updateCamera]);
+
+  return { player, shown, fit };
 }

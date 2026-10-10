@@ -63,11 +63,13 @@ async function main() {
       frameId: created.frameId,
       dsl: FLOW.replace('API -> Store', 'API -> Queue [queue, amber]\n  Queue -> Store'),
     });
-    const shot = await call(client, 'screenshot', { frameId: created.frameId, scale: 2 });
+    // The PNG is an MCP image block after the JSON summary.
+    const { content: [summary, picture] = [] } = await client.callTool({ name: 'screenshot', arguments: { frameId: created.frameId, scale: 2 } });
+    const shot = JSON.parse(summary?.text ?? '{}');
     process.stdout.write(`${JSON.stringify({
       editor: { documentName: editor.editor?.name, documentId: editor.editor?.documentId },
       created, read: { frameId: read.frameId, edited: read.edited, losses: read.losses, dslLength: read.dsl.length },
-      updated, screenshot: { mime: shot.mime, bytes: shot.base64.length, filename: shot.filename },
+      updated, screenshot: { mime: picture?.mimeType, bytes: picture?.data?.length ?? 0, filename: shot.filename },
     })}\n`);
   } finally {
     // Closing the transport kills the spawned server, so the bridge port is

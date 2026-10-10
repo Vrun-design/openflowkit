@@ -191,12 +191,12 @@ export function applySnapsToWorkspace<T extends { views: readonly { viewId: stri
   };
 }
 
-/** Writes the workspace back: DSL, one snap per model view, ADRs untouched. */
+/** Writes the workspace back: DSL (unless null: unchanged), one snap per model view, ADRs untouched. */
 export async function writeWorkspace(
   folder: WorkspaceFolder,
-  options: { readonly dsl: string; readonly document: SceneDocumentV1 },
+  options: { readonly dsl: string | null; readonly document: SceneDocumentV1 },
 ): Promise<void> {
-  await folder.writeText(WORKSPACE_DSL_FILE, options.dsl);
+  if (options.dsl !== null) await folder.writeText(WORKSPACE_DSL_FILE, options.dsl);
   for (const page of options.document.pages) {
     const snap = snapOfPage(page);
     if (!snap) continue;

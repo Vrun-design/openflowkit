@@ -61,6 +61,11 @@ export const ELEMENT_KIND_LABEL: Readonly<Record<ElementKind, string>> = {
   component: 'Component', store: 'Data store', queue: 'Queue', node: 'Deployment node', instance: 'Instance',
 };
 
+/** The Model panel's words: C4 terms for people who know them (R4 keeps them off the canvas). */
+export const MODEL_KIND_LABEL: Readonly<Record<ElementKind, string>> = {
+  ...ELEMENT_KIND_LABEL, container: 'Container', store: 'Database',
+};
+
 export interface ViewRuleWhere {
   readonly all?: readonly ViewRuleWhere[];
   readonly any?: readonly ViewRuleWhere[];

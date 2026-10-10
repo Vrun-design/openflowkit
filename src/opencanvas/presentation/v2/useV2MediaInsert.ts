@@ -17,6 +17,8 @@ export interface V2MediaInsertOptions {
   readonly applySelection: (selection: CanvasSelection) => void;
   readonly applyConnectorSelection: (connectorIds: readonly string[]) => void;
   readonly announce: (message: string) => void;
+  /** A failed insert, shown as a toast: the announcer alone reaches only screen readers. */
+  readonly onFailure: (message: string) => void;
   readonly mintId: (prefix: string) => string;
   /** Viewport centre in world space: where a picker-inserted image lands. */
   readonly centreWorld: () => Point2d;
@@ -49,8 +51,9 @@ export function useV2MediaInsert(options: V2MediaInsertOptions) {
     const opts = optionsRef.current;
     const page = opts.pageRef.current;
     if (!page || opts.readOnlyRef.current) return;
+    const fail = (message: string) => { opts.announce(message); opts.onFailure(message); };
     if (!isImageFile(file)) {
-      opts.announce('That file is not an image.');
+      fail('That file is not an image.');
       return;
     }
     try {
@@ -66,7 +69,7 @@ export function useV2MediaInsert(options: V2MediaInsertOptions) {
       }));
       opts.announce('Image added.');
     } catch (error) {
-      opts.announce(error instanceof Error ? error.message : 'Could not add that image.');
+      fail(error instanceof Error ? error.message : 'Could not add that image.');
     }
   }, [insertNode]);
 

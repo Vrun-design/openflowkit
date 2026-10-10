@@ -336,9 +336,11 @@ interface AgentBundle {
   readonly bridgeTokenHeader: string;
   bridgeUrls(port: number, host?: string): { base: string; health: string; hello: string; next: string; result: string };
   isAllowedBridgeOrigin(origin: string | undefined | null): boolean;
+  isBridgeClientInfo(value: unknown): value is BridgeClientInfo;
   isBridgeRequest(value: unknown): value is BridgeRequest;
   readonly WIDGET_KINDS: readonly string[];
   readonly FRAME_PRESETS: readonly string[];
+  readonly DSL_FAMILIES: readonly [string, ...string[]];
   readonly STARTER_TEMPLATES: readonly StarterTemplate[];
   readonly findStarterTemplate: (name: string) => StarterTemplate | undefined;
   acceptsMapFile(path: string): boolean;
@@ -378,7 +380,7 @@ export const {
   compileWorkspace, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
   collectIconArt, tablerSvg, ICON_PACK_IDS, headlessElkLayout, deterministicLayout, CAPABILITY_MANIFEST,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
-  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
+  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeClientInfo, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS, DSL_FAMILIES,
   STARTER_TEMPLATES, findStarterTemplate,
   discoverArchitecture, capUnits, discoveryToDsl, driftReport, modelFromNode, modelFromDocument, readArchModel,
   discoverySummary, acceptsArchitectureFile, slugDiscoveryId,

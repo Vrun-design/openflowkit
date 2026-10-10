@@ -2,6 +2,7 @@ import { applyDocumentCommand } from './execute';
 import type { ScenePage } from '../document/types';
 import { describe, expect, it } from 'vitest';
 import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from '../../presentation/v2/v2Document';
+import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
@@ -12,6 +13,7 @@ import {
   buildToggleLockCommand,
   buildQuickCreateCommand,
   buildSetNodeLabelCommand,
+  buildSetShapeCommand,
 } from './sceneEdits';
 
 function emptyPage(): ScenePage {
@@ -30,7 +32,33 @@ function pageWithTwoNodes(): ScenePage {
   ).document.pages[0];
 }
 
+describe('change shape', () => {
+  it('swaps the outline of every unlocked shape in one step, keeping label, size, kind and paint', () => {
+    const decision = createTestNode('d', { kind: 'decision', content: { label: 'Offer?' }, size: { width: 168, height: 104 }, appearance: { fill: '#fef3c7' } });
+    const box = createTestNode('b', { kind: 'process', content: { shape: 'rectangle', label: 'Hired' } });
+    const locked = createTestNode('l', { kind: 'process', content: { shape: 'rectangle', sectionLocked: true } });
+    const text = createTestNode('t', { kind: 'text', content: { label: 'note' } });
+    const page = createTestDocument({ nodes: [decision, box, locked, text] }).pages[0]!;
+    const command = buildSetShapeCommand(page, ['d', 'b', 'l', 't'], 'hexagon')!;
+    expect(command.label).toBe('Change shape');
+    const after = command.commands.map((child) => child.kind === 'set-node' ? child.after : null);
+    expect(after.map((node) => node?.id)).toEqual(['d', 'b']);
+    expect(after[0]).toEqual({ ...decision, content: { label: 'Offer?', shape: 'hexagon' } });
+    expect(buildSetShapeCommand(page, ['t'], 'hexagon')).toBeNull();
+    expect(buildSetShapeCommand(applyDocumentCommand({ ...createEmptyV2Document('x'), pages: [page] }, command).document.pages[0]!, ['d', 'b'], 'hexagon')).toBeNull();
+  });
+});
+
 describe('v2 shape creation commands', () => {
+  it('places a shape inside a frame as its child, so the frame carries it', () => {
+    const frame = createTestNode('f', { kind: 'section', size: { width: 400, height: 300 }, transform: { translation: { x: 100, y: 100 }, rotationRadians: 0, scale: { x: 1, y: 1 } } });
+    const page = createTestDocument({ nodes: [frame] }).pages[0]!;
+    const inside = buildInsertShapeCommand(page, { kind: 'rectangle', id: 'in', at: { x: 150, y: 150 } });
+    expect(inside.node.parentId).toBe('f');
+    expect(inside.node.transform.translation).toEqual({ x: 50, y: 50 });
+    expect(buildInsertShapeCommand(page, { kind: 'rectangle', id: 'out', at: { x: 900, y: 900 } }).node.parentId).toBeNull();
+  });
+
   it.each([['rectangle', 'process'], ['ellipse', 'process'], ['diamond', 'process'], ['text', 'text']] as const)(
     'builds a valid %s insert at the theme default size',
     (kind, nodeKind) => {
@@ -288,14 +316,22 @@ describe('v2 quick-create command', () => {
 describe('v2 reorder and lock commands', () => {
   it('brings the selection above everything, keeping its internal order', () => {
     const page = pageWithTwoNodes();
-    const command = buildReorderCommand(page, ['node-a'], 'front');
+    const command = buildReorderCommand(page, ['node-a'], 'front')!;
     expect(command.commands.map((child) => child.kind === 'set-node' && child.after.zIndex)).toEqual([
       Math.max(...page.nodes.map((node) => node.zIndex)) + 1,
     ]);
-    const back = buildReorderCommand(page, ['node-b'], 'back');
+    const back = buildReorderCommand(page, ['node-b'], 'back')!;
     expect(back.commands.map((child) => child.kind === 'set-node' && child.after.zIndex)).toEqual([
       Math.min(0, ...page.nodes.filter((node) => node.id !== 'node-b').map((node) => node.zIndex)) - 1,
     ]);
+  });
+
+  it('has nothing to do when the selection is already in front (or behind)', () => {
+    const page = pageWithTwoNodes();
+    const top = [...page.nodes].sort((a, b) => b.zIndex - a.zIndex)[0]!;
+    const bottom = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex)[0]!;
+    expect(buildReorderCommand(page, [top.id], 'front')).toBeNull();
+    expect(buildReorderCommand({ ...page, nodes: page.nodes.map((node) => node.id === bottom.id ? { ...node, zIndex: -1 } : node) }, [bottom.id], 'back')).toBeNull();
   });
 
   it('locks when any node is unlocked, then unlocks all', () => {

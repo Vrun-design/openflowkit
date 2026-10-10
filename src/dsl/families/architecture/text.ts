@@ -1,7 +1,7 @@
 import { createArchIndex, elementAncestors, elementPathRef, type ArchIndex } from '../../model/model';
 import type { ArchElement, ArchFlow, ArchModel, ArchRelation, ArchView, FlowStep, ViewRuleWhere } from '../../model/types';
 import { dslFrameRaw, type CanonicalAttribute, type DslFrameScene } from '../../sceneMeta';
-import { attributeText, quote, slugifyDslId } from '../../text';
+import { attributeText, quote, quoted, slugifyDslId } from '../../text';
 import { canonicalColorWord, sortAttributes } from '../../vocabulary';
 import { graphText } from '../graph/text';
 import { archModelFromJson } from '../../model/model';
@@ -140,10 +140,6 @@ function relationLine(index: ArchIndex, relation: ArchRelation, scope: string | 
 }
 
 /** The block a relation belongs in: both endpoints share a parent element. */
-function quoted(value: string): string {
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
-}
-
 function sharedScope(index: ArchIndex, relation: ArchRelation): string | null {
   const from = index.byId.get(relation.from);
   const to = index.byId.get(relation.to);
@@ -188,17 +184,19 @@ function indexOf(model: ArchModel): ArchIndex {
   return createArchIndex(model);
 }
 
+/** The direction rides as a trailing word (`view context of Shop right`), the form parseView and the importers read. */
 function viewHead(index: ArchIndex, view: ArchView): string {
   const ref = view.of ? elementPathRef(index, view.of) : undefined;
+  const direction = view.direction ? ` ${view.direction}` : '';
   switch (view.kind) {
     case 'landscape':
-      return 'view landscape';
+      return `view landscape${direction}`;
     case 'custom':
       return `view custom ${quoted(view.name)}${view.direction ? ` [${view.direction}]` : ''}`;
     case 'deployment':
-      return `view deployment of ${ref ?? '?'} in ${quote(view.env ?? '')}`;
+      return `view deployment of ${ref ?? '?'} in ${quote(view.env ?? '')}${direction}`;
     default:
-      return `view ${view.kind} of ${ref ?? '?'}`;
+      return `view ${view.kind} of ${ref ?? '?'}${direction}`;
   }
 }
 

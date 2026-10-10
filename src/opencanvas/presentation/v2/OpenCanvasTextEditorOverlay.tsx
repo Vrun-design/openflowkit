@@ -127,6 +127,8 @@ export function OpenCanvasTextEditorOverlay({
       onInput={fit}
       onBlur={blur}
       onKeyDown={(event) => {
+        // Enter (or Escape) that ends an IME composition belongs to the IME, not the label.
+        if (event.nativeEvent.isComposing) return;
         // Escape keeps what was typed (tldraw, Excalidraw): leaving the editor
         // is never a way to lose text. A blank new node still disappears.
         if (event.key === 'Escape' || event.key === 'Tab' || (event.key === 'Enter' && !event.shiftKey)) {

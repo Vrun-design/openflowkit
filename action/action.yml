@@ -8,8 +8,8 @@ inputs:
     description: Command that runs the openflowkit CLI.
     default: npx -y -p @vrun-design/openflowkit-mcp@0.2.0 openflowkit
   refresh-svg:
-    description: Commit a fresh SVG to the PR branch when the committed one beside a diagram is stale (same-repo PRs only).
-    default: 'true'
+    description: Commit a fresh SVG to the PR branch when the committed one beside a diagram is stale (same-repo PRs only). Off by default: GitHub runs no checks on that commit, so required checks would block the merge.
+    default: 'false'
   comment-author:
     description: Login of the account that owns the comment to update (the author of the token's comments).
     default: github-actions[bot]

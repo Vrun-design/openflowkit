@@ -28,6 +28,13 @@ describe('useV2RepoDocument', () => {
     expect(repoMapSourceOf(born)).toEqual({ owner: 'a', repo: 'b', ref: 'dev' });
     expect(born.name).toBe('a/b');
   });
+  it('a map document id opened with no intent (a bookmark, another browser) is born as that repo\'s map', () => {
+    const born = renderHook(() => useV2RepoDocument(null, null, 'map-acme_shop')).result.current.initialize!(plain);
+    expect(repoMapSourceOf(born)).toEqual({ owner: 'acme', repo: 'shop' });
+    expect(renderHook(() => useV2RepoDocument(null, null, 'doc_123')).result.current.initialize).toBeUndefined();
+    // A ref is hashed into the id and cannot be read back: that one stays an ordinary document.
+    expect(renderHook(() => useV2RepoDocument(null, null, 'map-acme_shop@1x2y')).result.current.initialize).toBeUndefined();
+  });
   it('a stored document of another repo under the intent is a mismatch, the same repo is not', () => {
     expect(renderHook(() => useV2RepoDocument(repoDoc, { repoMap: { owner: 'a', repo: 'c' } })).result.current.mismatch).toBe(true);
     expect(renderHook(() => useV2RepoDocument(repoDoc, { repoMap: { owner: 'a', repo: 'b' } })).result.current.mismatch).toBe(false);

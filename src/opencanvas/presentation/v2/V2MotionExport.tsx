@@ -306,9 +306,9 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
           <Segmented<'12' | '24' | '30'> label="Frame rate" value={String(fps) as '12' | '24' | '30'}
             onChange={(value) => setFps(Number(value) as MotionFps)}
             options={MOTION_FPS.map((value) => ({ value: String(value) as '12' | '24' | '30', label: `${value} fps` }))} />
-          <Segmented<'720' | '1080' | '1440'> label="Size" value={String(size) as '720' | '1080' | '1440'}
+          <Segmented<'720' | '1080' | '1440'> label="Width" value={String(size) as '720' | '1080' | '1440'}
             onChange={(value) => setSize(Number(value) as MotionSize)}
-            options={MOTION_SIZES.map((value) => ({ value: String(value) as '720' | '1080' | '1440', label: `${value}p` }))} />
+            options={MOTION_SIZES.map((value) => ({ value: String(value) as '720' | '1080' | '1440', label: `${value} px`, title: `${value} pixels wide; the height follows the diagram` }))} />
         </>
       ) : null}
       <div className="ofk-motion-fields">

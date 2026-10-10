@@ -97,6 +97,8 @@ export function useV2Assistant(options: V2AssistantOptions) {
   const messages = messagesOf(store);
   const busy = activity !== 'idle';
 
+  // Leaving the editor stops the reply: nothing would show it, and the provider would bill it.
+  useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(() => {
     if (loadedFor.current === options.documentId) return;
     loadedFor.current = options.documentId;

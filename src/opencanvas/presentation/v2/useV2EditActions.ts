@@ -26,8 +26,16 @@ import {
   buildReorderCommand,
   buildToggleLockCommand,
 } from '../../domain/commands/sceneEdits';
+import { isModelPlacement } from '../../application/dsl/architectureCommands';
 
 const CLIPBOARD_FORMAT = 'openflowkit.selection';
+
+function parseClipboard(text: string): ProductionClipboardSnapshot | null {
+  try {
+    const parsed = JSON.parse(text) as ({ format?: string } & ProductionClipboardSnapshot) | null;
+    return parsed?.format === CLIPBOARD_FORMAT && Array.isArray(parsed.nodes) ? parsed : null;
+  } catch { return null; }
+}
 
 interface V2EditActionsOptions {
   readonly commit: (command: DocumentCommand) => void;
@@ -56,13 +64,16 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     return page && !readOnly ? page : null;
   };
 
+  // On a C4 view a deleted placement is only unplaced: the model keeps the element.
   const deleteSelection = () => {
     const page = editablePage();
-    if (!page || (selectionRef.current.nodeIds.length === 0 && selectedConnectorIds.length === 0)) return;
-    options.commit(buildDeleteSelectionCommand(page, selectionRef.current.nodeIds, connectorIds()));
+    const { nodeIds } = selectionRef.current;
+    if (!page || (nodeIds.length === 0 && selectedConnectorIds.length === 0)) return;
+    const unplaced = page.nodes.some((node) => nodeIds.includes(node.id) && isModelPlacement(node));
+    options.commit(buildDeleteSelectionCommand(page, nodeIds, connectorIds()));
     options.applySelection(clearSelection());
     options.applyConnectorSelection([]);
-    options.announce('Selection deleted.');
+    options.announce(unplaced ? 'Deleted. Model elements were unplaced from this view. The model keeps them.' : 'Selection deleted.');
   };
 
   const duplicateSelection = () => {
@@ -97,7 +108,7 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     const command = direction === 'front' || direction === 'back'
       ? buildReorderCommand(page, selectionRef.current.nodeIds, direction)
       : buildStepOrderCommand(page, selectionRef.current.nodeIds, direction);
-    if (command && (command.kind !== 'batch' || command.commands.length > 0)) options.commit(command);
+    if (command) options.commit(command);
   };
 
   const commitMaybe = (command: ReturnType<typeof buildAlignCommand>) => { if (command) options.commit(command); };
@@ -114,8 +125,8 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     if (page) commitMaybe(buildFlipCommand(page, selectionRef.current.nodeIds, axis));
   };
 
-  // Clipboard: in-memory snapshot is the truth; the system clipboard gets a
-  // JSON copy so a paste survives a reload or crosses tabs when allowed.
+  // Clipboard: the system clipboard gets a JSON copy so a paste survives a
+  // reload or crosses tabs; the in-memory snapshot covers a denied write.
   const copySelection = () => {
     const page = pageRef.current;
     if (!page || selectionRef.current.nodeIds.length === 0) return false;
@@ -126,25 +137,30 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     return true;
   };
   const cutSelection = () => { if (copySelection()) deleteSelection(); };
-  const pasteClipboard = async () => {
+  /** ⌘V hands over the paste event's text: shapes when it is our JSON. With no text (the menu), the in-memory copy. True when it pasted. */
+  const pasteShapes = (text?: string): boolean => {
     const page = editablePage();
-    if (!page) return;
-    let snapshot = clipboardRef.current;
-    try {
-      const text = await navigator.clipboard?.readText();
-      const parsed = text ? JSON.parse(text) as { format?: string } & ProductionClipboardSnapshot : null;
-      if (parsed?.format === CLIPBOARD_FORMAT && Array.isArray(parsed.nodes)) snapshot = parsed;
-    } catch { /* permission denied or not JSON: in-memory copy wins */ }
-    if (!snapshot || snapshot.nodes.length === 0) return;
-    const { command, pastedNodeIds } = buildPasteProductionSelectionCommand(
-      pageRef.current ?? page, snapshot, (kind) => options.mintId(kind)
-    );
+    const snapshot = text === undefined ? clipboardRef.current : parseClipboard(text);
+    if (!page || !snapshot || snapshot.nodes.length === 0) return false;
+    const { command, pastedNodeIds } = buildPasteProductionSelectionCommand(page, snapshot, (kind) => options.mintId(kind));
     options.commit(command);
     options.applyConnectorSelection([]);
     options.applySelection(replaceSelection(pastedNodeIds));
     options.announce(`${pastedNodeIds.length} pasted.`);
+    return true;
   };
   const hasClipboard = () => clipboardRef.current !== null;
+  // WebKit may fire no paste event for ⌘V outside an editable field: the key arms an in-memory paste
+  // a beat later, and a paste event (every other engine, or WebKit with a field) disarms it.
+  const pendingPasteRef = useRef<number | null>(null);
+  const pasteEventArrived = () => {
+    if (pendingPasteRef.current !== null) window.clearTimeout(pendingPasteRef.current);
+    pendingPasteRef.current = null;
+  };
+  const pasteKeyPressed = () => {
+    pasteEventArrived();
+    pendingPasteRef.current = window.setTimeout(() => { pendingPasteRef.current = null; pasteShapes(); }, 100);
+  };
 
   const wrapSelection = (kind: WrapKind) => {
     const page = editablePage();
@@ -218,7 +234,7 @@ export function useV2EditActions(options: V2EditActionsOptions) {
   return {
     deleteSelection, duplicateSelection, nudgeSelection, reorderSelection, toggleLock,
     alignSelection, distributeSelection, flipSelection,
-    copySelection, cutSelection, pasteClipboard, hasClipboard, copyStyle, pasteStyle, toggleTextStyle,
+    copySelection, cutSelection, pasteShapes, pasteKeyPressed, pasteEventArrived, hasClipboard, copyStyle, pasteStyle, toggleTextStyle,
     groupSelection, wrapInSection, ungroupSelection, canUngroup,
   };
 }

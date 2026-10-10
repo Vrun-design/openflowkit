@@ -13,10 +13,10 @@ import { findStarterTemplate } from '../../../agent/starterTemplates';
 import { compileSource } from '../../../agent/compileSource';
 import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { dslFrames } from '../../../dsl/frameScene';
-import { dslFrameMeta } from '../../../dsl/sceneMeta';
+import { dslFrameMeta, dslFrameRaw } from '../../../dsl/sceneMeta';
 import { dslFamilyDirection } from '../../../dsl/vocabulary';
 import type { LandingDirection } from '../../domain/camera/readableLanding';
-import { shortcutGroups } from './v2Shortcuts';
+import { platformKeys, shortcutGroups } from './v2Shortcuts';
 import { writeAnimateBlock } from '../../../dsl/animate';
 import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
 import { archFrameOf, placedElementId } from '../../../dsl/model/model';
@@ -71,13 +71,14 @@ import { useV2FlowPlayback } from './useV2FlowPlayback';
 import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
 import { useV2IconLibrary } from './useV2IconLibrary';
 import { useV2Inserts } from './useV2Inserts';
-import { useV2Keyboard } from './useV2Keyboard';
+import { keyOwnedByTarget, useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { useV2MapMode } from './map/useV2MapMode';
 import { buildPinPageCommand } from '../../application/map/pinPage';
 import { useV2RepoDocument, useV2RepoPanel } from './useV2RepoDocument';
 import { BadRepoAddress, V2RepoMapOverlay } from './map/V2RepoMapState';
-import { V2MapStart } from './map/V2MapStart';
+import { mapRepoPath, V2MapStart } from './map/V2MapStart';
+import { firstMapVisit } from './map/mapDepth';
 import { IMAGE_URL_PATTERN, useV2MediaInsert } from './useV2MediaInsert';
 import { useV2Pages } from './useV2Pages';
 import { useV2Panels } from './useV2Panels';
@@ -89,7 +90,7 @@ import { useV2Selection } from './useV2Selection';
 import { useV2TestApi } from './useV2TestApi';
 import { useV2WorkspaceFolder } from './useV2WorkspaceFolder';
 import { firstV2Page, isV2StartIntent, mintV2Id, rememberLastDocument } from './v2Document';
-import { downloadTextFile, type V2ExportScope } from './v2Export';
+import { downloadRawRecords, downloadTextFile, type V2ExportScope } from './v2Export';
 import type { V2TipId } from './v2FeatureTips';
 import { scheduleV2Thumbnail } from './v2Thumbnail';
 import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
@@ -121,10 +122,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   );
   const hostRef = useRef<PixiRendererHost | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
+  const pasteRef = useRef<(event: ClipboardEvent) => void>(() => undefined);
   const gestureApiRef = useRef<V2GestureApi | null>(null);
   const focusCanvas = useCallback(() => sectionRef.current?.focus(), []);
-  // Shortcuts listen on the editor, so with focus on <body> (a fresh load, a panel that closed with no opener to
-  // return to, a click on bare chrome) every key went nowhere. Hand those keys to the canvas.
+  // Shortcuts and paste listen on the editor, so with focus on <body> (a fresh load, a panel that closed with no
+  // opener to return to, a click on bare chrome) every key and ⌘V went nowhere. Hand those to the canvas.
   useEffect(() => {
     const forward = (event: KeyboardEvent) => {
       const canvas = sectionRef.current;
@@ -133,8 +135,14 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       canvas.dispatchEvent(copy);
       if (copy.defaultPrevented) event.preventDefault();
     };
+    // A paste is handled as it is, not re-dispatched: Gecko's ClipboardEvent constructor drops clipboardData.
+    const paste = (event: ClipboardEvent) => { if (event.target === document.body) pasteRef.current(event); };
     document.addEventListener('keydown', forward);
-    return () => document.removeEventListener('keydown', forward);
+    document.addEventListener('paste', paste);
+    return () => {
+      document.removeEventListener('keydown', forward);
+      document.removeEventListener('paste', paste);
+    };
   }, []);
   const [tool, setTool] = useState<V2Tool>('select');
   // Which variant a flyout tool draws with; its grid marks the last pick.
@@ -225,6 +233,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     selection, selectionRef, selectedConnectorId, selectedConnectorIds, selectedConnectorIdsRef,
     applySelection, applyConnectorSelection,
   } = selectionApi;
+  /** Exactly these shapes selected, and no connector. */
+  const selectNodes = useCallback((nodeIds: readonly string[]) => {
+    applyConnectorSelection([]);
+    applySelection(replaceSelection(nodeIds));
+  }, [applyConnectorSelection, applySelection]);
   // Pages are documents-in-document: the active page drives the canvas, the
   // context bar and export. Null means "the first page" (single-page default).
   const [activePageId, setActivePageId] = useState<string | null>(null);
@@ -242,7 +255,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const notify = (message: string) => { setAnnouncement(message); pushToast({ id: `map-${Date.now()}`, tone: 'info', title: message }); };
   const location = useLocation();
   const startIntent = isV2StartIntent(location.state) ? location.state : null;
-  const repo = useV2RepoDocument(session.document, startIntent);
+  const repo = useV2RepoDocument(session.document, startIntent, id);
   // Only the repo's own map page is locked and drawn as a map; its other pages are ordinary Canvas pages.
   const repoPage = repo.lockedPageId !== null && page?.id === repo.lockedPageId;
   // "This is the repo page", not "this is a repo document": a page added to a repo document is an ordinary one.
@@ -251,19 +264,22 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // left it) or any write to a document whose lock is broken is refused, with no undo entry.
   const lockRef = useRef({ id: repo.lockedPageId, broken: repo.broken });
   useEffect(() => { lockRef.current = { id: repo.lockedPageId, broken: repo.broken }; });
-  const sessionCommit = session.commit;
-  const commit = useCallback((command: DocumentCommand) => {
+  const { commit: sessionCommit, amendNewNode: sessionAmend } = session;
+  const writable = useCallback((command: DocumentCommand) => {
     const { id, broken } = lockRef.current;
-    if (broken || (id !== null && commandTouchesPage(command, id))) { setAnnouncement('The repo map is read-only'); return; }
-    sessionCommit(command);
-  }, [sessionCommit]);
+    if (broken || (id !== null && commandTouchesPage(command, id))) { setAnnouncement('The repo map is read-only'); return false; }
+    return true;
+  }, []);
+  const commit = useCallback((command: DocumentCommand) => { if (writable(command)) sessionCommit(command); }, [writable, sessionCommit]);
   const load = useV2DocumentLoad({
     documentId: id,
     initialize: repo.initialize,
     repository,
     fixed: shared?.document,
     openDocument: session.openDocument,
-    onRecovered: () => pushToast({ id: 'recovered', tone: 'warning', title: 'Recovered from the last good backup.' }),
+    // The damaged copy is kept beside the backup: it may hold edits the backup lacks.
+    onRecovered: () => pushToast({ id: 'recovered', tone: 'warning', title: 'Recovered from the last good backup.',
+      ...(id ? { action: { label: 'Download the damaged copy', onClick: () => downloadRawRecords(id, 'damaged-copy') } } : {}) }),
   });
   // Map mode: a lens on the page's model. The canvas draws `viewPage`; commands, undo and autosave still see `page`.
   const docReadOnly = load.readOnly || repo.broken || repoPage;
@@ -272,11 +288,19 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     document: session.document, page, pageRef, hostRef, readOnly: docReadOnly,
     palette: preferences.diagramPalette, autoIcons: preferences.autoIcons,
     onPaletteChange: useCallback((diagramPalette) => updatePreferences({ diagramPalette }), [updatePreferences]),
-    commit: commit, applySelection, fitView: camera.fitView,
+    // A new diagram lands readable, as the assistant's does.
+    commit: commit, applySelection, fitView: (ids) => { camera.landReadable(landingDirection(), ids); },
     openPanel: useCallback(() => openWorkspace('code'), [openWorkspace]),
     onViews: setPendingPageId, pushToast, dismissToast, announce: setAnnouncement,
+    focusCanvas, forgetHistory: session.forgetHistory,
   });
-  const toggleCode = () => { if (panels.workspace === 'code') panels.closeWorkspace(); else code.openNew(); };
+  // The page's diagram opens as itself (the selected one, or the only one); else a new diagram.
+  const toggleCode = () => {
+    if (panels.workspace === 'code') { panels.closeWorkspace(); return; }
+    const frames = page ? dslFrames(page) : [];
+    const frame = frames.find((candidate) => selectionRef.current.nodeIds.includes(candidate.id)) ?? (frames.length === 1 ? frames[0] : undefined);
+    if (frame) code.openFrame(frame.id); else code.openNew();
+  };
   // Map's start screen is for a document that is editable and has no model on any page (a model page elsewhere keeps the old rule).
   const modelled = useMemo(() => session.document?.pages.some((candidate) => archFrameOf(candidate) !== null) ?? false, [session.document]);
   // A model being written (the start screen's action) keeps Map on until its page is the one on screen (generating, then the page switch pending).
@@ -290,10 +314,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     panelsKey: [panels.workspace, panels.shortcutsOpen, panels.chartId, panels.treeOpen, panels.motionOpen].join(),
     selectedIds: () => selectionRef.current.nodeIds,
     glide: camera.animateTo,
-    page, documentId: session.document?.id, repo: repoSource ? { model: repo.state.model } : null, startable, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
+    page, documentId: session.document?.id, repo: repoSource ? { model: repo.state.model, loading: repo.state.status === 'loading' } : null, startable, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
-    select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
+    select: (id) => selectNodes([id]),
     clearSelection: () => selectionApi.clearAll(),
     selectedNodeId: selection.nodeIds.length === 1 && selectedConnectorIds.length === 0 ? selection.nodeIds[0]! : null,
     selectedConnectorId: selection.nodeIds.length === 0 ? selectedConnectorId : null,
@@ -307,6 +331,12 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     closeChart: () => panels.closeChart(),
     notify,
   });
+  // Zoom to fit takes what is on screen: the map's own fit in Map mode.
+  const fitAll = () => (map.active ? map.fit() : camera.fitView());
+  // A repo map's first visit opens its outline beside it.
+  useEffect(() => {
+    if (repoPage && map.active && session.document && firstMapVisit(session.document.id)) openWorkspace('model');
+  }, [repoPage, map.active, session.document, openWorkspace]);
   // Choosing a Create tool on Map's start screen goes back to Canvas with it armed.
   const leaveStart = <A extends unknown[], R>(action: (...args: A) => R) => (...args: A): R => {
     if (map.start) map.choose('canvas');
@@ -336,6 +366,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     page,
     camera: camera.camera,
     commit: commit,
+    amendNewNode: (nodeId, command) => { if (writable(command)) sessionAmend(nodeId, command); },
     announce: setAnnouncement,
     focusCanvas,
     onRenamePlacedElement: (nodeId, label) => {
@@ -364,7 +395,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     const open = map.state().open;
     const single = open.length === 1 && map.model ? map.model.nodes[open[0]!]?.name : undefined;
     const pageId = mintV2Id('page');
-    commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (pinned)` }));
+    commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (drawing)` }));
     setActivePageId(pageId);
     map.setMode('canvas');
     setAnnouncement('Map copied to a new Canvas page to edit as a drawing');
@@ -385,10 +416,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     if (!startIntent || load.phase !== 'ready' || !page) return;
     navigate(location.pathname, { replace: true, state: null });
     if ('start' in startIntent) openWorkspace(startIntent.start);
-    else if ('source' in startIntent) code.startFrom(startIntent.source);
+    else if ('source' in startIntent) code.startFrom(startIntent.source, { baseline: true });
     else if ('template' in startIntent) { // a repoMap intent needs nothing here: the document was born with its source
       const template = findStarterTemplate(startIntent.template);
-      if (template) code.startFrom(template.dsl);
+      if (template) code.startFrom(template.dsl, { baseline: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per intent
   }, [startIntent, load.phase, page === null]);
@@ -430,6 +461,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     const meta = last ? dslFrameMeta(last) : null;
     return (meta?.direction as LandingDirection | undefined) ?? (meta ? dslFamilyDirection(meta.family) : 'down');
   };
+  // The Animation panel is about the whole page: opening it lands the page readable beside it.
+  useEffect(() => { if (panels.motionOpen) camera.landReadable(landingDirection()); }, [panels.motionOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     camera.fitOnOpen(rendererStatus, session.document, fitKey, session.revision, landingDirection());
   }, [rendererStatus, session.document, session.revision, fitKey, camera]);
@@ -493,7 +526,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     {
       glideToNodes: camera.glideToNodes,
       openPage: setActivePageId,
-      selectNodes: (nodeIds) => { applyConnectorSelection([]); applySelection(replaceSelection(nodeIds)); },
+      selectNodes,
       commit: commit,
       announce: setAnnouncement,
       compileWorkspace: compileAny,
@@ -503,15 +536,18 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   );
   architectureActionsRef.current = architectureActions;
   const workspaceFolder = useV2WorkspaceFolder({
-    onLoad: (dsl, snaps) => { code.setDraft(dsl); void code.generate(dsl, snaps); },
+    onLoad: (dsl, snaps) => { code.setDraft(dsl); return code.generate(dsl, snaps); },
     onToast: (title, tone) => pushToast({ id: `workspace-${Date.now()}`, tone, title }),
   });
   // Committing a view writes the DSL + snaps back to the open folder. The
   // folder is the git-facing artifact; IndexedDB stays the app's storage.
+  // Lines the parser kept verbatim (it could not read them) go back too, so the file never loses them.
   useEffect(() => {
-    if (!workspaceFolder.folder || !session.document || docReadOnly) return;
-    const dsl = architecture.model ? architectureWorkspaceText(architecture.model) : null;
-    if (!dsl) return;
+    if (!workspaceFolder.folder || !session.document || docReadOnly || !architecture.model) return;
+    const frame = (page && archFrameOf(page)) ?? session.document.pages.map(archFrameOf).find((found) => found !== null) ?? null;
+    const kept = frame ? dslFrameRaw(frame).reserved : undefined;
+    const reserved = Array.isArray(kept) ? kept.filter((line): line is string => typeof line === 'string') : [];
+    const dsl = architectureWorkspaceText(architecture.model) + reserved.map((line) => `${line}\n`).join('');
     const timer = window.setTimeout(() => { void workspaceFolder.save(dsl, session.document!); }, 900);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -530,6 +566,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     glideToNodes: camera.glideToNodes,
     onOpenPage: setActivePageId,
   });
+  // The player spotlights the Canvas page; Map has its own scene, so switching modes ends the flow.
+  const { close: closeFlow } = playback;
+  useEffect(() => { if (map.active) closeFlow(); }, [map.active, closeFlow]);
+  const endFlow = () => { closeFlow(); focusCanvas(); };
   const placedElementIds = useMemo(() => new Set(
     (viewPage?.nodes ?? []).flatMap((node) => {
       const elementId = placedElementId(node);
@@ -651,16 +691,20 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     capabilities: agentCapabilities,
     commit: commit,
     onActivity: setAnnouncement,
+    // An agent edit off-screen (or under the agent panel) pulls the camera to it; one already in view leaves it alone.
+    onApplied: (nodeIds) => requestAnimationFrame(() => {
+      const bounds = hostRef.current?.getContentBounds(nodeIds);
+      if (bounds) camera.revealBounds(bounds);
+    }),
   });
 
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
     (nodeId: string, editorOptions?: OpenEditorOptions) => {
-      applyConnectorSelection([]);
-      applySelection(replaceSelection([nodeId]));
+      selectNodes([nodeId]);
       openLabelEditor(nodeId, editorOptions);
     },
-    [openLabelEditor, applyConnectorSelection, applySelection]
+    [openLabelEditor, selectNodes]
   );
   const connectorLabel = useV2ConnectorLabelEditing({
     document: session.document,
@@ -690,6 +734,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const media = useV2MediaInsert({
     pageRef, commit: commit, applySelection, applyConnectorSelection,
     announce: setAnnouncement, mintId: mintV2Id, readOnlyRef,
+    onFailure: (title) => pushToast({ id: `media-${Date.now()}`, tone: 'danger', title }),
     centreWorld: () => {
       const bounds = sectionRef.current?.getBoundingClientRect();
       return hostRef.current && bounds
@@ -715,24 +760,32 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     const at = pointFromEvent(event);
     for (const file of files) void media.insertImageFile(file, at);
   };
-  const pastedMermaidRef = useRef('');
-  const handlePaste = (event: React.ClipboardEvent<HTMLElement>) => {
+  // ⌘V arrives here as the native paste event (the keyboard hook leaves it alone): a text field pastes into itself;
+  // on the canvas, images, then our own copied shapes, image URLs, Mermaid (drawn in place), and last the in-memory copy.
+  const handlePaste = (event: Pick<ClipboardEvent, 'target' | 'clipboardData' | 'preventDefault'>) => {
+    editActions.pasteEventArrived();
+    if (isEditableTarget(event.target) || editLocked) return;
     const files = imageFiles(event.clipboardData);
     if (files.length > 0) {
       event.preventDefault();
       for (const file of files) void media.insertImageFile(file);
       return;
     }
-    const text = event.clipboardData.getData('text/plain').trim();
-    if (IMAGE_URL_PATTERN.test(text)) {
+    const text = event.clipboardData?.getData('text/plain').trim() ?? '';
+    if (editActions.pasteShapes(text)) {
+      event.preventDefault();
+    } else if (IMAGE_URL_PATTERN.test(text)) {
       event.preventDefault();
       media.insertImageUrl(text);
     } else if (looksLikeMermaid(text)) {
-      // Mermaid on the canvas has nowhere to go; point at the panel that draws it.
-      pastedMermaidRef.current = text;
-      tips.offer('mermaid');
+      // The code panel converts and draws it as one undo step, its source open beside it.
+      event.preventDefault();
+      code.startFrom(text);
+    } else if (editActions.pasteShapes()) {
+      event.preventDefault();
     }
   };
+  pasteRef.current = handlePaste;
   const [moreOpen, setMoreOpen] = useState(false);
   const pickEmoji = (glyph: string) => {
     media.insertEmoji(glyph);
@@ -750,7 +803,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
 
   const handleKeyDown = useV2Keyboard({
     toolRef, editingRef,
-    onToolChange: setTool,
+    // A with two shapes selected connects them (first-selected → second); otherwise it arms the connector.
+    onToolChange: (next) => { if (next !== 'connector' || !gestureApiRef.current?.connectSelection()) setTool(next); },
     onToggleIcons: () => {
       setLibrarySection('icons');
       iconLibrary.toggle();
@@ -766,12 +820,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     // A Canvas edit undone from the map would otherwise vanish unseen.
     onUndo: undo,
     onRedo: session.redo,
-    // On a C4 view Delete unplaces; the model keeps the element.
-    onDelete: () => {
-      if (editLocked) return;
-      if (architectureActions.unplaceSelection(selectionRef.current.nodeIds)) return;
-      editActions.deleteSelection();
-    },
+    // On a C4 view a deleted placement is unplaced (the model keeps the element), in the same step as the rest.
+    onDelete: editActions.deleteSelection,
     // A model edit, not a drawing edit: Map allows it, as its panel does.
     onRemoveFromModel: () => {
       if (!docReadOnly && selectedElementId) architectureActions.removeElement(selectedElementId);
@@ -780,14 +830,15 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
     onGroup: editActions.groupSelection, onUngroup: editActions.ungroupSelection,
     onWrapInSection: editActions.wrapInSection,
-    onCut: editActions.cutSelection, onCopy: editActions.copySelection,
-    onPaste: () => { void editActions.pasteClipboard(); },
+    onCut: editActions.cutSelection, onCopy: editActions.copySelection, onPasteKey: editActions.pasteKeyPressed,
     onCopyStyle: editActions.copyStyle, onPasteStyle: editActions.pasteStyle,
     onAlign: editActions.alignSelection, onDistribute: editActions.distributeSelection,
     onFlip: editActions.flipSelection,
     onZoomToSelection: () => camera.fitView(selectionRef.current.nodeIds.length ? selectionRef.current.nodeIds : undefined),
     onTextStyle: editActions.toggleTextStyle,
     onEditPrimary: (source) => {
+      // Enter with a shape tool armed places one at the view centre: the keyboard's click on the canvas.
+      if (source === 'enter' && gestureApiRef.current?.placeShape(media.centreWorld())) return;
       const primary = selectionRef.current.primaryNodeId;
       // Enter on a model object with a deeper view opens it in Map (or its view page), even read-only;
       // F2 or ⌘Enter edits the label instead.
@@ -815,7 +866,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       else panels.closeDocked();
     },
     onSelectAll: () => selectionApi.selectAll(viewPage),
-    onFitView: () => camera.fitView(),
+    onFitView: fitAll,
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
     onToggleTree: panels.toggleTree,
@@ -832,14 +883,15 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     page, readOnly: editLocked, rendererReady, selectedCount: selection.nodeIds.length,
     aiConfigured: aiSettings.configured, workspace: panels.workspace, motionOpen: panels.motionOpen,
     // Typing a label is not the moment: the tip waits, so the Escape that ends editing cannot eat it.
-    blocked: panels.workspace !== null || panels.motionOpen || panels.treeOpen || panels.shortcutsOpen
-      || exportOpen || contextMenu !== null || editing !== null || connectorLabel.editing !== null,
+    blocked: panels.workspace !== null || panels.motionOpen || playback.flow !== null || panels.treeOpen || panels.shortcutsOpen
+      || exportOpen || contextMenu !== null || editing !== null || connectorLabel.editing !== null
+      // An agent is drawing: a coachmark would talk over it.
+      || agentBridge.status === 'connected',
     announce: setAnnouncement,
   });
   const runTip = (tip: V2TipId) => {
     tips.dismiss();
     if (tip === 'code') code.openNew();
-    if (tip === 'mermaid') { code.writeNew(() => pastedMermaidRef.current); openWorkspace('code'); }
     if (tip === 'assistant') openWorkspace('assistant');
     if (tip === 'motion') panels.openMotion();
   };
@@ -857,8 +909,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     if (action === 'duplicate') {
       const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
       commit(command);
-      applyConnectorSelection([]);
-      applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
+      selectNodes(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : []));
     }
     if (action === 'delete') {
       if (!architectureActions.unplaceSelection([nodeId])) commit(buildDeleteSelectionCommand(page, [nodeId], []));
@@ -873,10 +924,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
         data-workspace-open={panels.workspace !== null || panels.shortcutsOpen || panels.motionOpen || chartPanelNode !== null}
         data-left-open={panels.treeOpen}
         onKeyDown={(event) => {
-          if (playback.flow && !isEditableTarget(event.target)) {
+          // A focused control (a tree, a button) keeps its own arrows and Space; a playing flow takes the rest.
+          if (playback.flow && !keyOwnedByTarget(event)) {
             if (event.key === 'ArrowRight' || event.key === ' ') { playback.next(); event.preventDefault(); return; }
             if (event.key === 'ArrowLeft') { playback.prev(); event.preventDefault(); return; }
-            if (event.key === 'Escape') { playback.close(); event.preventDefault(); return; }
+            if (event.key === 'Escape') { endFlow(); event.preventDefault(); return; }
           }
           if (event.key === '?' && !isEditableTarget(event.target)) {
             event.preventDefault(); panels.toggleShortcuts();
@@ -949,6 +1001,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onToolChange={leaveStart(setTool)}
               toolConfig={toolConfig}
               onPickShape={leaveStart(pickShape)}
+              onPlaceShape={(shape) => gestureApiRef.current?.placeShape(media.centreWorld(), shape)}
               onPickConnector={leaveStart(pickConnector)}
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={leaveStart(iconLibrary.insertIcon)}
               onInsertImage={leaveStart(pickImageFile)} onPickEmoji={leaveStart(pickEmoji)}
@@ -957,7 +1010,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
-              onFitView={() => camera.fitView()}
+              onFitView={fitAll}
               onToggleTree={panels.toggleTree}
             />
             <V2CanvasHost
@@ -989,20 +1042,20 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               {repoSource && map.active ? <V2RepoMapOverlay source={repoSource} map={repo.state} links={map.links} /> : null}
               {map.start ? (
                 <V2MapStart busy={code.generating} onStartModel={() => { code.startFrom(C4_STARTER, { openPanel: false }); setModelPanelOnStart(true); }}
-                  onMapRepo={({ owner, repo: name, ref }) => navigate(`/map/github/${owner}/${name}${ref !== 'HEAD' ? `/tree/${encodeURIComponent(ref)}` : ''}`)}
+                  onMapRepo={(repoRef) => navigate(mapRepoPath(repoRef))}
                   onAgent={() => openWorkspace('agent')} />
               ) : null}
               {map.empty ? (
                 <div className="ofk-v2-map-state" data-testid="v2-map-empty">
                   <EmptyState hero={<V2StateHero kind="no-canvas" />} title="No elements yet"
-                    description="Add people, systems and containers in the model, then open the map again."
+                    description="Add people, systems and containers in the model; the map draws them as you go."
                     action={<Button variant="primary" onClick={() => openWorkspace('model')}>Open model</Button>} />
                 </div>
               ) : null}
               {map.error ? (
                 <div className="ofk-v2-map-state" data-testid="v2-map-error">
                   <ErrorState hero={<V2StateHero kind="torn-page" />} title="The map could not be drawn." description={map.error}
-                    action={<Button variant="primary" onClick={() => map.setMode('canvas')}>Back to canvas</Button>} />
+                    action={<Button variant="primary" onClick={() => map.choose('canvas')}>Back to canvas</Button>} />
                 </div>
               ) : null}
             </V2CanvasHost>
@@ -1040,7 +1093,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onRemoveElement={() => { if (selectedElementId) architectureActions.removeElement(selectedElementId); }}
               onSelectAll={() => selectionApi.selectAll(viewPage)}
               onExport={openElementExport}
-              onZoomToFit={() => camera.fitView()}
+              onZoomToFit={fitAll}
               onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
               onZoomTo100={camera.resetZoom}
               showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
@@ -1066,18 +1119,22 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onOpenAnimation={panels.openMotion} />
             <V2ShareBar canShare={canShare} shareOpen={exportOpen && exportDoor === 'bar-share'} exportOpen={exportOpen && exportDoor === 'bar-export'}
               onShare={(anchor) => toggleBarPanel(anchor, 'bar-share')} onExport={(anchor) => toggleBarPanel(anchor, 'bar-export')} />
-            <V2WorkspaceRail mode={panels.workspace} onChange={panels.toggleWorkspace}
+            <V2WorkspaceRail mode={panels.workspace} onChange={(mode) => { if (mode === 'code') toggleCode(); else panels.toggleWorkspace(mode); }}
               onShortcuts={panels.toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
             {/* A drawing tool armed means the next click draws: the welcome steps aside instead of catching it. */}
             {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !docReadOnly && rendererReady && !map.active && tool === 'select'
               ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
-            {panels.workspace === 'code' ? <V2CodePanel code={code.draft} palette={preferences.diagramPalette}
+            {repoPage && !map.active && page.nodes.length === 0 ? (
+              <div className="ofk-v2-map-state"><EmptyState title="This map has no drawing yet" description={`Edit as drawing (${platformKeys('⇧M')}) copies it here.`} /></div>
+            ) : null}
+            {panels.workspace === 'code' ? <V2CodePanel code={code.draft} palette={preferences.diagramPalette} autoFocus={code.panelFocus}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
               onCodeChange={code.edit}
               diagnostics={code.diagnostics} generating={code.generating} canvasEdited={code.canvasEdited}
               {...(code.foreign ? { convertFrom: code.foreign } : {})}
               onGenerate={() => { void code.generate(); }} onClose={() => { code.cancel(); panels.closeWorkspace(); }} /> : null}
             {panels.workspace === 'agent' ? <V2AgentConnect status={agentBridge.status} detail={agentBridge.detail}
+              activity={agentBridge.activity} onUndo={session.undo}
               port={preferences.bridgePort} token={preferences.bridgeToken}
               onPortChange={(bridgePort) => updatePreferences({ bridgePort })}
               onTokenChange={(bridgeToken) => updatePreferences({ bridgeToken })}
@@ -1087,8 +1144,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               <V2InspectPanel report={inspectSelection(viewPage ?? page, selection.nodeIds, selectedConnectorIds)}
                 onClose={() => { panels.closeWorkspace(); focusCanvas(); }}
                 onSelectNode={(nodeId) => {
-                  applyConnectorSelection([]);
-                  applySelection(replaceSelection([nodeId]));
+                  selectNodes([nodeId]);
                   camera.glideToNodes([nodeId]);
                 }}
                 onShowCode={code.openFrame}
@@ -1121,13 +1177,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onSelectElement={(elementId) => {
                   const node = (viewPage ?? page).nodes.find((candidate) => placedElementId(candidate) === elementId);
                   if (node) {
-                    applyConnectorSelection([]);
-                    applySelection(replaceSelection([node.id]));
+                    selectNodes([node.id]);
                     camera.glideToNodes([node.id]);
                     return;
                   }
-                  applyConnectorSelection([]);
-                  applySelection(replaceSelection([]));
+                  selectNodes([]);
                   setAnnouncement('Inspecting an element outside the current view.');
                 }}
                 onClearSelection={() => selectionApi.clearAll()}
@@ -1136,6 +1190,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onEditElement={architectureActions.editElement}
                 onRemoveElement={architectureActions.removeElement}
                 onAddElement={architectureActions.addElement}
+                onAddToView={(id) => {
+                  void architectureActions.addToView(id).catch((error: unknown) => pushToast({
+                    id: 'add-to-view', tone: 'danger', title: error instanceof Error ? error.message : 'Could not add it to this view.',
+                  }));
+                }}
                 onCreateFlow={architectureActions.createFlow}
                 onPlayFlow={playback.open}
                 onClose={panels.closeWorkspace}
@@ -1147,7 +1206,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               <V2FlowPanel
                 model={architecture.model}
                 playback={playback}
-                onClose={playback.close}
+                onClose={endFlow}
                 onCopy={(kind) => {
                   if (kind === 'sequence') { void architectureActions.openFlowAsSequence(playback.flow!); return; }
                   const text = playback.exportText(kind);

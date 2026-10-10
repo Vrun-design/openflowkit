@@ -84,9 +84,13 @@ export function measureNodeSize(request: NodeMeasureRequest): Size2d {
     return clampSize(Math.max(180, label.width + 40), label.height + 64, spec);
   }
   const wrapping = wrapsText(request);
+  // An actor's text sits in its body, below the head (nodeLabelBounds): text is measured for that area and
+  // the box grows by the area's share of it, so the head never sits under the name.
+  const body = spec.shape === 'actor' ? labelShare(spec.shape, request.kind) : { width: 1, height: 1 };
   const policy = {
-    version: 1, mode: 'responsive', minSize: { width: spec.minSize.width, height: spec.minSize.height },
-    maxSize: { width: spec.maxSize.width, height: spec.maxSize.height },
+    version: 1, mode: 'responsive',
+    minSize: { width: spec.minSize.width * body.width, height: spec.minSize.height * body.height },
+    maxSize: { width: spec.maxSize.width * body.width, height: spec.maxSize.height * body.height },
     overflow: wrapping ? 'wrap' : 'visible', clipContent: false, maxLines: 4,
   } as const;
   const sized = resolveSizedNode(blankNode({
@@ -96,10 +100,10 @@ export function measureNodeSize(request: NodeMeasureRequest): Size2d {
     contentLayout: request.spec.shape === 'actor' ? ACTOR_CONTENT_LAYOUT : TEXT_LAYOUT,
     sizingPolicy: policy,
   }, { width: 1, height: 1 }, request.kind), policy);
-  const size = clampSize(sized.size.width, sized.size.height, spec);
+  const size = clampSize(sized.size.width / body.width, sized.size.height / body.height, spec);
   // A wrapped node takes the full wrap width: the canvas wraps with the real font at that width, so the
   // estimate's narrower widest line would leave no slack for glyphs wider than measured.
-  return wrapping && needsWrap(request, spec.maxSize.width - 2 * textPadding(spec))
+  return wrapping && needsWrap(request, spec.maxSize.width * body.width - 2 * textPadding(spec))
     ? { width: clampSize(spec.maxSize.width, 1, spec).width, height: size.height } : size;
 }
 
@@ -114,6 +118,12 @@ const textPadding = (spec: DslShapeSpec) => spec.shape === 'actor' ? ACTOR_CONTE
 function wrapsText(request: NodeMeasureRequest): boolean {
   if (request.hasIcon || request.width !== undefined || request.height !== undefined) return false;
   return request.spec.shape === 'actor' || request.overflow === 'wrap' || !insetLabel(request.spec.shape, request.kind);
+}
+
+/** The share of the box a shape's label area takes, per axis. */
+function labelShare(shape: string, kind: string): Size2d {
+  const bounds = nodeLabelBounds(blankNode({ shape }, { width: 100, height: 100 }, kind));
+  return { width: bounds.width / 100, height: bounds.height / 100 };
 }
 
 /** Whether the shape's label area is smaller than its box. */

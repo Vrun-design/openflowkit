@@ -53,6 +53,11 @@ function HomeDocument(): React.JSX.Element | null {
   return target ? <Navigate to={`/d/${target}`} replace /> : null;
 }
 
+/** One editor per document: switching /d/A → /d/B (back, forward) unmounts A's editor, which saves A's pending edit as A. */
+function EditorRoute(): React.JSX.Element {
+  return <EditorPage key={useParams().id} />;
+}
+
 function LegacyV2Redirect(): React.JSX.Element {
   const { id } = useParams();
   return <Navigate to={`/d/${id}`} replace />;
@@ -68,7 +73,7 @@ export default function App(): React.JSX.Element {
           <Route path="/view" element={<LegacyViewPage />} />
           {LEGACY_HOME_PATHS.map((path) => <Route key={path} path={path} element={<Navigate to="/home" replace />} />)}
           {LEGACY_DOCS_PATHS.map((path) => <Route key={path} path={path} element={<DocsSiteRedirect />} />)}
-          <Route path="/d/:id" element={<EditorPage />} />
+          <Route path="/d/:id" element={<EditorRoute />} />
           <Route path="/s/:id/:key?" element={<SharedPage />} />
           <Route path="/from/github/*" element={<FromGithubPage />} />
           <Route path="/map/github/*" element={<MapRoute />} />

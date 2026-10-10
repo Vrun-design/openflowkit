@@ -237,7 +237,7 @@ describe('buildMap folding', () => {
   it('folds 20 top-level folders into the root `more` box', () => {
     const m = buildMap({ files: Array.from({ length: 20 }, (_, i) => file(`t${String(i).padStart(2, '0')}/a.ts`)), imports: [] });
     check(m, 20);
-    expect(m.nodes['root#more'].name).toBe('9 more parts');
+    expect(m.nodes['root#more'].name).toBe('9 more modules');
   });
 
   it('folds 16 declared parts', () => {

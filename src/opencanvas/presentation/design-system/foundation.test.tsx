@@ -58,9 +58,9 @@ describe('design foundation', () => {
         ).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme.onAccent, theme.accent)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme.onAccent, theme.accentHover)).toBeGreaterThanOrEqual(4.5);
-      // Brand exception: the single bold primary CTA uses the seed at >= 3:1 (owner decision 2026-09-20).
-      expect(contrast(theme.onPrimary, theme.primary)).toBeGreaterThanOrEqual(3);
-      expect(contrast(theme.onPrimary, theme.primaryHover)).toBeGreaterThanOrEqual(3);
+      // The primary button carries 13px text: AA 4.5:1 (was a 3:1 brand exception, 2026-09-20; the seed stays for non-text marks).
+      expect(contrast(theme.onPrimary, theme.primary), 'onPrimary/primary').toBeGreaterThanOrEqual(4.5);
+      expect(contrast(theme.onPrimary, theme.primaryHover), 'onPrimary/primaryHover').toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme.onInverse, theme.inverse)).toBeGreaterThanOrEqual(4.5);
       for (const role of ['focus', 'controlBorder'] as const)
         expect(contrast(theme[role], theme.surface)).toBeGreaterThanOrEqual(3);

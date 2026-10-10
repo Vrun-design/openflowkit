@@ -139,7 +139,8 @@ test('a selected box shows where it lives, what it talks to and what is inside @
   await page.waitForTimeout(450);
   await clickHeader(page, 'web/src'); // closed again: a selected, shut folder
   await expect.poll(() => selected(page)).toEqual(['web/src']);
-  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  // A repo map's first visit opens the model panel beside it: no rail click needed.
+  await expect(page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const panel = page.getByLabel('Selected box');
   await expect(panel).toContainText('web/src');
   await expect(panel).toContainText('Folder · 8 files');
@@ -297,7 +298,9 @@ test('a repo that is not found, an unreachable GitHub and a repo with nothing to
   await expect(alert(page)).toContainText('not found, or it is private');
   await expect(toolbar(page), 'no toolbar for a map that is not there').toHaveCount(0);
   expect(((await alert(page).innerText()).match(/openflowkit map/g) ?? []).length, 'the command, once').toBe(1);
-  await expect(page.getByRole('button', { name: 'Back to home' })).toHaveAttribute('data-variant', 'primary');
+  // Most often a typo: the address comes back, ready to fix; home stays one click away.
+  await expect(alert(page).getByRole('textbox', { name: 'Map a GitHub repo' })).toHaveValue('acme/shop');
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeVisible();
 
   await page.unroute('https://api.github.com/repos/acme/shop/git/trees/**');
   await page.route('https://api.github.com/repos/acme/shop/git/trees/**', (route) => route.abort('connectionrefused'));
@@ -329,7 +332,8 @@ test('a crowded level draws its strongest arrows and offers the rest @gate', asy
 
 test('a repo document cannot be edited: no new elements, no generated diagram, nothing for undo @gate', async ({ page }) => {
   await openMap(page);
-  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  // Open on first visit, so the absent buttons below are absent from a showing panel.
+  await expect(page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Add element' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Create C4 workspace' })).toHaveCount(0);
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();

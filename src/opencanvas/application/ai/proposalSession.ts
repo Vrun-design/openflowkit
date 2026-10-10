@@ -1,6 +1,7 @@
 // Revision-aware proposal lifecycle: a plain record any client (panel today,
 // MCP propose-for-review later) creates, decides on, and turns into ONE batch.
 // Owns no React, no provider, no storage; the session commits what it returns.
+import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { BatchDocumentCommand, DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import {
@@ -134,6 +135,12 @@ export function summarizeChanges(
       reason: explanation,
     };
   });
+}
+
+/** Top-level nodes on `pageId` that `command` adds or changes, for bringing an applied edit into view. */
+export function commandTouchedRoots(document: SceneDocumentV1, command: DocumentCommand, pageId: string): string[] {
+  const after = applyDocumentCommand(document, command).document.pages.find(({ id }) => id === pageId);
+  return after ? changedRoots(document.pages.find(({ id }) => id === pageId), after) : [];
 }
 
 /**

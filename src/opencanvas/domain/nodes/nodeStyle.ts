@@ -6,9 +6,10 @@ import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
 import { darkWashFill, isDarkCanvas, resolveAdaptiveInk, WASH_SUB_INK } from '../color/adaptiveColor';
-import { hasExplicitColor, nodePaletteName, paletteResolver } from './nodePalette';
+import { hasExplicitColor, nodePaletteName, PALETTE_KEYS, paletteResolver } from './nodePalette';
 import { widgetLabelBox } from './widgetNodePresentation';
 import { framePresetOf } from './framePreset';
+import { mixHex, readableTextOn } from '../../../lib/colorUtils';
 
 // Every visible property of a node, resolved from flat `appearance` keys
 // (docs/plan/phase-1-style.md §1) with legacy `content.*` palette/typography
@@ -191,6 +192,19 @@ function familyColorKey(node: SceneNode): string | undefined {
   return (resolveBasicNodePresentation(bare) ?? resolveArchitectureNodePresentation(bare))?.colorKey;
 }
 
+const PALETTE_FILLS = new Map<string, ReadonlySet<string>>();
+
+/** Whether `fill` is one of the palette's own swatch fills (pastel or solid), not a colour the author typed. */
+function isPaletteFill(fill: string, palette: ReturnType<typeof nodePaletteName>): boolean {
+  let fills = PALETTE_FILLS.get(palette);
+  if (!fills) {
+    const swatch = paletteResolver(palette);
+    fills = new Set(PALETTE_KEYS.flatMap((key) => [swatch(key, 'pastel').fill.toLowerCase(), swatch(key, 'solid').fill.toLowerCase()]));
+    PALETTE_FILLS.set(palette, fills);
+  }
+  return fills.has(fill.toLowerCase());
+}
+
 function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const a = node.appearance;
   const c = node.content;
@@ -218,6 +232,13 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   // (rgba) container fill keeps its palette ink, except as a dark-canvas wash.
   const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' || darkWash ? canvasColor
     : fill.startsWith('#') ? fill : undefined;
+  const textColor = canvasColor !== undefined && textBackdrop !== undefined
+    ? resolveAdaptiveInk(explicitTextColor, textBackdrop)
+    : paint(a.textColor, defaults.text);
+  // The palette's grey sub-label ink is for its own fills; on a dark authored hex it follows the label, as the export
+  // draws it (72%). Palette swatches and cards (whose header reads subTextColor as a wash) keep their look.
+  const darkFill = explicitTextColor !== undefined && /^#[0-9a-f]{6}$/i.test(fill) && readableTextOn(fill) === '#ffffff'
+    && !resolveArchitectureNodePresentation(node) && !isPaletteFill(fill, nodePaletteName(node));
   return {
     fill,
     stroke: paint(a.stroke, defaults.stroke),
@@ -227,10 +248,9 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
     cornerRadius: clampNumber(a.cornerRadius, STYLE_LIMITS.cornerRadius, defaults.cornerRadius),
     opacity: clampNumber(a.opacity, { min: 0, max: 1 }, 1),
     shadow: a.shadow === true,
-    textColor: canvasColor !== undefined && textBackdrop !== undefined
-      ? resolveAdaptiveInk(explicitTextColor, textBackdrop)
-      : paint(a.textColor, defaults.text),
-    ...(darkWash && explicitTextColor === undefined ? { subTextColor: WASH_SUB_INK } : {}),
+    textColor,
+    ...(darkWash && explicitTextColor === undefined ? { subTextColor: WASH_SUB_INK }
+      : darkFill ? { subTextColor: mixHex(textColor, fill, 0.28) } : {}),
     fontSize: clampNumber(a.fontSize, STYLE_LIMITS.fontSize, defaults.fontSize),
     fontFamily: oneOf<FontFamilyKey>(a.fontFamily, ['sans', 'serif', 'mono', 'hand'],
       FONT_FAMILY_ALIASES[optionalPresentationString(c.fontFamily) ?? ''] ?? 'sans'),

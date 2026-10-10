@@ -15,7 +15,8 @@ import { FRAME_PRESETS, createPresetFrame } from '../../opencanvas/domain/nodes/
 import { defineOp, pointOf, pointSchema, requirePage } from './types';
 
 // Toolbar shapes first: they are what a human creates, so agents get the same nodes.
-const CATALOG_IDS = [...SHAPE_KINDS, ...PRODUCTION_NODE_CATALOG.map((entry) => entry.id)];
+// A catalog entry can share a toolbar shape's id (ellipse); the enum lists it once.
+const CATALOG_IDS = [...new Set([...SHAPE_KINDS, ...PRODUCTION_NODE_CATALOG.map((entry) => entry.id)])];
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/).describe('Hex colour, e.g. #e95420.');
 

@@ -6,7 +6,7 @@ import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
 import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
-import { clearOfPanel, nudgeInto, panToUncover, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, isEditKey, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
+import { clearOfPanel, fitAll, refitKind, showsAll, nudgeInto, panToUncover, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, isEditKey, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -107,12 +107,13 @@ describe('map budget, double-click guard and scene tag', () => {
 describe('map keys', () => {
   it('lets look, zoom, panel and undo keys through and swallows the editing ones', () => {
     for (const k of [{ key: 'm' }, { key: 'v' }, { key: ' ' }, { key: 'z', metaKey: true }, { key: '0', metaKey: true },
-      { key: 'f', ctrlKey: true }, { key: '!', code: 'Digit1', shiftKey: true }, { key: 'Dead', code: 'KeyM', altKey: true }]) {
+      { key: 'f', ctrlKey: true }, { key: '!', code: 'Digit1', shiftKey: true }, { key: 'Dead', code: 'KeyM', altKey: true },
+      { key: 'ç', code: 'KeyC', altKey: true }]) {
       expect(key(k), JSON.stringify(k)).toBe(true);
     }
     for (const k of [{ key: 'Delete' }, { key: 'Backspace' }, { key: 'r' }, { key: 'ArrowLeft' }, { key: 'q' },
       { key: 'a', metaKey: true }, { key: 'v', metaKey: true }, { key: 'x', metaKey: true }, { key: 'd', metaKey: true },
-      { key: 'Dead', code: 'KeyA', altKey: true }]) {
+      { key: 'Dead', code: 'KeyA', altKey: true }, { key: '∂', code: 'KeyD', altKey: true }]) {
       expect(key(k), JSON.stringify(k)).toBe(false);
     }
     // Remove from model is a model edit, which Map allows (the panel offers it too).
@@ -293,5 +294,54 @@ describe('clearOfPanel', () => {
   });
   it('does nothing without content or selection', () => {
     expect(clearOfPanel({ cam, before, seen: before, after: left })).toBeNull();
+  });
+});
+
+describe('fitAll and showsAll', () => {
+  const free = { left: 100, top: 60, width: 800, height: 500 };
+  it('zoom to fit shows the whole map inside the free area, however small that makes it', () => {
+    const extent = { x: 100, y: 50, width: 6000, height: 4000 };
+    const cam = fitAll(extent, free);
+    expect(cam.zoom).toBeLessThan(READABLE);
+    expect(extent.x * cam.zoom + cam.x).toBeGreaterThanOrEqual(free.left);
+    expect((extent.x + extent.width) * cam.zoom + cam.x).toBeLessThanOrEqual(free.left + free.width);
+    expect(extent.y * cam.zoom + cam.y).toBeGreaterThanOrEqual(free.top);
+    expect((extent.y + extent.height) * cam.zoom + cam.y).toBeLessThanOrEqual(free.top + free.height);
+    expect(showsAll(extent, cam, free)).toBe(true);
+  });
+  it('a readable landing on a big map shows only part of it', () => {
+    const extent = { x: 0, y: 0, width: 6000, height: 4000 };
+    expect(showsAll(extent, mapCamera(extent, free), free)).toBe(false);
+    expect(showsAll({ x: 0, y: 0, width: 400, height: 200 }, mapCamera({ x: 0, y: 0, width: 400, height: 200 }, free), free)).toBe(true);
+  });
+});
+
+describe('mapCamera with a reading start', () => {
+  it('a map too big to show readable starts at its first box, not at an empty corner of the extent', () => {
+    const free = { left: 100, top: 60, width: 800, height: 500 };
+    const extent = { x: 0, y: 0, width: 6000, height: 4000 };
+    const first = { x: 2000, y: 0, width: 300, height: 80 };
+    const cam = mapCamera(extent, free, first);
+    expect(cam.zoom).toBeCloseTo(READABLE, 5);
+    const [sx, sy] = [first.x * cam.zoom + cam.x, first.y * cam.zoom + cam.y];
+    expect(sx).toBeGreaterThanOrEqual(free.left);
+    expect(sx).toBeLessThan(free.left + 100);
+    expect(sy).toBeGreaterThanOrEqual(free.top);
+    expect(sy).toBeLessThan(free.top + 100);
+  });
+});
+
+describe('refitKind', () => {
+  const cam = { x: 10, y: 20, zoom: 0.4 };
+  it('a layout with no focus redoes the fit the untouched camera holds: all of it after Zoom to fit, the start after a landing', () => {
+    expect(refitKind({ cam, all: true }, { ...cam }, false)).toBe('all');
+    expect(refitKind({ cam, all: false }, { ...cam, x: 10.2 }, false)).toBe('start');
+  });
+  it('a camera the reader moved, or no fit held, keeps its place', () => {
+    expect(refitKind({ cam, all: true }, { ...cam, x: 80 }, false)).toBeNull();
+    expect(refitKind(null, cam, false)).toBeNull();
+  });
+  it('mid-move to the fit still counts as untouched', () => {
+    expect(refitKind({ cam, all: true }, { ...cam, x: 300 }, true)).toBe('all');
   });
 });

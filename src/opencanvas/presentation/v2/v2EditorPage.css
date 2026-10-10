@@ -232,7 +232,10 @@
 .ofk-v2-welcome-actions > * { pointer-events: auto; }
 .ofk-v2-welcome-actions .ofk-button { font-size: 14px; min-height: 38px; padding: 0 12px; gap: 8px; }
 /* Templates: label on its own line, then tight chips that wrap as a block. */
-@media (hover: hover) and (pointer: fine) { .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+/* The arrows point at controls a mouse hovers; a touch screen gets none. (This block was left unclosed in cf87050b,
+   which put every later rule behind a fine pointer: phones and tablets lost the rest of this file.) */
+.ofk-v2-guide { display: none; }
+@media (hover: hover) and (pointer: fine) { .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; } }
 .ofk-v2-guide svg { width: 100px; height: 80px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ofk-v2-guide-tools { top: 150px; left: 82px; align-items: flex-start; }
 .ofk-v2-guide-tools span { margin-top: 0; }
@@ -610,6 +613,9 @@
   /* One lane is too narrow for both: the document bar keeps the top edge, the workspace rail drops under it. */
   .ofk-v2 .ofk-v2-document-bar { max-width: none; }
   .ofk-v2 .ofk-v2-workspace-rail { top: var(--ofk-layout-topLane); }
+  /* No room beside a selection on a phone: the bar docks above the camera controls instead of over the tools
+     (the page writes left/top inline as the selection moves). */
+  .ofk-v2 [data-context-bar] { top: auto !important; left: 8px !important; bottom: calc(var(--ofk-layout-bottomLane) + 8px); }
   /* Start under the rail instead of centring behind it; templates scroll as one row. */
   .ofk-v2-welcome-center { top: 136px; transform: translateX(-50%); }
   .ofk-v2-welcome-center > img { width: 36px; height: 36px; margin-bottom: 14px; }
@@ -824,6 +830,8 @@
 .ofk-v2-code-footer > .ofk-segmented label { flex: 1; justify-content: center; }
 /* Connect agent — rail panel. Hero echoes the model welcome; status lives in the header badge. */
 .ofk-connection-panel .ofk-panel-body { padding: 8px 24px 24px; --ofk-panel-gutter: var(--ofk-space-xl); }
+.ofk-connection-activity { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 0; padding: 6px 6px 6px 10px; border: 1px solid var(--ofk-border); border-radius: 8px; font-size: 12px; color: var(--ofk-secondary); }
+.ofk-connection-activity > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ofk-connection-badge { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; padding: 3px 9px 3px 7px; border: 1px solid var(--ofk-border); border-radius: 999px; font-size: 11px; color: var(--ofk-secondary); white-space: nowrap; }
 .ofk-connection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-muted); flex: none; }
 .ofk-panel[data-status='connecting'] .ofk-connection-dot { background: var(--ofk-accent); animation: ofk-connection-pulse 1.2s ease-in-out infinite; }
@@ -1005,6 +1013,7 @@
 .ofk-chart-table tr:hover .ofk-chart-remove, .ofk-chart-table th:hover .ofk-chart-remove,
 .ofk-chart-table tr:focus-within .ofk-chart-remove { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .ofk-chart-table .ofk-chart-remove { transition: none; } }
+@media (hover: none) { .ofk-chart-table .ofk-chart-remove { opacity: 1; } }
 .ofk-chart-panel-foot { display: flex; align-items: center; gap: 8px; }
 .ofk-chart-panel-foot .ofk-chart-hint { margin-inline-start: auto; font-size: 11px; color: var(--ofk-muted); }
 

@@ -12,7 +12,7 @@ import { svgViewBox } from './canonicalSvg';
 import { withSvgImage } from './raster';
 import { paintFrame } from './framePainter';
 import {
-  motionCanvasSize, motionFrameIntervalMs, motionFrameTimes,
+  motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, onePass,
   type MotionFormat, type MotionFps, type MotionSize,
 } from './motionSchedule';
 import type { MotionWorkerOut } from './motion.worker';
@@ -172,7 +172,8 @@ function waitUntil(deadline: number, signal?: AbortSignal): Promise<void> {
  * VP9 encoder for the offline path.
  */
 async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionEncodeResult> {
-  const { document, timeline, pageId, format, size, fps } = request;
+  const { document, pageId, format, size, fps } = request;
+  const timeline = onePass(request.timeline);
   const theme = request.theme ?? 'light';
   const viewBox = svgViewBox(document, { pageId });
   const { width, height } = motionCanvasSize(viewBox, size);

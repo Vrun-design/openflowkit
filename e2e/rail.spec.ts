@@ -42,27 +42,33 @@ test('the rail opens flyouts by mouse and keyboard, picks a shape, locks and und
   expect((await state(page)).tool).toBe('select');
 
   // Keyboard: ArrowRight opens the grid with focus on the current pick, arrows
-  // move between cells, Enter picks.
+  // move between cells, Enter places that shape at the view centre — the
+  // keyboard has no canvas to click, so it never leaves a tool armed.
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('option', { name: 'Diamond' })).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('option', { name: 'Triangle' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(shapes).toHaveAttribute('aria-expanded', 'false');
-  await expect(shapes).toBeFocused();
-  await expect.poll(async () => (await state(page)).tool).toBe('shape');
-
-  // The picked variant is what the tool draws.
-  await page.mouse.click(420, 330);
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
-  const shapesOnPage = (await doc(page)).pages[0].nodes;
-  expect(String(shapesOnPage[0]?.content.shape)).toBe('triangle');
+  expect(String((await doc(page)).pages[0].nodes[0]?.content.shape)).toBe('triangle');
+  expect((await state(page)).tool).toBe('select');
+
+  // Mouse: a click on a cell arms the tool, and the picked variant is what it draws.
+  await shapes.click();
+  await page.getByRole('option', { name: 'Diamond' }).click();
+  await expect(shapes).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(async () => (await state(page)).tool).toBe('shape');
+  await page.mouse.click(420, 520);
+  await expect.poll(async () => (await state(page)).nodes.length).toBe(2);
+  expect(String((await doc(page)).pages[0].nodes[1]?.content.shape)).toBe('diamond');
+  await page.keyboard.press('Escape');
 
   // Lock is a keyboard action (⌘L) since the rail lost its button, and it undoes.
   const rect = (await nodeRect(page, (await state(page)).nodes[0]))!;
   const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
   await page.mouse.click(box.x + rect.x + rect.width / 2, box.y + rect.y + rect.height / 2);
-  await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
+  await expect.poll(async () => (await state(page)).nodes.length).toBe(2);
   await page.keyboard.press('Meta+l');
   await expect.poll(async () => String((await doc(page)).pages[0].nodes[0]?.content.sectionLocked)).toBe('true');
   await page.keyboard.press('Meta+z');

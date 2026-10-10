@@ -80,4 +80,14 @@ describe('topLeftFirst', () => {
     const rects = new Map([['b', { x: 10, y: 0 }], ['a', { x: 10, y: 0 }], ['c', { x: 0, y: 0 }], ['d', { x: 0, y: 5 }]]);
     expect(['d', 'b', 'a', 'c'].sort(topLeftFirst(rects))).toEqual(['c', 'a', 'b', 'd']);
   });
+  it('buckets rows once, so the order does not depend on the input order (a staircase of small steps)', () => {
+    const rects = new Map([['a', { x: 300, y: 0, height: 60 }], ['b', { x: 200, y: 20, height: 60 }], ['c', { x: 100, y: 40, height: 60 }], ['d', { x: 0, y: 60, height: 60 }]]);
+    const orders = [['a', 'b', 'c', 'd'], ['d', 'c', 'b', 'a'], ['b', 'd', 'a', 'c'], ['c', 'a', 'd', 'b']].map((ids) => [...ids].sort(topLeftFirst(rects)));
+    for (const order of orders) expect(order).toEqual(orders[0]);
+    expect(orders[0]).toEqual(['b', 'a', 'd', 'c']);
+  });
+  it('reads boxes a few px apart in height as one row, left first (main.go before a money/ box 12px higher)', () => {
+    const rects = new Map([['main.go', { x: 0, y: 112, height: 60 }], ['money', { x: 300, y: 100, height: 120 }], ['below', { x: 0, y: 260, height: 60 }]]);
+    expect(['below', 'money', 'main.go'].sort(topLeftFirst(rects))).toEqual(['main.go', 'money', 'below']);
+  });
 });

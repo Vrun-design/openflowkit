@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import {
-  MOTION_FPS, MOTION_SIZES, motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes,
+  MOTION_FPS, MOTION_SIZES, gifRepeat, motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, onePass,
 } from './motionSchedule';
 import { motionMime, webCodecsAvailable } from './motionFrames';
 import { svgViewBox } from './canonicalSvg';
@@ -61,5 +62,37 @@ describe('motion schedule', () => {
 
   it('reports WebCodecs availability without throwing where it is absent', () => {
     expect(typeof webCodecsAvailable()).toBe('boolean');
+  });
+});
+
+describe('GIF loop', () => {
+  const NETSCAPE = 'NETSCAPE2.0';
+  function encode(loop: boolean): string {
+    const encoder = GIFEncoder();
+    const rgba = new Uint8Array(4 * 4 * 4).fill(255);
+    const palette = quantize(rgba, 2);
+    for (let frame = 0; frame < 2; frame += 1) {
+      encoder.writeFrame(applyPalette(rgba, palette), 4, 4, { palette, delay: 50, repeat: gifRepeat(loop) });
+    }
+    encoder.finish();
+    return new TextDecoder('latin1').decode(encoder.bytes());
+  }
+
+  it('Loop off plays once: the file has no loop block', () => {
+    expect(encode(false)).not.toContain(NETSCAPE);
+  });
+
+  it('Loop on repeats forever: one loop block, count 0', () => {
+    const file = encode(true);
+    expect(file.split(NETSCAPE)).toHaveLength(2);
+    // Sub-block: 3, 1, then the little-endian count.
+    const at = file.indexOf(NETSCAPE) + NETSCAPE.length;
+    expect([...file.slice(at, at + 4)].map((c) => c.charCodeAt(0))).toEqual([3, 1, 0, 0]);
+  });
+
+  it('frames cover one pass: a looping clip still ends on its finished last frame', () => {
+    const timeline = { loop: true, steps: [], preset: 'build' as const, durationMs: 1000 };
+    expect(onePass(timeline)).toEqual({ ...timeline, loop: false });
+    expect(timeline.loop).toBe(true);
   });
 });

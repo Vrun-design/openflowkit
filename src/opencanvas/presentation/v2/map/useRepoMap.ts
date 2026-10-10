@@ -9,7 +9,7 @@ export interface RepoMapState {
   readonly status: 'idle' | 'loading' | 'ready' | 'problem';
   /** While loading: the tree first, then the map as it fills in. */
   readonly model: MapModel | null;
-  /** `sampled` is kept after the read finishes: the "Showing X of Y files" note outlives the counter. */
+  /** `sampled` is kept after the read finishes: the "Read X of Y files" note outlives the counter. */
   readonly progress: MapProgress;
   readonly problem: RepoProblemView | null;
   readonly retry: () => void;
@@ -46,12 +46,13 @@ export function useRepoMap(source: RepoMapSource | null, load: Loader = loadRepo
     const controller = new AbortController();
     const put = (next: (a: Answer | null) => Answer): void => { if (!controller.signal.aborted) setAnswer((a) => next(a)); };
     let sampled: MapProgress['sampled'];
+    let stale: Pick<MapProgress, 'stale' | 'staleRef'> = {};
     put(() => ({ key, status: 'loading', model: null, progress: NO_PROGRESS }));
     const token = storedToken();
     load({ owner, repo, ref }, {
       signal: controller.signal,
       ...(token ? { token } : {}),
-      onSnapshot: (model, progress) => { sampled = progress.sampled; put(() => ({ key, status: 'loading', model, progress: { ...progress } })); },
+      onSnapshot: (model, progress) => { sampled = progress.sampled; stale = progress.stale ? { stale: true, ...(progress.staleRef ? { staleRef: progress.staleRef } : {}) } : {}; put(() => ({ key, status: 'loading', model, progress: { ...progress } })); },
       onProgress: (progress) => {
         const now = performance.now();
         if (now - lastTick.current < 100 && progress.read < progress.total) return; // ≤10 renders/s
@@ -62,8 +63,9 @@ export function useRepoMap(source: RepoMapSource | null, load: Loader = loadRepo
     }).then(
       (model) => {
         if (controller.signal.aborted) return;
-        const progress: MapProgress = { read: model.stats.files, total: model.stats.files, ...(sampled ? { sampled } : {}) };
-        remember(memoKey, { model, progress });
+        const progress: MapProgress = { read: model.stats.files, total: model.stats.files, ...(sampled ? { sampled } : {}), ...stale };
+        // A stale map is not remembered for the session: the next visit asks GitHub again.
+        if (!stale.stale) remember(memoKey, { model, progress });
         put(() => ({ key, status: 'ready', model, progress }));
       },
       (error: unknown) => {

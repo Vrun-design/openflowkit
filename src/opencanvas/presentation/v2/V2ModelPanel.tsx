@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconArrowLeft, IconCircleDot, IconPlayerPlay, IconPlus } from '@tabler/icons-react';
 import type { ArchElementPatch } from '../../application/dsl/architectureCommands';
 import { modelTags } from '../../../dsl/model/predicates';
-import { elementAncestors, type ArchIndex } from '../../../dsl/model/model';
-import { ELEMENT_KIND_LABEL, type ArchFlow, type ElementKind } from '../../../dsl/model/types';
+import { elementAncestors, modelKindLabel, type ArchIndex } from '../../../dsl/model/model';
+import type { ArchFlow, ElementKind } from '../../../dsl/model/types';
 import { Button, EmptyState, Icon, IconButton, Panel, Tabs, Tree, type TreeNode } from '../design-system';
 import { MapArrowDetails, type MapArrow } from './map/MapArrowDetails';
 import { MapArrowEvidence, type MapRepoArrow } from './map/MapArrowEvidence';
@@ -27,10 +27,13 @@ export interface V2ModelPanelProps {
   readonly onSelectElement: (elementId: string) => void;
   readonly onCreateChildView: (elementId: string) => void;
   readonly onDrillInto: (elementId: string) => void;
-  readonly onEditElement: (elementId: string, patch: ArchElementPatch) => void;
+  /** May resolve to a new id: a just-added element's first rename moves its id to the name. */
+  readonly onEditElement: (elementId: string, patch: ArchElementPatch) => string | null | void;
   readonly onRemoveElement: (elementId: string) => void;
-  /** Adds an element at the top level (`null`) or under a parent; returns the new id. */
+  /** Adds an element at the top level (`null`) or under a parent; resolves to the new id. */
   readonly onAddElement: (parentId: string | null, kind: ElementKind) => string | null;
+  /** Includes an element in the current page's view. */
+  readonly onAddToView?: (elementId: string) => void;
   readonly onCreateFlow: (flow: ArchFlow) => void;
   readonly onPlayFlow: (flow: ArchFlow) => void;
   readonly onClose: () => void;
@@ -124,7 +127,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
       if (!element || (visible && !visible.has(id))) return [];
       const kids = build(index.childIds.get(id) ?? []);
       return [{
-        id, label: element.name, icon: <ElementKindIcon kind={element.kind} />, meta: element.tech ?? ELEMENT_KIND_LABEL[element.kind],
+        id, label: element.name, icon: <ElementKindIcon kind={element.kind} />, meta: element.tech ?? modelKindLabel(element),
         muted: placedAny && !props.placedElementIds.has(id), ...(kids.length ? { children: kids } : {}),
       }];
     });
@@ -195,6 +198,10 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
     inspect(id);
     setJustAdded(id);
   };
+  const editElement = (elementId: string, patch: ArchElementPatch) => {
+    const id = props.onEditElement(elementId, patch);
+    if (id && id !== elementId) { inspect(id); setJustAdded(null); }
+  };
   const relationCount = model.relations.length;
   const header = { title: 'Architecture model', onClose: props.onClose, className: 'ofk-agent-panel ofk-v2-model-panel', tools: BETA };
   const showCard = tab === 'elements';
@@ -231,11 +238,12 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
               ? { label: 'Show on canvas', run: () => props.onShowOnCanvas!(selected.id) }
               : props.onOpenInMap ? { label: 'Open in Map', run: () => props.onOpenInMap!(selected.id) } : undefined}
             onShowInView={!placed && pageId ? () => props.onNavigate({ pageId, elementId: selected.id }) : undefined}
+            onAddToView={!placed && props.onAddToView && architecture.view ? () => props.onAddToView!(selected.id) : undefined}
             onBack={back}
             onInspect={(id) => inspect(id)}
-            onEdit={(patch) => props.onEditElement(selected.id, patch)}
+            onEdit={(patch) => { editElement(selected.id, patch); }}
             onRemove={() => props.onRemoveElement(selected.id)}
-            onAddInside={(kind) => addElement(selected.id, kind)}
+            onAddInside={(kind) => { addElement(selected.id, kind); }}
             onOpenView={() => props.onDrillInto(selected.id)}
             onCreateView={() => props.onCreateChildView(selected.id)}
           />
@@ -262,7 +270,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                   {props.mapOverview && !query ? <MapOverview {...props.mapOverview} /> : null}
                   {model.elements.length === 0 ? (
                     <EmptyState icon={<Icon icon={IconPlus} />} title="No elements yet" description="Add a person or a system to start the model."
-                      action={readOnly ? undefined : <Button variant="primary" onClick={() => addElement(null, 'system')}>Add element</Button>} />
+                      action={readOnly ? undefined : <Button variant="primary" onClick={() => { addElement(null, 'system'); }}>Add element</Button>} />
                   ) : nodes.length === 0 ? (
                     <p role="status" className="ofk-v2-model-hint">No matching elements. Try another name, technology or tag.</p>
                   ) : (
@@ -278,7 +286,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                 </div>
                 <footer className="ofk-v2-model-foot">
                   <span>{plural(model.elements.length, 'element')} · {plural(relationCount, 'relationship')}</span>
-                  {readOnly || model.elements.length === 0 ? null : <Button variant="quiet" onClick={() => addElement(null, 'system')}><Icon icon={IconPlus} />Add element</Button>}
+                  {readOnly || model.elements.length === 0 ? null : <Button variant="quiet" onClick={() => { addElement(null, 'system'); }}><Icon icon={IconPlus} />Add element</Button>}
                 </footer>
               </>
             ),

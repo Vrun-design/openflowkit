@@ -19,6 +19,11 @@ describe('V2MapToolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'All levels' }));
     expect(p.onDepth).toHaveBeenCalledWith('everything');
   });
+  it('while the map is still being drawn: says so, and no level is pressed', () => {
+    render(<V2MapToolbar {...props({ depth: null, drawing: true })} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Drawing the map…');
+    for (const name of ['Top level', 'One level in', 'All levels']) expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
+  });
   it('offers Edit as drawing as words, disabled while nothing is drawn', () => {
     const onPin = vi.fn();
     const { rerender } = render(<V2MapToolbar {...props({ onPin, canPin: true })} />);

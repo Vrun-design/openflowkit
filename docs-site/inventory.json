@@ -6,7 +6,7 @@
       "id": "app-shell",
       "name": "The editor shell",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2EditorPage.tsx:86",
+      "evidence": "src/opencanvas/presentation/v2/V2EditorPage.tsx",
       "notes": "One page: canvas plus floating chrome (document bar, creation toolbar, workspace rail, context bar, panels).",
       "page": "quick-start"
     },
@@ -14,23 +14,23 @@
       "id": "document-bar",
       "name": "Document bar",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2DocumentBar.tsx:86",
-      "notes": "Rename, save status, pages, export, open file, canvas menu, agent connect.",
+      "evidence": "src/opencanvas/presentation/v2/V2DocumentBar.tsx",
+      "notes": "Rename, save status (Reload / Save as copy on a conflict), pages, the Canvas | Map switch, and the canvas menu: settings, open file, share, export.",
       "page": "quick-start"
     },
     {
       "id": "workspace-rail",
       "name": "Workspace rail",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx:22",
-      "notes": "Five modes: AI assistant, Architecture model, Slides, Diagram as code, Connect agent.",
+      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx",
+      "notes": "Four modes: AI assistant, Architecture model, Diagram as code, Connect agent. Inspect opens with Alt+I.",
       "page": "quick-start"
     },
     {
       "id": "settings-panel",
       "name": "Settings",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2Settings.tsx:6",
+      "evidence": "src/opencanvas/presentation/v2/V2Settings.tsx",
       "notes": "Appearance light/dark/system, density, dot grid, snap to grid, canvas colour.",
       "page": "settings"
     },
@@ -38,7 +38,7 @@
       "id": "preferences-storage",
       "name": "Saved preferences",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Preferences.ts:30",
+      "evidence": "src/opencanvas/presentation/v2/useV2Preferences.ts",
       "notes": "Preferences persist in localStorage, validated field by field. Not account-synced; there are no accounts.",
       "page": "settings"
     },
@@ -46,23 +46,23 @@
       "id": "autosave",
       "name": "Autosave with conflict detection",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Autosave.ts:36",
-      "notes": "Saves to IndexedDB; a write that loses the version race reports conflict with a reload action.",
+      "evidence": "src/opencanvas/presentation/v2/useV2Autosave.ts",
+      "notes": "Saves to IndexedDB compare-and-swap; a write that loses to another tab shows \"Another tab saved first\" with Reload and Save as copy.",
       "page": "local-first-diagramming"
     },
     {
       "id": "crash-recovery",
       "name": "Crash recovery",
       "status": "shipped",
-      "evidence": "src/services/storage/v2/v2Repository.ts:180",
-      "notes": "A corrupt primary record falls back to the last good copy; corrupt-with-no-fallback surfaces a diagnostic download.",
+      "evidence": "src/services/storage/v2/v2Repository.ts",
+      "notes": "A corrupt primary record falls back to the last good copy; corrupt with no fallback offers Download raw data and a diagnostic report.",
       "page": "local-first-diagramming"
     },
     {
       "id": "local-first-storage",
       "name": "Local-first storage",
       "status": "shipped",
-      "evidence": "src/services/storage/v2/v2Repository.ts:1",
+      "evidence": "src/services/storage/v2/v2Repository.ts",
       "notes": "IndexedDB only. No server, no account, no sync.",
       "page": "local-first-diagramming"
     },
@@ -70,7 +70,7 @@
       "id": "open-file",
       "name": "Open a .json file",
       "status": "shipped",
-      "evidence": "src/services/storage/v2/openDocumentFile.ts:14",
+      "evidence": "src/services/storage/v2/openDocumentFile.ts",
       "notes": "Canonical JSON any supported schema version; opening saves a fresh id so it never overwrites the source.",
       "page": "local-first-diagramming"
     },
@@ -78,7 +78,7 @@
       "id": "v1-import",
       "name": "V1 file import",
       "status": "shipped",
-      "evidence": "src/services/storage/v2/openDocumentFile.ts:34",
+      "evidence": "src/services/storage/v2/openDocumentFile.ts",
       "notes": "One-shot: a legacy { nodes, edges } file is projected onto the 2.0 document model.",
       "page": "local-first-diagramming"
     },
@@ -86,7 +86,7 @@
       "id": "keyboard-shortcuts",
       "name": "Keyboard shortcuts",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2Shortcuts.ts:22",
+      "evidence": "src/opencanvas/presentation/v2/v2Shortcuts.ts",
       "notes": "The map is data; v2Shortcuts.test.ts checks it against the dispatcher.",
       "page": "keyboard-shortcuts"
     },
@@ -94,7 +94,7 @@
       "id": "shortcuts-cheatsheet",
       "name": "Shortcut cheatsheet (?)",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx:209",
+      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx",
       "notes": "Rendered from the shortcut map, not typed twice.",
       "page": "keyboard-shortcuts",
       "shortcuts": [
@@ -106,7 +106,7 @@
       "id": "canvas-select-hand",
       "name": "Select and Hand tools",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Pointer.ts:456",
+      "evidence": "src/opencanvas/presentation/v2/useV2Pointer.ts",
       "notes": "Pointer state machine: select, box-select, drag, pan.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -118,7 +118,7 @@
       "id": "canvas-pan-zoom",
       "name": "Pan and zoom",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Camera.ts:16",
+      "evidence": "src/opencanvas/presentation/v2/useV2Camera.ts",
       "notes": "Zoom to cursor; wheel and pinch normalised. Keyboard zoom targets fit / selection / 100%.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -134,7 +134,7 @@
       "id": "touch-gestures",
       "name": "Touch gestures",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Touch.ts:1",
+      "evidence": "src/opencanvas/presentation/v2/useV2Touch.ts",
       "notes": "Two-finger pinch/pan, double-tap, long-press context menu. No touch-specific layout; desktop chrome on a tablet.",
       "page": "canvas-basics"
     },
@@ -142,7 +142,7 @@
       "id": "selection",
       "name": "Selection",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Selection.ts:15",
+      "evidence": "src/opencanvas/presentation/v2/useV2Selection.ts",
       "notes": "Click, shift-click and box-select all feed one selection store.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -153,7 +153,7 @@
       "id": "find-on-canvas",
       "name": "Find on canvas",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Find.ts:29",
+      "evidence": "src/opencanvas/presentation/v2/useV2Find.ts",
       "notes": "⌘F searches the visible text on the current page; Enter / Shift+Enter step through matches, Escape restores the selection and view.",
       "page": "keyboard-shortcuts",
       "shortcuts": [
@@ -164,7 +164,7 @@
       "id": "hover-connector-handles",
       "name": "Hover handles and drag-to-connect",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/connectors/connectHandles.ts:27",
+      "evidence": "src/opencanvas/domain/connectors/connectHandles.ts",
       "notes": "Four side handles on hover; dropping on empty canvas quick-creates a connected shape with its label open.",
       "page": "shapes-and-connectors"
     },
@@ -172,31 +172,33 @@
       "id": "shape-tools",
       "name": "Rectangle, ellipse and 19 picker shapes",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:52",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
       "notes": "SHAPE_OPTIONS is the 19-shape picker (icons drawn from each outline). The full library still renders for old documents and DSL words.",
       "page": "shapes-and-connectors",
       "shortcuts": [
         "Rectangle",
         "Ellipse",
-        "Shapes"
+        "Shapes",
+        "Place the armed shape at the centre"
       ]
     },
     {
       "id": "connector-tools",
       "name": "Connector tools",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:77",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
       "notes": "Arrow (direct, the default), elbow (orthogonal), curve (bezier). Bends come from dragging a segment; a headless link is End: None.",
       "page": "shapes-and-connectors",
       "shortcuts": [
-        "Connector"
+        "Connector",
+        "Connect two selected shapes"
       ]
     },
     {
       "id": "text-tool",
       "name": "Text tool",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2CreationToolbar.tsx:83",
+      "evidence": "src/opencanvas/presentation/v2/V2CreationToolbar.tsx",
       "notes": "Click to place text; double-click a shape edits its label.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -207,7 +209,7 @@
       "id": "chart-tool",
       "name": "Chart insertion",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:115",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
       "notes": "Ten kinds: table, quadrant, bar, line, area, scatter, pie, donut, radar, heatmap.",
       "page": "insert-media"
     },
@@ -215,7 +217,7 @@
       "id": "ink-tools",
       "name": "Pen and highlighter",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:110",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
       "notes": "Pressure/tilt-aware freehand strokes stored as node input samples.",
       "page": "shapes-and-connectors",
       "shortcuts": [
@@ -227,7 +229,7 @@
       "id": "eraser-tool",
       "name": "Eraser",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Pointer.ts:1071",
+      "evidence": "src/opencanvas/presentation/v2/useV2Pointer.ts",
       "notes": "Drag collects the strokes it crossed; one undo step.",
       "page": "shapes-and-connectors",
       "shortcuts": [
@@ -238,7 +240,7 @@
       "id": "icon-library",
       "name": "Icon library",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2IconLibrary.ts:20",
+      "evidence": "src/opencanvas/presentation/v2/useV2IconLibrary.ts",
       "notes": "Search over the shipped icon packs; the pick inserts an icon node.",
       "page": "insert-media",
       "shortcuts": [
@@ -249,7 +251,7 @@
       "id": "emoji-picker",
       "name": "Emoji picker",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/emojiCatalog.ts:189",
+      "evidence": "src/opencanvas/presentation/v2/emojiCatalog.ts",
       "notes": "Static catalogue with search and recents; emoji are inserted as text.",
       "page": "insert-media"
     },
@@ -257,7 +259,7 @@
       "id": "image-insert",
       "name": "Image insertion",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2MediaInsert.ts:26",
+      "evidence": "src/opencanvas/presentation/v2/useV2MediaInsert.ts",
       "notes": "File picker or pasted URL; bytes live in the asset store, the node keeps the id.",
       "page": "insert-media",
       "shortcuts": [
@@ -268,7 +270,7 @@
       "id": "move-nudge",
       "name": "Move and nudge",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts:105",
+      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts",
       "notes": "Arrow keys move 1 px, Shift+arrow 10 px, as one command per gesture.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -279,7 +281,7 @@
       "id": "resize",
       "name": "Resize",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/transforms/transformSelection.ts:124",
+      "evidence": "src/opencanvas/domain/transforms/transformSelection.ts",
       "notes": "Eight handles; Shift locks aspect; Alt resizes from the centre.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -290,7 +292,7 @@
       "id": "rotate",
       "name": "Rotate",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/transforms/transformSelection.ts:217",
+      "evidence": "src/opencanvas/domain/transforms/transformSelection.ts",
       "notes": "Rotation handle outside the corner; Shift snaps to 15°.",
       "page": "canvas-basics"
     },
@@ -298,7 +300,7 @@
       "id": "snapping-guides",
       "name": "Snapping and alignment guides",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/transforms/alignmentGuides.ts:45",
+      "evidence": "src/opencanvas/domain/transforms/alignmentGuides.ts",
       "notes": "Object and grid snapping with guides; ⌘/Ctrl while dragging bypasses snapping.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -309,7 +311,7 @@
       "id": "undo-redo",
       "name": "Undo and redo",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2EditActions.ts:47",
+      "evidence": "src/opencanvas/presentation/v2/useV2EditActions.ts",
       "notes": "One history entry per user intent; every command has an inverse.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -320,7 +322,7 @@
       "id": "clipboard",
       "name": "Copy, cut and paste",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2EditActions.ts:47",
+      "evidence": "src/opencanvas/presentation/v2/useV2EditActions.ts",
       "notes": "In-app clipboard over serialized nodes and connectors.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -331,7 +333,7 @@
       "id": "paste-style",
       "name": "Copy and paste style",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/styleClipboard.ts:44",
+      "evidence": "src/opencanvas/domain/commands/styleClipboard.ts",
       "notes": "⌘/Ctrl+Alt+C / V applies node or connector appearance to the selection.",
       "page": "properties-panel",
       "shortcuts": [
@@ -342,7 +344,7 @@
       "id": "duplicate",
       "name": "Duplicate",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts:188",
+      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts",
       "notes": "⌘/Ctrl+D duplicates the selection with fresh ids.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -353,7 +355,7 @@
       "id": "delete-unplace",
       "name": "Delete and unplace",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2ArchitectureActions.ts:95",
+      "evidence": "src/opencanvas/presentation/v2/useV2ArchitectureActions.ts",
       "notes": "Backspace deletes; on a model view it unplaces the element instead, keeping the model entry.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -364,7 +366,7 @@
       "id": "remove-from-model",
       "name": "Remove from model",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx:335",
+      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx",
       "notes": "Deletes the model element itself; offered in the model panel and context menu.",
       "page": "architecture-c4",
       "shortcuts": [
@@ -375,7 +377,7 @@
       "id": "z-order",
       "name": "Z-order",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts:271",
+      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts",
       "notes": "Forward/backward (⌘]) and front/back (]); group variant moves the whole selection.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -388,7 +390,7 @@
       "id": "lock",
       "name": "Lock and unlock",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts:294",
+      "evidence": "src/opencanvas/domain/commands/sceneEdits.ts",
       "notes": "Locked nodes ignore move, resize and the agent move op.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -399,18 +401,19 @@
       "id": "group",
       "name": "Group and ungroup",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/groupNodes.ts:90",
+      "evidence": "src/opencanvas/domain/commands/groupNodes.ts",
       "notes": "⌘/Ctrl+G wraps in a container; Shift+G unwraps one level.",
       "page": "canvas-basics",
       "shortcuts": [
-        "Group / ungroup"
+        "Group / ungroup",
+        "Wrap in a section"
       ]
     },
     {
       "id": "text-style",
       "name": "Bold, italic and underline",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Keyboard.ts:29",
+      "evidence": "src/opencanvas/presentation/v2/useV2Keyboard.ts",
       "notes": "Toggles apply to the selected text nodes.",
       "page": "properties-panel",
       "shortcuts": [
@@ -421,18 +424,19 @@
       "id": "label-editing",
       "name": "Edit label",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2LabelEditing.ts:34",
+      "evidence": "src/opencanvas/presentation/v2/useV2LabelEditing.ts",
       "notes": "Enter or F2 opens the in-place label editor; double-click does the same.",
       "page": "canvas-basics",
       "shortcuts": [
-        "Edit label"
+        "Edit label",
+        "With one shape selected, typing edits its label"
       ]
     },
     {
       "id": "context-menu",
       "name": "Context menu",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ContextMenu.tsx:39",
+      "evidence": "src/opencanvas/presentation/v2/V2ContextMenu.tsx",
       "notes": "Right-click a shape, connector, frame or empty canvas for actions; includes Edit as code on frames.",
       "page": "context-menu"
     },
@@ -440,7 +444,7 @@
       "id": "context-bar",
       "name": "Selection context bar",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ContextBar.tsx:77",
+      "evidence": "src/opencanvas/presentation/v2/V2ContextBar.tsx",
       "notes": "Floats over the selection with the actions and styles that apply to it.",
       "page": "properties-panel"
     },
@@ -448,7 +452,7 @@
       "id": "style-controls",
       "name": "Fill, stroke, width, dash, opacity",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2NodeStyle.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2NodeStyle.tsx",
       "notes": "Node and connector style panels over the style node commands.",
       "page": "properties-panel"
     },
@@ -456,7 +460,7 @@
       "id": "tree-panel",
       "name": "Layers panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2TreePanel.tsx:27",
+      "evidence": "src/opencanvas/presentation/v2/V2TreePanel.tsx",
       "notes": "Page tree with visibility and lock toggles.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -467,7 +471,7 @@
       "id": "chart-data-panel",
       "name": "Chart data panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ChartDataPanel.tsx:25",
+      "evidence": "src/opencanvas/presentation/v2/V2ChartDataPanel.tsx",
       "notes": "Edits chart data by writing the DSL source back through Edit as code.",
       "page": "diagram-chart"
     },
@@ -475,7 +479,7 @@
       "id": "multi-page",
       "name": "Multi-page documents",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Pages.ts:26",
+      "evidence": "src/opencanvas/presentation/v2/useV2Pages.ts",
       "notes": "Add, rename, duplicate, reorder and delete pages; the document bar names the active page.",
       "page": "local-first-diagramming"
     },
@@ -483,7 +487,7 @@
       "id": "arrange",
       "name": "Align and distribute",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/arrangeNodes.ts:28",
+      "evidence": "src/opencanvas/domain/commands/arrangeNodes.ts",
       "notes": "Align edges/centres on Alt+A/D/W/S/H/V; distribute on Alt+Shift+H/V.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -496,7 +500,7 @@
       "id": "flip",
       "name": "Flip",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/commands/arrangeNodes.ts:55",
+      "evidence": "src/opencanvas/domain/commands/arrangeNodes.ts",
       "notes": "Mirrors the selection around its own centre.",
       "page": "canvas-basics",
       "shortcuts": [
@@ -507,18 +511,20 @@
       "id": "code-panel",
       "name": "Diagram as code panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2CodePanel.tsx:11",
-      "notes": "Edit DSL, live diagnostics, ⌘↵ Generate, palette picker, canvas-edited warning.",
+      "evidence": "src/opencanvas/presentation/v2/V2CodePanel.tsx",
+      "notes": "Edit DSL, live diagnostics, ⌘↵ Generate, palette picker, canvas-edited warning; Mermaid, Structurizr or D2 pasted in offers Convert (⌘⇧M). Opens with Alt+C.",
       "page": "openflow-dsl",
       "shortcuts": [
-        "Diagram as code"
+        "Diagram as code",
+        "Convert pasted Mermaid / Structurizr / D2 (code panel)",
+        "Leave the code editor (again: close it)"
       ]
     },
     {
       "id": "dsl-grammar",
       "name": "The OpenFlow DSL",
       "status": "shipped",
-      "evidence": "src/dsl/grammar.md:1",
+      "evidence": "src/dsl/grammar.md",
       "notes": "Version 1 line-oriented grammar with per-line warnings; bad lines are dropped, not fatal.",
       "page": "openflow-dsl-reference"
     },
@@ -526,7 +532,7 @@
       "id": "dsl-parse",
       "name": "Parser and diagnostics",
       "status": "shipped",
-      "evidence": "src/dsl/parse.ts:18",
+      "evidence": "src/dsl/parse.ts",
       "notes": "One parse feeds the panel diagnostics and the compile.",
       "page": "openflow-dsl"
     },
@@ -534,7 +540,7 @@
       "id": "dsl-serialize",
       "name": "DSL serialization and round-trip",
       "status": "shipped",
-      "evidence": "src/dsl/serialize.ts:1",
+      "evidence": "src/dsl/serialize.ts",
       "notes": "serialize(parse(text)) == text is enforced by the round-trip corpus.",
       "page": "openflow-dsl"
     },
@@ -542,7 +548,7 @@
       "id": "dsl-generate-frame",
       "name": "Generate and regenerate a frame",
       "status": "shipped",
-      "evidence": "src/dsl/compile.ts:142",
+      "evidence": "src/dsl/compile.ts",
       "notes": "Code lands as one frame; regenerating replaces it as one undo step.",
       "page": "openflow-dsl"
     },
@@ -550,23 +556,23 @@
       "id": "edit-as-code",
       "name": "Edit as code",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ContextMenu.tsx:95",
-      "notes": "Right-click a generated frame to reopen its source; ⌥D opens the panel.",
+      "evidence": "src/opencanvas/presentation/v2/V2ContextMenu.tsx",
+      "notes": "Right-click a generated frame to reopen its source; ⌥C opens the panel.",
       "page": "openflow-dsl"
     },
     {
       "id": "mermaid-import",
       "name": "Mermaid import",
       "status": "shipped",
-      "evidence": "src/services/dsl/mermaidToDsl.ts:171",
-      "notes": "Detected in the code panel and converted with a loss report; unsupported constructs are listed, not silently dropped.",
+      "evidence": "src/services/dsl/mermaidToDsl.ts",
+      "notes": "Detected in the code panel and converted with a loss report; Mermaid pasted on the canvas (⌘V) converts and draws in place. Unsupported constructs are listed, not silently dropped.",
       "page": "mermaid-import"
     },
     {
       "id": "structurizr-import",
       "name": "Structurizr import",
       "status": "shipped",
-      "evidence": "src/services/dsl/structurizrToDsl.ts:1",
+      "evidence": "src/services/dsl/structurizrToDsl.ts",
       "notes": "Structurizr DSL pasted into the code panel converts to an architecture workspace.",
       "page": "architecture-c4"
     },
@@ -574,7 +580,7 @@
       "id": "share-links",
       "name": "Encrypted share links",
       "status": "shipped",
-      "evidence": "src/services/share/shareClient.ts:55",
+      "evidence": "src/services/share/shareClient.ts",
       "notes": "The editor encrypts the document, the Worker stores only ciphertext (1 MiB cap, delete token, no expiry); the key stays in the link's # fragment.",
       "page": "share-links"
     },
@@ -582,7 +588,7 @@
       "id": "structurizr-migration",
       "name": "Coming from Structurizr",
       "status": "shipped",
-      "evidence": "src/services/dsl/structurizrToDsl.ts:1",
+      "evidence": "src/services/dsl/structurizrToDsl.ts",
       "notes": "Guide for moving a Structurizr DSL workspace: import, losses, CLI convert, repo files, drift and PR diagrams.",
       "page": "coming-from-structurizr"
     },
@@ -590,7 +596,7 @@
       "id": "d2-import",
       "name": "D2 import",
       "status": "shipped",
-      "evidence": "src/services/dsl/d2ToDsl.ts:1",
+      "evidence": "src/services/dsl/d2ToDsl.ts",
       "notes": "D2 pasted into the code panel, or passed to the MCP tools, converts to flowchart, sequence or erd with a loss report; tested on the d2 and d2-docs example files.",
       "page": "mermaid-import"
     },
@@ -598,7 +604,7 @@
       "id": "family-flowchart",
       "name": "Flowchart family",
       "status": "shipped",
-      "evidence": "src/dsl/families/graph/index.ts:13",
+      "evidence": "src/dsl/families/graph/index.ts",
       "notes": "Default family; nodes, edges, groups, notes, alignment statements.",
       "page": "diagram-flowchart",
       "families": [
@@ -609,7 +615,7 @@
       "id": "family-architecture",
       "name": "Architecture family",
       "status": "shipped",
-      "evidence": "src/dsl/families/architecture/index.ts:15",
+      "evidence": "src/dsl/families/architecture/index.ts",
       "notes": "Icon-backed architecture diagrams plus the C4 workspace (model/views/flows/deployment).",
       "page": "diagram-architecture",
       "families": [
@@ -620,7 +626,7 @@
       "id": "auto-icons",
       "name": "Icons from labels",
       "status": "shipped",
-      "evidence": "src/dsl/autoIcon.ts:1",
+      "evidence": "src/dsl/autoIcon.ts",
       "notes": "Label or tech: names a technology → its icon card at compile time; `icons: auto|off` per diagram, `icon: none` per node, Remove icon in the context menu and style bar, Settings switch.",
       "page": "diagram-architecture"
     },
@@ -628,7 +634,7 @@
       "id": "family-sequence",
       "name": "Sequence family",
       "status": "shipped",
-      "evidence": "src/dsl/families/sequence.ts:611",
+      "evidence": "src/dsl/families/sequence.ts",
       "notes": "Participants, messages, activations and fragments.",
       "page": "diagram-sequence",
       "families": [
@@ -639,7 +645,7 @@
       "id": "family-state",
       "name": "State family",
       "status": "shipped",
-      "evidence": "src/dsl/families/state.ts:87",
+      "evidence": "src/dsl/families/state.ts",
       "notes": "States, composite states, fork/join/choice.",
       "page": "diagram-state",
       "families": [
@@ -650,7 +656,7 @@
       "id": "family-erd",
       "name": "ERD family",
       "status": "shipped",
-      "evidence": "src/dsl/families/structured.ts:507",
+      "evidence": "src/dsl/families/structured.ts",
       "notes": "Entities, fields and cardinality.",
       "page": "diagram-erd",
       "families": [
@@ -661,7 +667,7 @@
       "id": "family-class",
       "name": "Class family",
       "status": "shipped",
-      "evidence": "src/dsl/families/structured.ts:507",
+      "evidence": "src/dsl/families/structured.ts",
       "notes": "Classes, members and relations; shares the structured-family engine with ERD.",
       "page": "diagram-class",
       "families": [
@@ -672,7 +678,7 @@
       "id": "family-mindmap",
       "name": "Mindmap family",
       "status": "shipped",
-      "evidence": "src/dsl/families/mindmap.ts:308",
+      "evidence": "src/dsl/families/mindmap.ts",
       "notes": "One central node with indentation-defined branches.",
       "page": "diagram-mindmap",
       "families": [
@@ -683,7 +689,7 @@
       "id": "family-gitgraph",
       "name": "Gitgraph family",
       "status": "shipped",
-      "evidence": "src/dsl/families/gitgraph.ts:351",
+      "evidence": "src/dsl/families/gitgraph.ts",
       "notes": "Commits, branches, merges, tags and cherry-picks.",
       "page": "diagram-gitgraph",
       "families": [
@@ -694,7 +700,7 @@
       "id": "family-chart",
       "name": "Chart family",
       "status": "shipped",
-      "evidence": "src/dsl/families/chart.ts:90",
+      "evidence": "src/dsl/families/chart.ts",
       "notes": "One chart per diagram; kinds match the chart tool.",
       "page": "diagram-chart",
       "families": [
@@ -705,7 +711,7 @@
       "id": "frame-nodes",
       "name": "Browser and mobile frame nodes",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts:61",
+      "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts",
       "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The Insert flyout's device frames are separate containers (see frames-tools).",
       "page": "diagram-flowchart"
     },
@@ -713,7 +719,7 @@
       "id": "reserved-families",
       "name": "Reserved families (bpmn, org, gantt, sankey, journey, timeline)",
       "status": "absent",
-      "evidence": "src/dsl/document.ts:33",
+      "evidence": "src/dsl/document.ts",
       "notes": "Reserved names parse to a flowchart with warning W105.",
       "families": [
         "bpmn",
@@ -728,7 +734,7 @@
       "id": "architecture-model",
       "name": "Architecture model panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx",
       "notes": "Element tree derived from placed nodes; select, drill in, edit, remove.",
       "page": "architecture-c4",
       "shortcuts": [
@@ -739,7 +745,7 @@
       "id": "inspect-panel",
       "name": "Inspect panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2InspectPanel.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2InspectPanel.tsx",
       "notes": "Read-only facts for the selection: layout, resolved style, content, connections, source line, model element. Opens from the context menu, the selection bar or Alt + I.",
       "page": "keyboard-shortcuts",
       "shortcuts": [
@@ -750,7 +756,7 @@
       "id": "architecture-drilldown",
       "name": "C4 element views and drill-down",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Architecture.ts:40",
+      "evidence": "src/opencanvas/presentation/v2/useV2Architecture.ts",
       "notes": "Breadcrumb chain, child views, Enter to open the element view.",
       "page": "architecture-c4",
       "shortcuts": [
@@ -760,20 +766,76 @@
     {
       "id": "map-mode",
       "name": "Map mode",
-      "status": "partial",
+      "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/map/useV2MapMode.ts",
-      "notes": "Canvas | Map switch on pages with a C4 model: the model as boxes inside boxes, a click opens a box in place, a click on an arrow lists its relations. A bottom toolbar sets the depth (Overview, Detailed, Everything), opens one more level or closes every box; arrow keys walk between boxes; Pin as page (Shift+M) freezes the map into an ordinary Canvas page. Repo maps in the editor still to come.",
+      "notes": "Canvas | Map switch in the document bar on every document (M): the architecture model as boxes inside boxes; a click opens a box in place, a click on an arrow lists its relations (or, on a repo map, its file:line evidence). The Map toolbar sets the depth (Top level, One level in, All levels) and Edit as drawing (Shift+M) copies the map to an ordinary Canvas page. Arrow keys walk between boxes. Repo maps (#/map/github/owner/repo) open in the editor, read-only.",
       "shortcuts": [
-        "Canvas / Map (pages with a model)",
+        "Canvas / Map",
         "Move between boxes (Map)",
         "Edit map as drawing (Map)"
-      ]
+      ],
+      "page": "map-mode"
+    },
+    {
+      "id": "home-page",
+      "name": "Home page",
+      "status": "shipped",
+      "evidence": "src/opencanvas/presentation/v2/V2HomePage.tsx",
+      "notes": "Recents, Starred, Templates and Archive; search (/), ⌘K to find any diagram, template or action, N for a new diagram; import or drop a .json, Mermaid, D2, Structurizr or DSL file.",
+      "page": "quick-start"
+    },
+    {
+      "id": "cli",
+      "name": "openflowkit CLI",
+      "status": "partial",
+      "evidence": "mcp-server/src/cli.ts",
+      "notes": "render, convert, validate, op, ops, discover, drift, build, map; ships in MCP server 0.2.0, which npm does not serve yet (it serves 0.1.2).",
+      "page": "coming-from-structurizr"
+    },
+    {
+      "id": "pr-action",
+      "name": "PR diagrams GitHub Action",
+      "status": "partial",
+      "evidence": "action/action.yml",
+      "notes": "Comments on a PR with node/connector counts, the DSL diff and drift; refreshes stale SVGs. Usable from other repos only once a release tag on main contains action/, and its default CLI needs MCP 0.2.0 on npm.",
+      "page": "coming-from-structurizr"
+    },
+    {
+      "id": "mcp-apps-remote",
+      "name": "Remote MCP Apps endpoint",
+      "status": "partial",
+      "evidence": "mcp-server/src/http.ts",
+      "notes": "npm run start:http serves render_diagram and get_syntax over Streamable HTTP and stores nothing. Not deployed; Claude, ChatGPT and VS Code hosts are unverified.",
+      "page": "mcp-server"
+    },
+    {
+      "id": "copy-as-mermaid",
+      "name": "Copy as Mermaid",
+      "status": "shipped",
+      "evidence": "src/dsl/mermaid/toMermaid.ts",
+      "notes": "In the Export panel: a flowchart or sequence diagram made from code is copied as Mermaid text, with what Mermaid cannot carry listed. Other families have no Mermaid form.",
+      "page": "exporting"
+    },
+    {
+      "id": "agent-plugins",
+      "name": "Claude Code and Codex plugins",
+      "status": "partial",
+      "evidence": "plugin/.claude-plugin/plugin.json",
+      "notes": "The MCP server plus the diagram skill, with a marketplace at .claude-plugin/marketplace.json. Installable once it is on the default branch (main) and MCP 0.2.0 is on npm."
+    },
+    {
+      "id": "repo-to-diagram",
+      "name": "Repo → architecture diagram",
+      "status": "shipped",
+      "evidence": "src/opencanvas/presentation/v2/V2FromGithubPage.tsx",
+      "notes": "#/from/github/owner/repo reads a public repo in the browser (api.github.com + raw.githubusercontent.com) and opens its discovered C4 model; evidence links pin to the commit read. Accepts owner/repo, github.com URLs with or without https/www, /tree/ and /blob/ links, .git and git@ remotes; an optional token stays in sessionStorage.",
+      "page": "map-mode"
     },
     {
       "id": "architecture-actions",
       "name": "Architecture edits",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2ArchitectureActions.ts:70",
+      "evidence": "src/opencanvas/presentation/v2/useV2ArchitectureActions.ts",
       "notes": "Edit element metadata, create child views, open flow as sequence.",
       "page": "architecture-c4"
     },
@@ -781,7 +843,7 @@
       "id": "flow-playback",
       "name": "Flow playback",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2FlowPlayback.ts:42",
+      "evidence": "src/opencanvas/presentation/v2/useV2FlowPlayback.ts",
       "notes": "Steps through a flow on the canvas, arrow keys/space, dimming the rest.",
       "page": "architecture-c4",
       "shortcuts": [
@@ -792,7 +854,7 @@
       "id": "perspective-tags",
       "name": "Tag perspective",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx:211",
+      "evidence": "src/opencanvas/presentation/v2/V2ModelPanel.tsx",
       "notes": "Matching elements stay bright, the rest dims; one tag set per document preference.",
       "page": "architecture-c4"
     },
@@ -800,7 +862,7 @@
       "id": "workspace-folder",
       "name": "Workspace folder",
       "status": "shipped",
-      "evidence": "src/services/workspace/workspaceFolder.ts:1",
+      "evidence": "src/services/workspace/workspaceFolder.ts",
       "notes": "File System Access API only (Chrome/Edge): architecture.ofk + views/*.snap + adr/*.md, written back to disk. Not git-aware beyond plain files.",
       "page": "architecture-workspace"
     },
@@ -808,7 +870,7 @@
       "id": "motion-animate-block",
       "name": "animate block",
       "status": "shipped",
-      "evidence": "src/dsl/animate.ts:1",
+      "evidence": "src/dsl/animate.ts",
       "notes": "Family-neutral `animate <preset> [duration] { step ... }` block; steps become a timeline.",
       "page": "animated-export"
     },
@@ -816,7 +878,7 @@
       "id": "motion-panel",
       "name": "Animation export panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2MotionExport.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2MotionExport.tsx",
       "notes": "Preset/order/duration/size/fps controls, live preview, animated SVG download, GIF/MP4/WebM encode, clipboard copy where supported.",
       "page": "animated-export"
     },
@@ -824,7 +886,7 @@
       "id": "export-image",
       "name": "PNG and SVG export",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2Export.ts:66",
+      "evidence": "src/opencanvas/presentation/v2/v2Export.ts",
       "notes": "Selection/page/document scope, light/dark/print theme, transparency, 1–3× scale.",
       "page": "exporting"
     },
@@ -832,7 +894,7 @@
       "id": "export-pdf",
       "name": "PDF export",
       "status": "partial",
-      "evidence": "src/opencanvas/presentation/v2/v2Export.ts:92",
+      "evidence": "src/opencanvas/presentation/v2/v2Export.ts",
       "notes": "PDF is the browser print dialog over the exported SVG, not a file written directly.",
       "page": "exporting"
     },
@@ -840,7 +902,7 @@
       "id": "export-json",
       "name": "Canonical JSON export",
       "status": "shipped",
-      "evidence": "src/opencanvas/infrastructure/export/canonicalJson.ts:4",
+      "evidence": "src/opencanvas/infrastructure/export/canonicalJson.ts",
       "notes": "Whole document, every page; the same bytes `openflow_save` writes.",
       "page": "exporting"
     },
@@ -848,7 +910,7 @@
       "id": "export-motion",
       "name": "GIF, MP4 and WebM export",
       "status": "shipped",
-      "evidence": "src/opencanvas/infrastructure/export/motionFrames.ts:86",
+      "evidence": "src/opencanvas/infrastructure/export/motionFrames.ts",
       "notes": "Encoded in a worker; MP4/WebM need WebCodecs and are hidden when unavailable.",
       "page": "animated-export"
     },
@@ -856,7 +918,7 @@
       "id": "themes",
       "name": "Light and dark themes",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Appearance.ts:1",
+      "evidence": "src/opencanvas/presentation/v2/useV2Appearance.ts",
       "notes": "System default with an explicit override; exports offer light/dark/print separately.",
       "page": "theming"
     },
@@ -864,7 +926,7 @@
       "id": "diagram-palettes",
       "name": "Diagram palettes",
       "status": "shipped",
-      "evidence": "src/opencanvas/domain/nodes/nodePalette.ts:1",
+      "evidence": "src/opencanvas/domain/nodes/nodePalette.ts",
       "notes": "pastel (default), paper, builder, mono; an `appearance:` line in the DSL wins over the panel.",
       "page": "theming"
     },
@@ -872,7 +934,7 @@
       "id": "mcp-ops",
       "name": "MCP operation surface",
       "status": "shipped",
-      "evidence": "src/agent/ops/index.ts:13",
+      "evidence": "src/agent/ops/index.ts",
       "notes": "One MCP tool per op, generated from this registry. Live mode runs ops in the paired editor; file mode runs them over an open .openflow.json.",
       "page": "mcp-server",
       "ops": [
@@ -898,7 +960,7 @@
       "id": "mcp-manifest",
       "name": "MCP capability manifest",
       "status": "shipped",
-      "evidence": "src/agent/manifest.ts:43",
+      "evidence": "src/agent/manifest.ts",
       "notes": "Every op names the human operation it mirrors and the equivalence test.",
       "page": "mcp-server"
     },
@@ -906,7 +968,7 @@
       "id": "mcp-document-tools",
       "name": "MCP document tools",
       "status": "shipped",
-      "evidence": "mcp-server/src/tools/ops.ts:69",
+      "evidence": "mcp-server/src/tools/ops.ts",
       "notes": "openflow_create, openflow_open, openflow_save, whoami.",
       "page": "mcp-server"
     },
@@ -914,7 +976,7 @@
       "id": "mcp-validate-dsl",
       "name": "MCP DSL validation",
       "status": "shipped",
-      "evidence": "mcp-server/src/tools/validateDsl.ts:8",
+      "evidence": "mcp-server/src/tools/validateDsl.ts",
       "notes": "Runs the real parser and returns its diagnostics.",
       "page": "mcp-server"
     },
@@ -922,7 +984,7 @@
       "id": "mcp-analyze-codebase",
       "name": "MCP codebase analysis",
       "status": "shipped",
-      "evidence": "mcp-server/src/tools/analyzeCodebase.ts:7",
+      "evidence": "mcp-server/src/tools/analyzeCodebase.ts",
       "notes": "Deterministic local scan that suggests architecture elements.",
       "page": "mcp-server"
     },
@@ -930,7 +992,7 @@
       "id": "mcp-templates",
       "name": "MCP starter templates",
       "status": "shipped",
-      "evidence": "mcp-server/src/tools/listTemplates.ts:5",
+      "evidence": "mcp-server/src/tools/listTemplates.ts",
       "notes": "Five DSL starting points (auth-flow, three-tier-architecture, request-sequence, order-state, event-pipeline).",
       "page": "mcp-server"
     },
@@ -938,7 +1000,7 @@
       "id": "mcp-discovery",
       "name": "MCP architecture discovery",
       "status": "shipped",
-      "evidence": "mcp-server/src/tools/architecture.ts:75",
+      "evidence": "mcp-server/src/tools/architecture.ts",
       "notes": "discover_architecture derives elements from the repository; explain_element adds descriptions and linked ADRs.",
       "page": "mcp-server"
     },
@@ -946,7 +1008,7 @@
       "id": "mcp-drift",
       "name": "MCP drift report",
       "status": "partial",
-      "evidence": "mcp-server/src/lib/architectureDiscovery.ts:1038",
+      "evidence": "src/dsl/discovery/discovery.ts",
       "notes": "Matches by element name and tech only; it cannot see intent, renames or moved code.",
       "page": "architecture-workspace"
     },
@@ -954,7 +1016,7 @@
       "id": "agent-bridge",
       "name": "Agent pairing (live bridge)",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2AgentConnect.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2AgentConnect.tsx",
       "notes": "Local long-poll bridge on a configurable port with an optional shared token.",
       "page": "mcp-server"
     },
@@ -962,7 +1024,7 @@
       "id": "agent-panel",
       "name": "Agent activity panel",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/V2AgentPanel.tsx:1",
+      "evidence": "src/opencanvas/presentation/v2/V2AgentPanel.tsx",
       "notes": "Shows what the connected agent did, with per-action details.",
       "page": "mcp-server"
     },
@@ -970,8 +1032,8 @@
       "id": "ai-byok",
       "name": "BYOK AI generation",
       "status": "partial",
-      "evidence": "src/services/ai/providers.ts:1",
-      "notes": "Ten providers over three wire formats; the key stays in the browser. Provider specifics are frozen until phase 10 lands (CSP still omits some endpoints).",
+      "evidence": "src/services/ai/providers.ts",
+      "notes": "Ten providers over three wire formats; the key stays in the browser and requests go only to the provider chosen. The CSP allows any https: endpoint plus localhost and 127.0.0.1, so a plain-http gateway on another host is blocked.",
       "page": "ai-generation",
       "shortcuts": [
         "AI assistant"
@@ -981,7 +1043,7 @@
       "id": "ai-proposal",
       "name": "AI proposal review",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Proposal.ts:37",
+      "evidence": "src/opencanvas/presentation/v2/useV2Proposal.ts",
       "notes": "The model's DSL is compiled, shown for review, then accepted as one undo step or discarded.",
       "page": "ai-generation"
     },
@@ -989,7 +1051,7 @@
       "id": "ai-prompt-builder",
       "name": "AI assistant conversation",
       "status": "shipped",
-      "evidence": "src/opencanvas/application/ai/assistantPrompt.ts:79",
+      "evidence": "src/opencanvas/application/ai/assistantPrompt.ts",
       "notes": "A streamed chat that answers, reviews or edits: it sees every diagram in scope (page or selection), takes attached images, keeps past chats per document, and only changes the canvas through reviewable proposals.",
       "page": "ai-generation"
     },
@@ -997,7 +1059,7 @@
       "id": "ai-assistant-agent",
       "name": "AI assistant tool use",
       "status": "shipped",
-      "evidence": "src/opencanvas/application/ai/assistantAgent.ts:36",
+      "evidence": "src/opencanvas/application/ai/assistantAgent.ts",
       "notes": "Multi-step: the model reads diagrams, checks syntax and finds icons through native tool calls on all three wires, then drafts changes that compile before they reach review. Models without tools fall back to diagram blocks.",
       "page": "ai-generation"
     },
@@ -1005,7 +1067,7 @@
       "id": "no-telemetry",
       "name": "No account, no telemetry in the app",
       "status": "shipped",
-      "evidence": "package.json:39",
+      "evidence": "package.json",
       "notes": "No analytics SDK in dependencies and no telemetry calls under src/. The docs site is separate and its analytics are opt-in at build time.",
       "page": "local-first-diagramming"
     },
@@ -1013,7 +1075,7 @@
       "id": "canvas-performance",
       "name": "Canvas performance",
       "status": "partial",
-      "evidence": "scripts/check-v2-polish.mjs:1",
+      "evidence": "scripts/check-v2-polish.mjs",
       "notes": "The headed polish probe measures drag latency, idle rendering and context-bar tracking. No committed 2k-object 60 fps benchmark; phase 7 measured 500 nodes × 451 frames at 3.1 s wall.",
       "page": "canvas-basics"
     },
@@ -1043,7 +1105,7 @@
       "name": "GitHub embed",
       "status": "absent",
       "evidence": "src/",
-      "notes": "No embed surface; export is files and clipboard."
+      "notes": "No embed surface; export is files, the clipboard and read-only share links."
     },
     {
       "id": "frames-tools",
@@ -1064,7 +1126,7 @@
       "name": "Wireframe widget library and family",
       "status": "shipped",
       "evidence": "src/opencanvas/domain/nodes/widgetNodePresentation.ts",
-      "notes": "35 controls in Koboyo's vocabulary; state (on/off, value, selected item, variant) from the style bar; the `wireframe` family compiles Koboyo's screen syntax.",
+      "notes": "35 controls; state (on/off, value, selected item, variant) from the style bar; the `wireframe` family compiles screens of controls from text.",
       "page": "diagram-wireframe",
       "families": [
         "wireframe"
@@ -1074,29 +1136,29 @@
       "id": "slides-present",
       "name": "Slides and Present mode (phase 8)",
       "status": "absent",
-      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx:197",
-      "notes": "The rail shows a Slides panel whose buttons are disabled and whose content is placeholder; nothing is saved."
+      "evidence": "src/opencanvas/presentation/v2/V2Workspace.tsx",
+      "notes": "No Slides or Present mode: the placeholder Slides panel was removed from the rail because it saved nothing."
     },
     {
       "id": "keyframes-panel",
       "name": "Keyframe tracks and timeline panel (phase 8)",
       "status": "absent",
-      "evidence": "src/opencanvas/presentation/v2/V2MotionSteps.tsx:4",
+      "evidence": "src/opencanvas/presentation/v2/V2MotionSteps.tsx",
       "notes": "Motion steps are text; there are no per-object curves, ruler or keyframes."
     },
     {
       "id": "film-look",
       "name": "Film look / cinematic rendering (phase 7b)",
       "status": "absent",
-      "evidence": "docs/plan/phase-7-motion.md:1",
+      "evidence": "src/",
       "notes": "On hold by owner decision; no renderer code exists."
     },
     {
       "id": "command-center",
       "name": "Command center / launcher",
-      "status": "absent",
-      "evidence": "src/",
-      "notes": "No command palette or launcher exists in the 2.0 editor."
+      "status": "partial",
+      "evidence": "src/opencanvas/presentation/v2/V2HomePage.tsx",
+      "notes": "Home has ⌘K to find any diagram, template or action. The editor has no command palette."
     },
     {
       "id": "diagram-diff",
@@ -1109,7 +1171,7 @@
       "id": "named-snapshots",
       "name": "Named snapshots and version restore",
       "status": "absent",
-      "evidence": "src/services/storage/v2/v2Repository.ts:1",
+      "evidence": "src/services/storage/v2/v2Repository.ts",
       "notes": "Storage keeps one primary plus one fallback record for crash recovery; there is no named-version history."
     },
     {
@@ -1130,28 +1192,28 @@
       "id": "architecture-lint-rules",
       "name": "Rule-based architecture linting",
       "status": "absent",
-      "evidence": "src/agent/lint.ts:21",
+      "evidence": "src/agent/lint.ts",
       "notes": "lintDsl returns parser diagnostics; there are no JSON rule packs or canvas violation highlighting."
     },
     {
       "id": "design-system-import-export",
       "name": "Design system theme import/export",
       "status": "absent",
-      "evidence": "src/opencanvas/domain/nodes/nodePalette.ts:1",
+      "evidence": "src/opencanvas/domain/nodes/nodePalette.ts",
       "notes": "Four fixed diagram palettes plus the UI token set; no user-managed design systems."
     },
     {
       "id": "hand-drawn-stroke",
       "name": "Hand-drawn stroke style",
       "status": "absent",
-      "evidence": "src/opencanvas/domain/nodes/nodeStyle.ts:34",
+      "evidence": "src/opencanvas/domain/nodes/nodeStyle.ts",
       "notes": "Stroke styles are solid/dashed/dotted; the rough/hand-drawn renderer was V1 and is gone."
     },
     {
       "id": "smart-layout-canvas",
       "name": "Re-layout the canvas with ELK",
       "status": "absent",
-      "evidence": "src/services/dsl/elkLayoutPort.ts:1",
+      "evidence": "src/services/dsl/elkLayoutPort.ts",
       "notes": "ELK runs inside DSL compile only; there is no command that re-lays-out hand-placed canvas nodes."
     }
   ]

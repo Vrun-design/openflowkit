@@ -3,8 +3,10 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { canRedoDocument, canUndoDocument } from '../history/history';
 import {
+  amendSessionNewNode,
   commitSessionCommand,
   createDocumentSession,
+  forgetSessionHistory,
   redoSessionCommand,
   StaleSessionRevisionError,
   undoSessionCommand,
@@ -63,6 +65,12 @@ export function useDocumentSession(callbacks: DocumentSessionCallbacks) {
       ),
     [advance]
   );
+  const amendNewNode = useCallback(
+    (nodeId: string, command: DocumentCommand) =>
+      advance((current) => amendSessionNewNode(current, nodeId, command, current.revision)),
+    [advance]
+  );
+  const forgetHistory = useCallback(() => advance(forgetSessionHistory), [advance]);
   const undo = useCallback(
     () =>
       advance(
@@ -88,6 +96,8 @@ export function useDocumentSession(callbacks: DocumentSessionCallbacks) {
     canRedo: session ? canRedoDocument(session.history) : false,
     openDocument,
     commit,
+    amendNewNode,
+    forgetHistory,
     undo,
     redo,
   };

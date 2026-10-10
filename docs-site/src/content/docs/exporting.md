@@ -3,7 +3,7 @@ title: Exporting
 description: PNG, SVG, PDF and JSON — scopes, themes, scale, transparency, and what each format is actually good for.
 ---
 
-Canvas menu → **Export…** opens one panel: format, scope, and the options that belong to the
+**Export** at the top right (or canvas menu → **Export…**) opens one panel: format, scope, and the options that belong to the
 format. Right-clicking an element and choosing **Export…** opens the same panel already scoped
 to that element. Everything is produced in the browser from the same exported SVG.
 
@@ -45,10 +45,11 @@ reference — the file is the document, not a rendering of it.
 - **No direct PDF file.** PDF is the print dialog; the file is written by the browser and the
   page setup (margins, headers) belongs to the print dialog, not to OpenFlowKit.
 - **No ZIP of all pages.** All-pages export downloads one file per page.
-- **No Mermaid export.** Mermaid is an import path only — see
-  [Mermaid import](/mermaid-import/).
-- **No share links or embeds.** Exports are files; see
-  [Local-first diagramming](/local-first-diagramming/) for why.
+- **Mermaid only for flowchart and sequence.** **Copy as Mermaid** in the panel copies a
+  flowchart or sequence diagram made from code as Mermaid text; other families have no Mermaid
+  form. See [Mermaid import](/mermaid-import/).
+- **No embeds.** A read-only, end-to-end encrypted [share link](/share-links/) is the only
+  hosted form; everything else is a file.
 - **No format options beyond those above** — no JPEG, no WebP, no size presets for PNG.
 
 ## Where to go next

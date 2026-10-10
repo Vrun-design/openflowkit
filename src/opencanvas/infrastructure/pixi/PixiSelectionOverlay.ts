@@ -54,7 +54,7 @@ export class PixiSelectionOverlay {
   }
 
   // Hovering a side handle previews what a click will do: the same-size
-  // node one gap away and the arrow into it (Koboyo's affordance).
+  // node one gap away and the arrow into it.
   private drawQuickCreateGhost(index: SceneIndex, nodeId: string, side: ConnectSide, zoom: number): void {
     const node = index.nodesById.get(nodeId);
     if (!node || node.transform.rotationRadians !== 0) return;

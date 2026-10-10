@@ -5,3 +5,4 @@ node_modules
 src/generated/
 src/generated-viewer/
 data/icon-art/
+/LICENSE

@@ -101,6 +101,18 @@ const SHAPE_WORDS: Readonly<Record<string, string>> = {
   hexagon: 'hexagon',
 };
 
+/** Structurizr shapes OFK draws as something close but not the same; each is reported. */
+const APPROXIMATE_SHAPES = new Set(['pipe', 'bucket', 'folder', 'mobiledevicelandscape']);
+
+/**
+ * Structurizr's conventional tags that name an OFK kind (`External` system → `external`,
+ * `Database` container → `store`). Only leaves change: these kinds hold no children.
+ */
+const KIND_BY_TAG: Readonly<Record<string, Readonly<Record<string, ElementKind>>>> = {
+  system: { external: 'external' },
+  container: { database: 'store', queue: 'queue' },
+};
+
 const DROP_STATEMENTS = new Set(['theme', 'themes', 'branding', 'terminology', 'configuration']);
 
 interface DraftElement {
@@ -159,7 +171,8 @@ type RulePart =
   | { readonly kind: 'pair'; readonly from: string; readonly to: string }
   | { readonly kind: 'where-kind'; readonly value: string }
   | { readonly kind: 'where-tag'; readonly value: string }
-  | { readonly kind: 'where-compound'; readonly value: string };
+  /** `a && b || c`: OR of AND groups, written once the kinds are final. */
+  | { readonly kind: 'where-compound'; readonly groups: readonly (readonly RulePart[])[] };
 
 interface DraftRule {
   readonly op: 'include' | 'exclude';
@@ -643,8 +656,12 @@ class StructurizrConverter {
         const key = property.tokens[0]?.value.toLowerCase() ?? '';
         const value = property.tokens.slice(1).map((token) => token.value).join(' ');
         if (key === 'background' && (isHexColor(value) || canonicalColorWord(value))) style.color = value.toLowerCase();
-        else if (key === 'shape' && SHAPE_WORDS[value.toLowerCase()]) style.shape = SHAPE_WORDS[value.toLowerCase()];
-        else if (key === 'icon' && /^[A-Za-z][\w-]*[/:][\w./-]+$/.test(value)) style.icon = value.replace(':', '/');
+        else if (key === 'shape' && SHAPE_WORDS[value.toLowerCase()]) {
+          style.shape = SHAPE_WORDS[value.toLowerCase()];
+          if (APPROXIMATE_SHAPES.has(value.toLowerCase())) this.loss(property.line, `styles: shape ${value} drawn as a ${style.shape}`);
+        } else if (key === 'icon' && /^[A-Za-z][\w-]*[/:][\w./-]+$/.test(value)) style.icon = value.replace(':', '/');
+        // The label colour follows the fill (readable on any background); an authored one has no DSL home.
+        else if (key === 'color') this.loss(property.line, `styles: element "${tag}" color (text colour) dropped`);
       }
       if (!style.shape && !style.color && !style.icon) continue;
       this.styles.push(style);
@@ -689,7 +706,11 @@ class StructurizrConverter {
     const scopeRef = kind === 'landscape' ? undefined : args[0]?.value;
     const envWord = kind === 'deployment' ? args[1]?.value : undefined;
     const env = envWord ? this.envAliases.get(envWord.toLowerCase()) ?? envWord : undefined;
-    const key = kind === 'deployment' ? args[2]?.value : args[1]?.value;
+    // `systemLandscape [key] [description]`, `systemContext <scope> [key] [description]`, `deployment <scope> <env> [key] [description]`.
+    const keyAt = kind === 'landscape' ? 0 : kind === 'deployment' ? 2 : 1;
+    const key = args[keyAt]?.value;
+    const description = args[keyAt + 1]?.kind === 'string' ? args[keyAt + 1]!.value : undefined;
+    if (description) this.loss(statement.line, `view description "${description}" dropped`);
     const view: DraftView = {
       kind,
       rules: [],
@@ -755,7 +776,7 @@ class StructurizrConverter {
     };
     if (!body) return unsupported();
     const parts: RulePart[] = [];
-    const alternatives: string[] = [];
+    const alternatives: RulePart[][] = [];
     for (const alternative of body.split(' || ')) {
       const group: RulePart[] = [];
       for (const atom of alternative.split(' && ')) {
@@ -765,14 +786,10 @@ class StructurizrConverter {
       }
       if (body.includes('&&')) {
         if (!group.every((part) => part.kind === 'where-kind' || part.kind === 'where-tag')) return unsupported();
-        alternatives.push(group.map((part) => {
-          if (part.kind === 'where-kind') return `kind is ${part.value}`;
-          if (part.kind === 'where-tag') return tagPredicate(part.value);
-          return '';
-        }).join(' and '));
+        alternatives.push(group);
       } else parts.push(...group);
     }
-    if (alternatives.length) parts.push({kind: 'where-compound', value: alternatives.join(' or ')});
+    if (alternatives.length) parts.push({ kind: 'where-compound', groups: alternatives });
     return [{ op, parts }];
   }
 
@@ -784,6 +801,7 @@ class StructurizrConverter {
       ...(args[0] ? { scopeRef: args[0].value } : {}),
       ...(args[1]?.kind === 'string' ? { name: args[1].value } : {}),
     };
+    if (args[2]?.kind === 'string') this.loss(statement.line, `dynamic view description "${args[2].value}" dropped`);
     for (const child of statement.children) this.readDynamicStatement(child, flow);
     this.flows.push(flow);
   }
@@ -821,6 +839,7 @@ class StructurizrConverter {
     this.prune();
     this.indexModel();
     this.applyStyles();
+    this.kindsFromTags();
     this.iconsFromThemeTags();
     const relations = this.resolveRelations();
     this.resolveViews();
@@ -858,6 +877,29 @@ class StructurizrConverter {
         }
       }
     }
+  }
+
+  private kindsFromTags(): void {
+    for (const element of this.elements) {
+      const byTag = KIND_BY_TAG[element.kind];
+      const tag = byTag && element.children.length === 0 ? element.tags.find((entry) => byTag[entry]) : undefined;
+      if (tag) element.kind = byTag![tag]!;
+    }
+  }
+
+  /** The OFK kinds a Structurizr `element.type==` names, once tags have refined them. */
+  private kindsOf(kind: string): string[] {
+    const refined = Object.values(KIND_BY_TAG[kind] ?? {});
+    return [kind, ...new Set(refined.filter((variant) => this.elements.some((element) => element.kind === variant)))];
+  }
+
+  private wherePredicate(groups: readonly (readonly RulePart[])[]): string {
+    // A refined kind multiplies its AND group out (`kind is system and tag` → one group per kind); AND binds tighter.
+    return groups.flatMap((group) => group.reduce<string[][]>((combos, part) => {
+      const options = part.kind === 'where-kind' ? this.kindsOf(part.value).map((kind) => `kind is ${kind}`)
+        : part.kind === 'where-tag' ? [tagPredicate(part.value)] : [];
+      return combos.flatMap((prefix) => options.map((option) => [...prefix, option]));
+    }, [[]]).map((combo) => combo.join(' and '))).join(' or ');
   }
 
   private resolveInstances(): void {
@@ -1038,10 +1080,11 @@ class StructurizrConverter {
     }
   }
 
-  /** Structurizr ids are the OFK ids (`webApi` → `webapi`); display names stay labels. */
+  /** Structurizr ids are the OFK ids, as written (`webApi`; ids are case-sensitive, §2.6); display names stay labels. */
   private localId(element: DraftElement): string {
     if (element.kind === 'instance') return slugifyDslId(element.name);
     if (element.explicitSid) {
+      if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(element.sid)) return element.sid;
       const slug = slugifyDslId(element.sid);
       if (/^[A-Za-z_]/.test(slug)) return slug;
     }
@@ -1213,9 +1256,9 @@ class StructurizrConverter {
         case 'pair':
           return [`${rule.op} ${this.ruleRef(part.from)} -> ${this.ruleRef(part.to)}`];
         case 'where-compound':
-          return [`${rule.op} * where ${part.value}`];
+          return [`${rule.op} * where ${this.wherePredicate(part.groups)}`];
         case 'where-kind':
-          return [`${rule.op} * where kind is ${part.value}`];
+          return [`${rule.op} * where ${this.wherePredicate([[part]])}`];
         case 'where-tag':
           return [`${rule.op} * where ${tagPredicate(part.value)}`];
       }

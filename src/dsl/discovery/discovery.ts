@@ -65,6 +65,12 @@ const LOCKFILES = new Set([
 const NON_PRODUCTION_DIRS = new Set(['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'fixtures', '__fixtures__', 'testdata', '__mocks__', 'evals']);
 const NON_PRODUCTION_FILE = /\.(?:test|spec)\.[^.]+$|_test\.(?:go|py)$|^test_[^/]*\.py$/;
 
+/** A file that can define a deployable unit by itself (compose, Dockerfile, k8s yaml, terraform, a Worker or package manifest): a capped reader takes these before source. */
+export function definesUnit(file: string): boolean {
+  const name = basename(file);
+  return DOCKERFILE.test(name) || COMPOSE.test(name) || WRANGLER.test(name) || PACKAGE_MANIFESTS.has(name) || /\.(?:ya?ml|tf)$/i.test(name);
+}
+
 /** The shared filter: skipped directories out, then the analyzer's extensions widened for the files that define a deployable unit; takes a repo-relative path. */
 export function acceptsArchitectureFile(file: string): boolean {
   const segments = file.split(/[\\/]/);

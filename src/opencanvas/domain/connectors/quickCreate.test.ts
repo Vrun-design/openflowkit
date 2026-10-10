@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import type { ConnectSide } from './connectHandles';
+import { defaultShapeSize } from '../nodes/shapeNode';
 import { oppositeSide, planQuickCreate, quickCreateOrigin } from './quickCreate';
 
 const SIDES: readonly ConnectSide[] = ['top', 'right', 'bottom', 'left'];
@@ -40,6 +41,20 @@ describe('quick-create', () => {
     expect(plan.node.ports).toEqual([]);
     expect(plan.connector.source).toEqual({ nodeId: 'source', portId: null, anchor: null, point: null });
     expect(plan.connector.target).toEqual({ nodeId: 'new', portId: null, anchor: null, point: null });
+  });
+
+  it('a decision leads to a step: ⊕ from a diamond makes the default rectangle, centred on the same axis', () => {
+    for (const source of [
+      createTestNode('source', { kind: 'process', content: { shape: 'diamond', label: 'Offer?' }, size: { width: 168, height: 104 } }),
+      createTestNode('source', { kind: 'decision', content: { label: 'Offer?' }, size: { width: 168, height: 104 } }),
+    ]) {
+      const plan = planQuickCreate(createTestDocument({ nodes: [source] }).pages[0]!, 'source', 'right', 'new', 'edge');
+      expect(plan.node.kind).toBe('process');
+      expect(plan.node.content).toEqual({ shape: 'rectangle', label: '' });
+      expect(plan.node.size).toEqual(defaultShapeSize('rectangle'));
+      const centre = { x: plan.node.transform.translation.x + plan.node.size.width / 2, y: plan.node.transform.translation.y + plan.node.size.height / 2 };
+      expect(centre.y).toBe(source.transform.translation.y + 52);
+    }
   });
 
   it('a source inside a frame gets its new node in the same frame, beside it (not at the page origin)', () => {

@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { createRemoteServer } from './remote/server.js';
 import { DEFAULT_APP_ORIGIN } from './lib/openLink.js';
 import type { RemoteServerOptions } from './remote/server.js';
+import { isMain } from './lib/isMain.js';
 
 export const MAX_BODY_BYTES = 512 * 1024;
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
@@ -108,4 +109,4 @@ function main(): void {
   server.listen(port, bind, () => console.error(`openflowkit-http: listening on http://${bind}:${port}/mcp`));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
+if (isMain(import.meta.url)) main();

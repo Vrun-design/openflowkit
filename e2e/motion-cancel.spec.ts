@@ -35,7 +35,7 @@ test('cancelling an encode leaves the panel usable', async ({ page }) => {
   await duration.fill('20');
   await duration.blur();
   await page.getByRole('radio', { name: 'MP4', exact: true }).check();
-  await page.getByRole('radio', { name: '1440p' }).check();
+  await page.getByRole('radio', { name: '1440 px' }).check();
   await page.getByRole('radio', { name: '30 fps' }).check();
 
   const exportButton = page.getByRole('button', { name: /Export MP4/ });

@@ -15,7 +15,10 @@ import { hasIcon } from '../../application/dsl/iconCommands';
 import { buildSetInkCommand } from '../../domain/commands/inkCommands';
 import { buildSetChartKindCommand } from '../../domain/commands/chartCommands';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
-import { CHART_OPTIONS } from './v2ToolCatalog';
+import { CHART_OPTIONS, SHAPE_SECTIONS } from './v2ToolCatalog';
+import { buildSetShapeCommand } from '../../domain/commands/sceneEdits';
+import type { ShapeKind } from '../../domain/nodes/shapeNode';
+import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
 import { buildSetWidgetStateCommand, type WidgetStatePatch } from '../../domain/commands/widgetCommands';
 import { WIDGETS, WIDGET_SEVERITIES, resolveWidgetPresentation } from '../../domain/nodes/widgetNodePresentation';
 import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
@@ -24,6 +27,7 @@ import { V2IconPicker } from './V2IconPicker';
 import { resolveNodeStyle, STYLE_LIMITS, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { Icon, NumberField, Segmented } from '../design-system';
+import { platformKeys } from './v2Shortcuts';
 import {
   INK_PRESETS, PALETTE_KEYS, PALETTE_LABELS, paletteFillPatch, paletteKeyForFill, paletteSwatch, type PaletteMode,
 } from '../../domain/nodes/nodePalette';
@@ -63,7 +67,11 @@ interface NodeStylePanelsProps {
   readonly onSetIcon: (icon: IconChoice) => void;
 }
 
-type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart' | 'widget';
+type Panel = 'shape' | 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart' | 'widget';
+
+/** Change shape offers what the Shapes picker draws: Rectangle, Ellipse, then the library. */
+const CHANGE_SHAPES = SHAPE_SECTIONS.flatMap((section) => section.options)
+  .map((option) => ({ ...option, id: option.id.replace('tool:', '') as ShapeKind }));
 
 const FONT_SIZE_PRESETS = [{ value: 12, label: 'XS' }, { value: 14, label: 'S' }, { value: 18, label: 'M' }, { value: 24, label: 'L' }];
 const PADDING_PRESETS = [{ value: 8, label: 'S' }, { value: 16, label: 'M' }, { value: 24, label: 'L' }];
@@ -126,6 +134,15 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
     const command = buildSetWidgetStateCommand(page, nodeIds, patch);
     if (command) commit(command);
   };
+  // Change shape: every selected node is a basic shape (decisions and steps included; text, icons, frames are not).
+  const shapes = nodes.map((node) => resolveBasicNodePresentation(node)?.shape);
+  const canChangeShape = shapes.every((shape) => shape !== undefined);
+  const shape = shapes.every((value) => value === shapes[0]) ? CHANGE_SHAPES.find((option) => option.id === shapes[0]) : undefined;
+  const commitShape = (next: ShapeKind) => {
+    const command = buildSetShapeCommand(page, nodeIds, next);
+    if (command) commit(command);
+    close();
+  };
   const canPickIcon = !isText && !isContainer && !isStroke && !isChart && !isImage && !nodes.some((node) => node.kind === 'widget');
   const currentIcon = nodes.length === 1 ? resolveArchitectureNodePresentation(nodes[0])?.icon : undefined;
   const selectedIcon = currentIcon?.kind === 'provider' ? currentIcon : null;
@@ -151,6 +168,13 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
 
   return (
     <>
+      {canChangeShape ? (
+        <StyleButton label="Shape" open={open === 'shape'} onToggle={() => toggle('shape')} onClose={close}
+          preview={<Icon icon={(shape ?? CHANGE_SHAPES[0]!).icon} />}>
+          <ChoiceRow<ShapeKind> label="Shape" value={shape?.id ?? null} onChange={commitShape} layout="grid"
+            options={CHANGE_SHAPES.map((option) => ({ value: option.id, title: option.label, label: <Icon icon={option.icon} /> }))} />
+        </StyleButton>
+      ) : null}
       {canPickIcon ? (
         <StyleButton label="Icon" open={open === 'icon'} onToggle={() => toggle('icon')} onClose={close} panelClassName="ofk-style-panel--icons"
           preview={selectedIcon ? <IconSwatch packId={selectedIcon.packId} shapeId={selectedIcon.shapeId} /> : <Icon icon={IconMoodSmile} />}>
@@ -330,9 +354,9 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
               else if (id === 'underline') apply({ textDecoration: decoration === 'underline' ? 'none' : 'underline' });
               else apply({ textDecoration: decoration === 'line-through' ? 'none' : 'line-through' });
             }} options={[
-              { id: 'bold', label: 'Bold', icon: <Icon icon={IconBold} />, on: fontWeight === 700, shortcut: '⌘B' },
-              { id: 'italic', label: 'Italic', icon: <Icon icon={IconItalic} />, on: fontStyle === 'italic', shortcut: '⌘I' },
-              { id: 'underline', label: 'Underline', icon: <Icon icon={IconUnderline} />, on: decoration === 'underline', shortcut: '⌘U' },
+              { id: 'bold', label: 'Bold', icon: <Icon icon={IconBold} />, on: fontWeight === 700, shortcut: platformKeys('⌘B') },
+              { id: 'italic', label: 'Italic', icon: <Icon icon={IconItalic} />, on: fontStyle === 'italic', shortcut: platformKeys('⌘I') },
+              { id: 'underline', label: 'Underline', icon: <Icon icon={IconUnderline} />, on: decoration === 'underline', shortcut: platformKeys('⌘U') },
               { id: 'strike', label: 'Strikethrough', icon: <Icon icon={IconStrikethrough} />, on: decoration === 'line-through' },
             ]} />
           </PanelRow>

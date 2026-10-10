@@ -4,7 +4,7 @@ description: Where documents live, how saving and recovery work, and what openin
 ---
 
 Local-first means the document is yours and the app is a tool: storage is in your browser,
-there is no account, and nothing is uploaded.
+there is no account, and nothing is uploaded unless you make a [share link](/share-links/).
 
 ## Where a document lives
 
@@ -14,23 +14,26 @@ data for the app's origin deletes your documents; export the JSON first if you c
 
 ## Saving
 
-Every edit is autosaved. The document bar shows the state:
+Every edit is autosaved. The cloud icon in the document bar shows the state (hover it for the
+words):
 
 | State | Meaning |
 | --- | --- |
 | Saved | The record matches the canvas |
 | Saving… | A write is in flight |
-| Conflict — reload to continue | Another tab wrote a newer version; reload before editing |
-| Save failed — storage is full / unavailable | The browser refused the write, with a retry action |
+| Another tab saved first — reload, or save yours as a copy | Another tab wrote a newer version first. **Reload** takes that version; **Save as copy** keeps yours as a new document |
+| Save failed — storage is full / unavailable | The browser refused the write, with a **Retry** action |
 
-There is a single write log per document and no merge: the conflict state exists so two tabs
-cannot silently overwrite each other.
+Each save is compare-and-swap: it only lands if the record is still the version this tab
+loaded. There is no merge; the conflict state exists so two tabs cannot silently overwrite each
+other.
 
 ## Recovery
 
 Each save keeps the previous good record as a fallback. If the primary record is damaged, the
-app loads the fallback and says so; if neither can be read, the document opens in a recovery
-view offering a diagnostic download rather than pretending the diagram is empty.
+app loads the fallback and says so; if neither can be read, the document opens as "This diagram
+is damaged" with **Download raw data** (the stored records, as JSON) and **Download diagnostic
+report**, rather than pretending the diagram is empty.
 
 ## Opening and importing files
 
@@ -52,8 +55,9 @@ page, the selection, or every page (one file per page).
 ## No account, no telemetry
 
 There is no sign-in, no license check and no analytics in the app. Nothing about your diagrams
-leaves the machine unless you export it or connect an agent, and the connected agent talks to
-a local bridge on `127.0.0.1` — see [MCP Server](/mcp-server/).
+leaves the machine unless you export it, share it (encrypted; the server never sees the key),
+send it to the AI provider you picked, or connect an agent — and the connected agent talks to a
+local bridge on `127.0.0.1` — see [MCP Server](/mcp-server/).
 
 ## What it cannot do
 

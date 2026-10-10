@@ -27,7 +27,7 @@ import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText, SUBLABEL_FONT } from '../../domain/text/measurement';
 import { decoratePixiText } from './pixiText';
 import { PixiTextPool } from './pixiTextPool';
-import type { SemanticDetailLevel } from './viewportProjection';
+import { labelReadable, type SemanticDetailLevel } from './viewportProjection';
 import { numericColorToHex } from '../../domain/color/adaptiveColor';
 
 const NODE_FILL = 0xffffff;
@@ -35,6 +35,8 @@ const NODE_STROKE = 0xcbd5e1;
 const ICON_FILL = 0xfef4f0;
 const ICON_STROKE = 0xe95420;
 const DETAILED_OUTLINE_NODE_LIMIT = 1_000;
+// ponytail: family renderers (architecture, class, sequence…) draw their own text; their smallest, 12 px, stands for all of it.
+const FAMILY_LABEL_FONT = 12;
 
 export type { PixiNodeDebugRecord } from './pixiNodeDebug';
 
@@ -60,6 +62,8 @@ export class PixiNodeRenderer {
   readonly media = new Container();
   readonly labels = new Container();
   private readonly labelByNodeId = new Map<string, Container>();
+  /** Font size per label, for the on-screen readability check. */
+  private readonly labelFontByNodeId = new Map<string, number>();
   // Label Text objects rasterize to a texture on creation (~0.5–1 ms each), so
   // a redraw reuses last draw's instances with the same text and style
   // instead of destroying and re-creating every label.
@@ -124,6 +128,7 @@ export class PixiNodeRenderer {
     const wireframeMediaGeneration = this.wireframeRenderer.beginDraw();
     this.mindmapRenderer.beginDraw(page.nodes);
     this.labelByNodeId.clear();
+    this.labelFontByNodeId.clear();
     const debugRecords: PixiNodeDebugRecord[] = [];
     const nodeStates = buildNodeStateMap(page);
     for (const node of page.nodes) {
@@ -295,6 +300,7 @@ export class PixiNodeRenderer {
       }
       this.labels.addChild(content);
       this.labelByNodeId.set(node.id, content);
+      this.labelFontByNodeId.set(node.id, style.fontSize);
     }
     this.texts.flush();
     this.debugRecords = debugRecords;
@@ -304,11 +310,12 @@ export class PixiNodeRenderer {
     return this.debugRecords;
   }
 
-  setLabelVisibility(visibleNodeIds: ReadonlySet<string> | null): void {
+  setLabelVisibility(visibleNodeIds: ReadonlySet<string> | null, zoom: number): void {
     this.labels.visible = visibleNodeIds !== null;
     if (!visibleNodeIds) return;
     for (const [nodeId, label] of this.labelByNodeId) {
       label.visible = visibleNodeIds.has(nodeId) && nodeId !== this.editingNodeId
+        && labelReadable(zoom, this.labelFontByNodeId.get(nodeId) ?? FAMILY_LABEL_FONT)
         && !this.freeformRenderer.isMediaLoaded(nodeId);
     }
   }

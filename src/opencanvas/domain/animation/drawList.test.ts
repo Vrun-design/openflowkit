@@ -94,6 +94,19 @@ describe('frame draw list', () => {
     expect(texts(ops)[0]).toMatchObject({ text: 'Boundary', align: 'start', x: 16, y: 20 });
   });
 
+  it('layers containers under the connectors and every other node over them, as the file does', () => {
+    const at = (x: number, y: number) => ({ ...createTestNode('x').transform, translation: { x, y } });
+    const group = createTestNode('g', { kind: 'section', zIndex: 0, size: { width: 200, height: 400 }, transform: at(0, 0) });
+    const a = createTestNode('a', { zIndex: 1, size: { width: 100, height: 50 }, transform: at(50, 60), content: { shape: 'rectangle' } });
+    const b = createTestNode('b', { zIndex: 1, size: { width: 100, height: 50 }, transform: at(50, 260), content: { shape: 'rectangle' } });
+    const page = pageOf({ nodes: [group, a, b], connectors: [createTestConnector('a->b', 'a', 'b')] });
+    const ops = paths(frameDrawList(page, frameOf(), 'light', VIEW_BOX));
+    // The container's outline, then the line (stroke only, slate), then the two node outlines.
+    expect(ops[0]!.commands).toHaveLength(4);
+    expect(ops[1]).toMatchObject({ fill: null, stroke: { color: '#64748b' } });
+    expect(ops.slice(2).every((op) => op.fill !== null || op.stroke?.color !== '#64748b')).toBe(true);
+  });
+
   it('marks a text node page as a fallback frame', () => {
     const text = createTestNode('t', { kind: 'text', content: { label: 'note' } });
     expect(frameDrawList(pageOf({ nodes: [text] }), frameOf(), 'light', VIEW_BOX)).toEqual([{ kind: 'fallback' }]);

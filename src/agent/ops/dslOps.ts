@@ -50,6 +50,17 @@ function diagramOutput(pageId: string, frameId: string, compiled: CompileResult)
 const mintPageId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
 /**
+ * Nothing drawable (every line dropped, or none written) is a failed call, not an empty frame. The diagnostics ride on the
+ * error so a checker (`openflowkit validate`) can report them as its own.
+ */
+function requireDrawable(compiled: CompileResult): CompileResult {
+  const notable = compiled.diagnostics.filter(({ severity }) => severity !== 'info');
+  if (compiled.nodes.length + compiled.groups.length > 0 || notable.length === 0) return compiled;
+  const lines = notable.map(({ line, col, code, message }) => `line ${line}:${col} ${code} ${message}`);
+  throw Object.assign(new RangeError(`Nothing to draw:\n${lines.join('\n')}`), { diagnostics: notable });
+}
+
+/**
  * A C4 workspace lands as one page per view, like ⌘↵ does.
  * The output describes the first view like a single diagram and lists the rest.
  */
@@ -95,7 +106,7 @@ export const createDiagram = defineOp({
       if (there && (there.x !== origin.x || there.y !== origin.y)) workspace = await compileAt(there);
       return withConverted(workspaceOutcome(context.document, workspace, { intoPageId: page.id }), source);
     }
-    const compiled = workspace.views[0]!.result;
+    const compiled = requireDrawable(workspace.views[0]!.result);
     return {
       command: buildDslPageCommand(page, compiled),
       output: { ...diagramOutput(page.id, compiled.frame.id, compiled), views: [], ...convertedOutput(source) },
@@ -121,7 +132,7 @@ export const updateDiagram = defineOp({
       ...(palette ? { appearance: { palette } } : {}),
     });
     if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace, { replaceFrameId: frameId }), source);
-    const compiled = workspace.views[0]!.result;
+    const compiled = requireDrawable(workspace.views[0]!.result);
     return {
       command: buildDslPageCommand(page, compiled, frameId),
       output: { ...diagramOutput(page.id, frameId, compiled), views: [], ...convertedOutput(source) },

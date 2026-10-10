@@ -13,6 +13,7 @@ import { StaleSessionRevisionError } from '../../application/session/session';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ChangeDecision } from '../design-system';
+import { platformKeys } from './v2Shortcuts';
 
 export type V2ProposalPhase = 'idle' | 'working' | 'ready' | 'stale' | 'applied' | 'failed';
 
@@ -146,7 +147,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
       const count = command.commands.length;
       const summary = `Applied ${count} ${count === 1 ? 'change' : 'changes'}.`;
       setAppliedSummary(summary);
-      announce(`${summary} Press ⌘Z to undo.`);
+      announce(`${summary} Press ${platformKeys('⌘Z')} to undo.`);
       setPhase('applied');
       setHighlightedChangeId(null);
       return touched;

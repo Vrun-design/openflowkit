@@ -5,7 +5,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { isMain } from './lib/isMain.js';
 import { collectIconArt, compileWorkspace, exportCanonicalSvg, type BundleWorkspace, type SvgExportDocument } from './lib/agent.js';
 import { svgBeside, tryWriteSvgBeside } from './lib/svgBeside.js';
 import { loadFileCapabilities, loadIconArt } from './lib/fileCapabilities.js';
@@ -627,8 +627,7 @@ export async function main(argv: readonly string[], io: CliIo): Promise<number> 
   return 2;
 }
 
-const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
-if (invokedPath && invokedPath === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2), {
     out: (message) => process.stdout.write(`${message}\n`),
     err: (message) => process.stderr.write(`${message}\n`),

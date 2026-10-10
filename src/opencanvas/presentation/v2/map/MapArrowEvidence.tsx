@@ -34,7 +34,7 @@ function Direction({ from, to, kind, total, evidence, link }: {
   );
 }
 
-/** Why a repo-map arrow exists: every `file:line`, per direction, linked to the commit it was read from. */
+/** Why a repo-map arrow exists: every `file:line`, per direction, linked to GitHub at the ref the map was read at (a repo map is read afresh each visit; nothing here is saved). */
 export function MapArrowEvidence({ arrow: { edge, link, name } }: { readonly arrow: MapRepoArrow }): React.JSX.Element {
   const a = name(edge.from);
   const b = name(edge.to);

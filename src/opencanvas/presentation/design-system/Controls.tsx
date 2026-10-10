@@ -377,7 +377,7 @@ export function ErrorState({
   /** Decorative inline-SVG illustration; replaces the warning icon. */
   hero?: ReactNode;
   title: string;
-  description?: string;
+  description?: ReactNode;
   /** Custom recovery (open backup, pick another file). Defaults to a retry button. */
   action?: ReactNode;
   /** A quiet second way out (back to the list), beside the primary action. */

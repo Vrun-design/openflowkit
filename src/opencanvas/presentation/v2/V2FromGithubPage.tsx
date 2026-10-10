@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, ErrorState, Progress } from '../design-system';
 import { capUnits, discoverArchitecture, discoveryToDsl } from '../../../dsl/discovery/discovery';
 import { fetchRepoFiles, githubEvidenceLink, parseRepoPath, RepoError, type RepoRef } from '../../../services/discovery/githubRepo';
-import { mintV2Id, type V2StartIntent } from './v2Document';
+import { repoMapDocumentId } from '../../application/map/repoMapSource';
+import { createV2Repository } from '../../../services/storage/v2/v2Repository';
+import type { V2StartIntent } from './v2Document';
 import { V2StateHero } from './V2StateHero';
-import { cliCommand, describeRepoError, keepToken, RepoTokenForm, storedToken, type RepoProblemView } from './v2RepoProblem';
+import { CliText, cliCommand, describeRepoError, keepToken, RepoTokenForm, storedToken, type RepoProblemView } from './v2RepoProblem';
 import { V2StateShell } from './V2StateShell';
 import './v2EditorPage.css';
 
@@ -17,12 +19,31 @@ type Outcome =
   | RepoProblemView
   | { readonly status: 'notes'; readonly notes: readonly string[]; readonly source: string };
 
+/** One diagram per repo (and ref), like a repo map: a revisit or a bookmark reopens it instead of piling up copies. */
+export const fromGithubDocumentId = (repo: RepoRef): string =>
+  repoMapDocumentId({ owner: repo.owner, repo: repo.repo, ...(repo.ref !== 'HEAD' ? { ref: repo.ref } : {}) }).replace(/^map-/, 'gh-');
+
+/**
+ * Whether this repo's diagram is already stored here; an archived one is brought back to Recents (its edits are the
+ * reader's). Storage trouble reads as no: the repo is read afresh.
+ */
+async function stored(id: string): Promise<boolean> {
+  try {
+    const repository = createV2Repository(indexedDB);
+    const found = await repository.loadDocument(id);
+    if (found.status === 'missing') return false;
+    if ('record' in found && found.record.archivedAt) await repository.restoreDocuments([id]);
+    return true;
+  } catch { return false; }
+}
+
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? '' : 's'}`;
 
 /** The repo's text diagram, and what the editor cannot tell the user about it. */
 async function readRepo(repo: RepoRef, signal: AbortSignal, onProgress: (done: number, total: number) => void): Promise<Outcome> {
   const token = storedToken();
-  const read = await fetchRepoFiles(repo, { signal, onProgress, ...(token ? { token } : {}) }).catch((error: unknown) => {
+  // Pinned to the commit: the evidence links are saved in the document, so they must name what was read, not HEAD.
+  const read = await fetchRepoFiles(repo, { signal, onProgress, pinCommit: true, ...(token ? { token } : {}) }).catch((error: unknown) => {
     if (error instanceof RepoError && error.problem.kind === 'token-rejected') keepToken(null);
     throw error;
   });
@@ -38,7 +59,7 @@ async function readRepo(repo: RepoRef, signal: AbortSignal, onProgress: (done: n
     ...(read.failed ? [`${plural(read.failed, 'file')} could not be read.`] : []),
     ...(read.unread + read.skipped ? [`Read ${read.files.length + read.failed} of ${read.wanted} relevant files; the rest were left out to keep this quick.`] : []),
   ];
-  return { status: 'notes', notes, source: discoveryToDsl(result, repo.repo, githubEvidenceLink(repo)) };
+  return { status: 'notes', notes, source: discoveryToDsl(result, repo.repo, githubEvidenceLink({ ...repo, ref: read.commit ?? repo.ref })) };
 }
 
 /** `#/from/github/<owner>/<repo>[/tree/<ref>]`: read a public repo in the browser and open its architecture in the editor. */
@@ -59,11 +80,14 @@ export function V2FromGithubPage(): React.JSX.Element {
       return undefined;
     }
     const controller = new AbortController();
-    readRepo(repo, controller.signal, (done, total) => setCounted({ request, done, total })).then(
+    const id = fromGithubDocumentId(repo);
+    // ponytail: a stored diagram always wins; regenerating it means deleting it first — add a "Read again" if readers ask
+    stored(id).then((exists): Promise<Outcome | 'stored'> | 'stored' => (exists ? 'stored' : readRepo(repo, controller.signal, (done, total) => setCounted({ request, done, total })))).then(
       (outcome) => {
         if (controller.signal.aborted) return;
+        if (outcome === 'stored') navigate(`/d/${id}`, { replace: true });
         // Nothing to say: straight to the editor, as home's Import does.
-        if (outcome.status === 'notes' && outcome.notes.length === 0) navigate(`/d/${mintV2Id('doc')}`, { replace: true, state: { source: outcome.source } satisfies V2StartIntent });
+        else if (outcome.status === 'notes' && outcome.notes.length === 0) navigate(`/d/${id}`, { replace: true, state: { source: outcome.source } satisfies V2StartIntent });
         else publish(outcome);
       },
       (error: unknown) => { if (!controller.signal.aborted) publish(describeRepoError(error, 'discover')); },
@@ -72,13 +96,13 @@ export function V2FromGithubPage(): React.JSX.Element {
   }, [pathname, request, navigate]);
   const outcome = answer?.request === request ? answer.outcome : null;
   const home = (primary: boolean) => <Button variant={primary ? 'primary' : 'secondary'} onClick={() => navigate('/home')}>Back to home</Button>;
-  const open = (outcome: Extract<Outcome, { status: 'notes' }>) => navigate(`/d/${mintV2Id('doc')}`, { replace: true, state: { source: outcome.source } satisfies V2StartIntent });
   const name = parseRepoPath(pathname.replace(/^\/from\/github\//, ''));
+  const open = (outcome: Extract<Outcome, { status: 'notes' }>) => navigate(`/d/${name ? fromGithubDocumentId(name) : 'gh'}`, { replace: true, state: { source: outcome.source } satisfies V2StartIntent });
 
   return (
     <V2StateShell testId="v2-from-github">
       {outcome?.status === 'problem' ? (
-        <ErrorState hero={<V2StateHero kind={outcome.hero} />} title={outcome.title} description={outcome.detail}
+        <ErrorState hero={<V2StateHero kind={outcome.hero} />} title={outcome.title} description={<CliText text={outcome.detail} />}
           {...(outcome.askToken
             ? { action: <RepoTokenForm home={home(false)} onSubmit={(token) => { if (token) keepToken(token); setAttempt((count) => count + 1); }} /> }
             : outcome.retry ? { onRetry: () => setAttempt((count) => count + 1), secondary: home(false) } : { action: home(true) })} />

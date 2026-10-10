@@ -5,7 +5,7 @@ import { ELEMENT_KIND_LABEL, type ArchElement, type ArchModel, type ArchRelation
 import { attrsToJson } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize, WRAP_SIZING_POLICY, wrapPolicyFor } from '../../sizing';
 
-import { COLOR_WORDS, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
+import { COLOR_WORDS, isHexColor, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
 import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
@@ -51,6 +51,11 @@ export function elementColorKey(element: ArchElement): { readonly key: string | 
 
 function paletteKey(word: string): string {
   return COLOR_WORDS[word.toLowerCase()]?.key ?? word;
+}
+
+/** The colour keys a card or boundary reads: a palette word, or `custom` with the hex the author wrote. */
+export function contentColor(word: string): { readonly color: string; readonly customColor?: string } {
+  return isHexColor(word) ? { color: 'custom', customColor: word.toLowerCase() } : { color: paletteKey(word) };
 }
 
 function specFor(word: string): DslShapeSpec {
@@ -131,7 +136,7 @@ export function boundaryNode(element: ArchElement, parentId: string | null, zInd
     id: element.id, kind: 'frame', parentId, layerId: 'default', zIndex,
     transform: { translation: { ...context.origin }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: { width: 240, height: 160 },
-    content: { label: element.name, subLabel: `[${ELEMENT_KIND_LABEL[element.kind]}]`,  ...(color ? { color: paletteKey(color) } : {}) },
+    content: { label: element.name, subLabel: `[${ELEMENT_KIND_LABEL[element.kind]}]`, ...(color ? contentColor(color) : {}) },
     appearance: {}, ports: [],
     metadata: {
       model: {
@@ -190,7 +195,7 @@ export function elementNode(element: ArchElement, parentId: string | null, zInde
       ...(subLabel ? { subLabel } : {}),
       ...(wrapPolicy ? { sizingPolicy: wrapPolicy } : {}),
       // Architecture cards and containers resolve their palette from content keys.
-      ...(isIconCard && color ? { color: paletteKey(color), ...(fill === 'bold' ? { colorMode: 'filled' } : {}) } : {}),
+      ...(isIconCard && color ? { ...contentColor(color), ...(fill === 'bold' ? { colorMode: 'filled' } : {}) } : {}),
       // The colour came from the kind, not the author: a dark canvas washes it like an unset one.
       ...(isIconCard && !element.color && color && fill !== 'bold' ? { archKindColor: paletteKey(color) } : {}),
       ...(isIconCard && authoredIcon ? {

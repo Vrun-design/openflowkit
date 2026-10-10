@@ -97,7 +97,7 @@ describe('mermaidToDsl', () => {
     // `[text]` is Mermaid's square box: rect, the DSL default, so only the colour is written.
     expect(dsl).toContain('a = Start [#f66]');
     expect(dsl).toContain('c = Go [rounded]');
-    expect(losses).toEqual([]);
+    expect(losses).toEqual(['style A: stroke not kept (only fill converts)']);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
   });
@@ -123,7 +123,9 @@ describe('mermaidToDsl', () => {
     // Both LR subgraphs link outside themselves, so Mermaid ignores their direction.
     expect(dsl).toContain('group edge = Edge Layer {');
     expect(dsl).toContain('group async = Async Pipeline {');
-    expect(losses).toEqual([]);
+    // Only fill converts; stroke and text colour are named, never dropped silently.
+    expect(losses.length).toBeGreaterThan(0);
+    expect(losses.every((loss) => loss.endsWith('not kept (only fill converts)'))).toBe(true);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
     expect(compiled.nodes).toHaveLength(47);
@@ -643,5 +645,25 @@ describe('mermaidToDsl', () => {
       expect(typeof result.error).toBe('string');
       expect(result.error.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('mermaidToDsl refuses broken Mermaid and names what it drops (persona P03)', () => {
+  it('reports an invalid edge as an error on its Mermaid line, and invents no node from it', () => {
+    const result = convert('flowchart TD\n  A --> B\n  A -->> C{Decide}\n  C --> D');
+    const errors = result.diagnostics.filter((item) => item.severity === 'error');
+    expect(errors.map((item) => [item.code, item.line])).toEqual([['E004', 3]]);
+    expect(errors[0]!.message).toContain('Mermaid line 3');
+    expect(result.dsl).not.toContain('Decide');
+  });
+
+  it('lists the style properties it cannot keep, on their Mermaid lines', () => {
+    const result = convert('flowchart LR\n  a --> b\n  classDef hot fill:#f96,stroke:#333,stroke-width:4px\n  class b hot\n  style a fill:#bbf,stroke:#f66');
+    expect(result.losses).toEqual(expect.arrayContaining([
+      expect.stringMatching(/classDef hot.*stroke, stroke-width/),
+      expect.stringMatching(/style a.*stroke/),
+    ]));
+    expect(result.diagnostics.filter((item) => item.code === 'W180').map((item) => item.line)).toEqual(expect.arrayContaining([3, 5]));
+    expect(result.dsl).toContain('#f96');
   });
 });

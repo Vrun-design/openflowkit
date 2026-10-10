@@ -17,7 +17,7 @@ state. Press `?` any time for the shortcut cheatsheet.
 
 ## 2. Or write it
 
-Press `⌥D` for the code panel, paste this, then press `⌘↵` or click **Generate diagram**:
+Press `⌥C` for the code panel, paste this, then press `⌘↵` or click **Generate diagram**:
 
 ```openflow
 flowchart

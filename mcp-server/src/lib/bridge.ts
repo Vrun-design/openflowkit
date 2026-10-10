@@ -9,11 +9,19 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { randomUUID } from 'node:crypto';
 import {
   BRIDGE_IDLE_MS, BRIDGE_POLL_SECONDS, BRIDGE_PROTOCOL_VERSION, bridgeTokenHeader,
-  isAllowedBridgeOrigin, type BridgeClientInfo, type BridgeHealth, type BridgeRequest,
+  isAllowedBridgeOrigin, isBridgeClientInfo, type BridgeClientInfo, type BridgeHealth, type BridgeRequest,
 } from './agent.js';
 import { MCP_SERVER_NAME, MCP_SERVER_VERSION } from './version.js';
 
 const MAX_BODY_BYTES = 32 * 1024 * 1024;
+const EDITOR_GONE = 'The editor tab was closed or reloaded. Reopen it and press Connect.';
+
+/**
+ * This machine by name: a rebound DNS name (evil.example → 127.0.0.1) is refused. Any port, so an
+ * SSH or devcontainer forward (Host: localhost:9000) still pairs.
+ */
+const isAllowedBridgeHost = (host: string | undefined): boolean =>
+  /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host?.toLowerCase() ?? '');
 
 interface PendingCall {
   readonly resolve: (output: unknown) => void;
@@ -33,6 +41,9 @@ export class LiveBridge {
   private server: Server | null = null;
   private client: (BridgeClientInfo & { readonly origin: string | null }) | null = null;
   private lastSeenAt: number | null = null;
+  /** The paired editor dropped its poll without saying goodbye; calls say so until it pairs again. */
+  private gone = false;
+  private portInUse = false;
   private parked: ServerResponse | null = null;
   private readonly queue: BridgeRequest[] = [];
   private readonly pending = new Map<string, PendingCall>();
@@ -50,12 +61,31 @@ export class LiveBridge {
   async start(): Promise<number> {
     if (this.server) return this.options.port;
     const server = createServer((request, response) => { void this.handle(request, response); });
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(this.options.port, '127.0.0.1', () => resolve());
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(this.options.port, '127.0.0.1', () => resolve());
+      });
+    } catch (error) {
+      this.portInUse = (error as { code?: string }).code === 'EADDRINUSE';
+      throw error;
+    }
     this.server = server;
     return (server.address() as { port: number }).port;
+  }
+
+  /** What whoami reports: whether this process can pair at all, and on which port. */
+  status(): { readonly port: number; readonly state: 'off' | 'listening' | 'paired' | 'port-in-use' } {
+    const port = (this.server?.address() as { port: number } | null)?.port ?? this.options.port;
+    const state = this.portInUse ? 'port-in-use' : !this.server ? 'off' : this.connected ? 'paired' : 'listening';
+    return { port, state };
+  }
+
+  /** Why this process has no editor, for a tool that needed one. */
+  get unpairedReason(): string | null {
+    return this.portInUse
+      ? `Another OpenFlowKit MCP server already owns port ${this.options.port}; this one can only edit files (openflow_open).`
+      : null;
   }
 
   async stop(): Promise<void> {
@@ -66,7 +96,7 @@ export class LiveBridge {
     const server = this.server;
     this.server = null;
     this.client = null;
-    if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (server) await new Promise<void>((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
   }
 
   health(): BridgeHealth {
@@ -92,7 +122,7 @@ export class LiveBridge {
   /** Sends one op to the paired editor and waits for its result. */
   async call(op: string, input: unknown, pageId?: string): Promise<unknown> {
     if (!this.connected) {
-      throw new Error('No editor is connected. Open the app and click "Connect agent" (or start the MCP server from the editor).');
+      throw new Error(this.gone ? EDITOR_GONE : 'No editor is connected. Open the app and click "Connect agent" (or start the MCP server from the editor).');
     }
     const request: BridgeRequest = { id: randomUUID(), op, input, ...(pageId ? { pageId } : {}) };
     const promise = new Promise<unknown>((resolve, reject) => {
@@ -161,6 +191,11 @@ export class LiveBridge {
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     try {
+      // A same-origin request from a rebound name carries no Origin header, so the Host is checked first.
+      if (!isAllowedBridgeHost(request.headers.host)) {
+        this.respond(response, 403, { error: 'Host not allowed. The bridge answers 127.0.0.1, localhost and [::1] only.' });
+        return;
+      }
       // A preflight cannot carry the token it asks permission to send: origin-check it, nothing more.
       if (request.method === 'OPTIONS') {
         if (isAllowedBridgeOrigin(request.headers.origin)) this.respond(response, 204, null);
@@ -170,14 +205,14 @@ export class LiveBridge {
       if (this.reject401(response, request)) return;
       if (request.method === 'GET' && url.pathname === '/health') { this.respond(response, 200, this.health()); return; }
       if (request.method === 'POST' && url.pathname === '/hello') {
-        const payload = await this.body(request) as { document?: BridgeClientInfo } | null;
-        const document = payload?.document;
-        if (!document || typeof document.documentId !== 'string') {
+        const document = (await this.body(request) as { document?: unknown } | null)?.document;
+        if (!isBridgeClientInfo(document)) {
           this.respond(response, 400, { error: 'hello needs a document summary.' });
           return;
         }
         const wasConnected = this.connected;
         this.client = { ...document, origin: request.headers.origin ?? null };
+        this.gone = false;
         this.lastSeenAt = Date.now();
         this.options.log?.(`Editor connected: "${document.name}" (${document.pages.length} page(s))${wasConnected ? ' [replaced]' : ''}`);
         this.respond(response, 200, { ok: true, protocol: BRIDGE_PROTOCOL_VERSION });
@@ -219,6 +254,17 @@ export class LiveBridge {
         this.respond(response, 204, null);
       }
     }, waitSeconds * 1000);
-    response.on('close', () => { clearTimeout(timer); if (this.parked === response) this.parked = null; });
+    // Closed while still parked (we reply to a poll before we drop it): the tab closed, reloaded or stopped polling.
+    response.on('close', () => { clearTimeout(timer); if (this.parked === response) this.editorGone(); });
+  }
+
+  private editorGone(): void {
+    this.parked = null;
+    this.lastSeenAt = null;
+    this.gone = true;
+    this.queue.length = 0;
+    for (const [, call] of this.pending) { clearTimeout(call.timer); call.reject(new Error(EDITOR_GONE)); }
+    this.pending.clear();
+    this.options.log?.('Editor disconnected (its tab closed or reloaded).');
   }
 }

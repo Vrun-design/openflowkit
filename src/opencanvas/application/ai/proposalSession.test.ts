@@ -7,7 +7,7 @@ import type { BatchDocumentCommand, DocumentCommand } from '../../domain/command
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import {
-  applyCommand, changedRoots, createProposal, decideChange, StaleProposalError, summarizeChanges,
+  applyCommand, changedRoots, commandTouchedRoots, createProposal, decideChange, StaleProposalError, summarizeChanges,
 } from './proposalSession';
 
 const PAGE = { kind: 'page', pageId: 'page-1', objectIds: [] } as const;
@@ -155,5 +155,14 @@ describe('changedRoots', () => {
     expect(changedRoots(added, edited)).toEqual(['frame']);
     expect(changedRoots(added, page)).toEqual([]);
     expect(changedRoots(undefined, page)).toEqual(['a', 'b']);
+  });
+});
+
+describe('commandTouchedRoots', () => {
+  it('names the nodes a command changes on that page, and nothing for another page', () => {
+    const document = fixture();
+    const command = setLabel(document, 'b', 'Renamed');
+    expect(commandTouchedRoots(document, command, 'page-1')).toEqual(['b']);
+    expect(commandTouchedRoots(document, command, 'elsewhere')).toEqual([]);
   });
 });

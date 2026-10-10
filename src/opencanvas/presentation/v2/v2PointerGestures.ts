@@ -25,7 +25,8 @@ import { defaultShapeSize } from '../../domain/nodes/shapeNode';
 import { buildInsertConnectorCommand, buildInsertShapeCommand, buildQuickCreateCommand, type V2ShapeKind } from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
 import { simplifyStroke, strokeBounds } from '../../domain/nodes/strokeGeometry';
-import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
+import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
+import { clearance, panToUncover } from './map/mapMode';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { FreeformPreviewFrame } from '../../infrastructure/pixi/PixiFreeformPreview';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
@@ -101,6 +102,10 @@ export type V2Operation =
 
 export interface V2GestureApi {
   readonly cancelGesture: () => boolean;
+  /** The keyboard's click on the canvas: `shape` (else the armed tool's) centred on `at`. False when nothing was placed. */
+  readonly placeShape: (at: Point2d, shape?: V2ShapeKind) => boolean;
+  /** Exactly two shapes selected: a connector from the first-selected to the second. False otherwise. */
+  readonly connectSelection: () => boolean;
 }
 
 export interface V2PointerOptions {
@@ -245,6 +250,65 @@ export function connectorPreview(options: V2PointerOptions, ends: {
   };
 }
 
+/** A shape tool's click (default size centred on `centre`) or drag (`box`): one step, selected, tool back to select. */
+function placeShape(
+  opts: V2PointerOptions, page: ScenePage, shape: V2ShapeKind, centre: Point2d,
+  box?: { readonly at: Point2d; readonly size: { readonly width: number; readonly height: number } },
+): void {
+  const id = opts.mintId('node');
+  const size = box?.size ?? defaultShapeSize(shape);
+  opts.commit(buildInsertShapeCommand(page, {
+    kind: shape, id, size, appearance: stickyAppearance(opts, shape),
+    at: box?.at ?? { x: centre.x - size.width / 2, y: centre.y - size.height / 2 },
+  }));
+  opts.applyConnectorSelection([]);
+  opts.applySelection(replaceSelection([id]));
+  opts.onToolChange('select');
+  if (shape === 'text') opts.openEditor(id, { isNew: true });
+}
+
+/** A connector between two nodes, as drawn: one step (a C4 view adds its relation), the connector selected. */
+function connectNodes(opts: V2PointerOptions, page: ScenePage, sourceNodeId: string, targetNodeId: string): void {
+  const id = opts.mintId('connector');
+  const command = buildInsertConnectorCommand(page, {
+    id, source: { nodeId: sourceNodeId }, target: { nodeId: targetNodeId },
+    route: connectorRoute(opts), appearance: connectorAppearance(opts),
+  });
+  opts.commit(opts.extendConnectorCommand?.(command, sourceNodeId, targetNodeId) ?? command);
+  opts.applySelection(clearSelection());
+  opts.applyConnectorSelection([id]);
+  opts.onToolChange('select');
+}
+
+/** V2GestureApi's keyboard doors to the two gestures above. */
+export function keyboardGestures(opts: () => V2PointerOptions): Pick<V2GestureApi, 'placeShape' | 'connectSelection'> {
+  const writablePage = () => (opts().readOnlyRef.current ? null : opts().pageRef.current);
+  return {
+    placeShape: (at, shape) => {
+      const page = writablePage();
+      const tool = opts().toolRef.current;
+      const placed = shape ?? (tool === 'shape' ? opts().toolConfigRef.current.shape
+        : tool === 'rectangle' || tool === 'ellipse' || tool === 'text' ? tool : null);
+      if (!page || !placed) return false;
+      // Enter, Enter: each shape steps down-right off the last, never stacked out of sight on it.
+      const size = defaultShapeSize(placed);
+      let centre = at;
+      const taken = (point: Point2d) => page.nodes.some(({ transform: { translation } }) =>
+        translation.x === point.x - size.width / 2 && translation.y === point.y - size.height / 2);
+      while (taken(centre)) centre = { x: centre.x + 24, y: centre.y + 24 };
+      placeShape(opts(), page, placed, centre);
+      return true;
+    },
+    connectSelection: () => {
+      const page = writablePage();
+      const ids = opts().selectionRef.current.nodeIds;
+      if (!page || ids.length !== 2) return false;
+      connectNodes(opts(), page, ids[0]!, ids[1]!);
+      return true;
+    },
+  };
+}
+
 export function stickyAppearance(options: V2PointerOptions, shape: V2ShapeKind): JsonObject | undefined {
   return options.stylePresetsRef?.current[shape === 'text' ? 'text' : 'shape'];
 }
@@ -383,6 +447,7 @@ export function strokeWorldPoints(
 // same-kind node at the fixed gap, side-bound, selected, label editing open.
 function commitQuickCreateDelivery(
   options: V2PointerOptions,
+  host: PixiRendererHost,
   operation: V2ConnectOperation,
   sourceNodeId: string,
   sourceSide: ConnectSide,
@@ -390,9 +455,17 @@ function commitQuickCreateDelivery(
 ): void {
   const nodeId = options.mintId('node');
   const connectorId = options.mintId('connector');
-  options.commit(buildQuickCreateCommand(operation.page, {
+  const command = buildQuickCreateCommand(operation.page, {
     sourceNodeId, sourceSide, newNodeId: nodeId, connectorId, ...(dropAt ? { dropAt } : {}),
-  }));
+  });
+  options.commit(command);
+  // A box made under the rail or off-screen is panned clear, the least it takes, zoom kept: the next click finds it.
+  const insert = command.commands[0];
+  if (insert?.kind === 'insert-node') {
+    const placed = { ...operation.page, nodes: [...operation.page.nodes, insert.node] };
+    const pan = panToUncover(nodeWorldBounds(insert.node, buildNodeWorldMatrices(placed).get(nodeId)!), options.cameraRef.current, clearance(host));
+    if (pan) options.updateCamera(pan);
+  }
   options.applyConnectorSelection([]);
   options.applySelection(replaceSelection([nodeId]));
   options.onToolChange('select');
@@ -473,38 +546,14 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
       point.x - operation.startScreen.x,
       point.y - operation.startScreen.y
     );
-    const id = opts.mintId('node');
-    if (moved < CLICK_THRESHOLD_PX) {
-      const size = defaultShapeSize(operation.shape);
-      opts.commit(
-        buildInsertShapeCommand(operation.page, {
-          kind: operation.shape,
-          id,
-          at: { x: world.x - size.width / 2, y: world.y - size.height / 2 },
-          size,
-          appearance: stickyAppearance(opts, operation.shape),
-        })
-      );
-    } else {
-      const width = Math.max(MIN_CREATE_SIZE, Math.abs(world.x - operation.startWorld.x));
-      const height = Math.max(MIN_CREATE_SIZE, Math.abs(world.y - operation.startWorld.y));
-      opts.commit(
-        buildInsertShapeCommand(operation.page, {
-          kind: operation.shape,
-          id,
-          at: {
-            x: Math.min(world.x, operation.startWorld.x),
-            y: Math.min(world.y, operation.startWorld.y),
-          },
-          size: { width, height },
-          appearance: stickyAppearance(opts, operation.shape),
-        })
-      );
-    }
-    opts.applyConnectorSelection([]);
-    opts.applySelection(replaceSelection([id]));
-    opts.onToolChange('select');
-    if (operation.shape === 'text') opts.openEditor(id, { isNew: true });
+    // A click places the default size centred on it; a drag commits the box it drew.
+    placeShape(opts, operation.page, operation.shape, world, moved < CLICK_THRESHOLD_PX ? undefined : {
+      at: { x: Math.min(world.x, operation.startWorld.x), y: Math.min(world.y, operation.startWorld.y) },
+      size: {
+        width: Math.max(MIN_CREATE_SIZE, Math.abs(world.x - operation.startWorld.x)),
+        height: Math.max(MIN_CREATE_SIZE, Math.abs(world.y - operation.startWorld.y)),
+      },
+    });
   } else if (operation.kind === 'ink') {
     host.setFreeformPreview(null);
     const command = buildInkCommand(opts, operation);
@@ -558,20 +607,12 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
       const sourceSide = operation.sourceSide;
       if (moved < CLICK_THRESHOLD_PX) {
         // Click on a handle: same as releasing on empty canvas that way.
-        commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
+        commitQuickCreateDelivery(opts, host, operation, sourceNodeId, sourceSide);
       } else if (targetId && targetId !== sourceNodeId) {
-        const id = opts.mintId('connector');
-        const command = buildInsertConnectorCommand(operation.page, {
-          id, source: { nodeId: sourceNodeId }, target: { nodeId: targetId },
-          route: connectorRoute(opts), appearance: connectorAppearance(opts),
-        });
-        opts.commit(opts.extendConnectorCommand?.(command, sourceNodeId, targetId) ?? command);
-        opts.applySelection(clearSelection());
-        opts.applyConnectorSelection([id]);
-        opts.onToolChange('select');
+        connectNodes(opts, operation.page, sourceNodeId, targetId);
       } else if (targetId === null) {
         // A drag lands the new node where it was released (FigJam, Miro); a click keeps the fixed gap.
-        commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide, host.screenToWorld(point));
+        commitQuickCreateDelivery(opts, host, operation, sourceNodeId, sourceSide, host.screenToWorld(point));
       }
       // Release back on the source node cancels; loops arrive in 1.6.
     } else if (moved >= CLICK_THRESHOLD_PX && !(targetId && targetId === operation.sourceNodeId)) {

@@ -12,6 +12,7 @@ import {
 import { buildReorderCommand } from '../../domain/commands/sceneEdits';
 import type { AlignMode, DistributeAxis } from '../../domain/transforms/arrangement';
 import { Icon, NumberField, Tooltip } from '../design-system';
+import { platformKeys } from './v2Shortcuts';
 import { PanelRow, StyleButton } from './V2StyleControls';
 
 interface V2ArrangeControlsProps {
@@ -55,7 +56,7 @@ export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsPr
           <PanelRow>
             <div className="ofk-choice-row" role="group" aria-label="Align">
               {ALIGNS.slice(0, 3).map(({ mode, label, shortcut, icon }) => (
-                <Tooltip key={mode} content={label} shortcut={shortcut}>
+                <Tooltip key={mode} content={label} shortcut={platformKeys(shortcut)}>
                   <button type="button" className="ofk-choice" aria-label={label} onClick={() => run(buildAlignCommand(page, nodeIds, mode))}>
                     <Icon icon={icon} />
                   </button>
@@ -64,7 +65,7 @@ export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsPr
             </div>
             <div className="ofk-choice-row" role="group" aria-label="Align vertically">
               {ALIGNS.slice(3).map(({ mode, label, shortcut, icon }) => (
-                <Tooltip key={mode} content={label} shortcut={shortcut}>
+                <Tooltip key={mode} content={label} shortcut={platformKeys(shortcut)}>
                   <button type="button" className="ofk-choice" aria-label={label} onClick={() => run(buildAlignCommand(page, nodeIds, mode))}>
                     <Icon icon={icon} />
                   </button>
@@ -75,7 +76,7 @@ export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsPr
           <PanelRow label="Distribute">
             <div className="ofk-choice-row" role="group" aria-label="Distribute">
               {DISTRIBUTES.map(({ axis, label, shortcut, icon }) => (
-                <Tooltip key={axis} content={label} shortcut={shortcut}>
+                <Tooltip key={axis} content={label} shortcut={platformKeys(shortcut)}>
                   <button type="button" className="ofk-choice" aria-label={label} disabled={nodeIds.length < 3}
                     onClick={() => run(buildDistributeCommand(page, nodeIds, axis))}>
                     <Icon icon={icon} />
@@ -110,22 +111,22 @@ export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsPr
         <section className="ofk-style-section">
         <h3>Layer order</h3>
         <div className="ofk-layer-actions" role="group" aria-label="Layer order">
-          <Tooltip content="Bring to front" shortcut="⌘⌥]">
+          <Tooltip content="Bring to front" shortcut={platformKeys('⌘⌥]')}>
             <button type="button" className="ofk-layer-action" aria-label="Bring to front" onClick={() => run(buildReorderCommand(page, nodeIds, 'front'))}>
               <Icon icon={IconArrowBarUp} /><span>To front</span>
             </button>
           </Tooltip>
-          <Tooltip content="Bring forward" shortcut="⌘]">
+          <Tooltip content="Bring forward" shortcut={platformKeys('⌘]')}>
             <button type="button" className="ofk-layer-action" aria-label="Bring forward" onClick={() => run(buildStepOrderCommand(page, nodeIds, 'forward'))}>
               <Icon icon={IconArrowUp} /><span>Forward</span>
             </button>
           </Tooltip>
-          <Tooltip content="Send backward" shortcut="⌘[">
+          <Tooltip content="Send backward" shortcut={platformKeys('⌘[')}>
             <button type="button" className="ofk-layer-action" aria-label="Send backward" onClick={() => run(buildStepOrderCommand(page, nodeIds, 'backward'))}>
               <Icon icon={IconArrowDown} /><span>Backward</span>
             </button>
           </Tooltip>
-          <Tooltip content="Send to back" shortcut="⌘⌥[">
+          <Tooltip content="Send to back" shortcut={platformKeys('⌘⌥[')}>
             <button type="button" className="ofk-layer-action" aria-label="Send to back" onClick={() => run(buildReorderCommand(page, nodeIds, 'back'))}>
               <Icon icon={IconArrowBarDown} /><span>To back</span>
             </button>

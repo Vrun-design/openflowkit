@@ -168,7 +168,7 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     keyPlaceholder: 'leave blank', keyPattern: '', needsKey: false,
     consoleUrl: 'https://ollama.com/download', consoleName: 'Ollama',
     logoPath: '/logos/ollama.svg', risk: 'browser_friendly',
-    hint: "Runs on this machine. Pull a model (ollama pull gemma4), quit the Ollama app, then run OLLAMA_ORIGINS='*' ollama serve.",
+    hint: 'Runs on this machine. Pull a model (ollama pull gemma4).',
     corsFix: 'ollama-origins',
   },
   {
@@ -183,6 +183,20 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     hint: 'Any OpenAI-compatible /chat/completions endpoint.',
   },
 ]);
+
+const LOCAL_PAGE = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+/** The hint for this page: Ollama already allows localhost pages, so only a hosted page needs OLLAMA_ORIGINS. */
+export function providerHint(definition: AiProviderDefinition, pageOrigin: string): string {
+  return definition.corsFix === 'ollama-origins' && !LOCAL_PAGE.test(pageOrigin)
+    ? `${definition.hint} Then quit the Ollama app and run OLLAMA_ORIGINS='*' ollama serve.`
+    : definition.hint;
+}
+
+/** Whether the Think toggle reaches the model: the Ollama wire never sends `think` (see provider.ts). */
+export function sendsThinking(id: AiProviderId): boolean {
+  return providerById(id).wire !== 'ollama';
+}
 
 export function providerById(id: AiProviderId): AiProviderDefinition {
   const found = AI_PROVIDERS.find((provider) => provider.id === id);

@@ -5,6 +5,7 @@ import {
   StaleSessionRevisionError,
   commitSessionCommand,
   createDocumentSession,
+  forgetSessionHistory,
   redoSessionCommand,
   undoSessionCommand,
 } from './session';
@@ -79,5 +80,19 @@ describe('revisioned document session', () => {
     const initial = session();
     expect(undoSessionCommand(initial, 0)).toBe(initial);
     expect(redoSessionCommand(initial, 0)).toBe(initial);
+  });
+
+  it('forgets history without moving the document or revision: a template is where the document starts', () => {
+    const committed = commitSessionCommand(session(), renameCommand(), 0);
+    const started = forgetSessionHistory(committed);
+    expect(started.document).toBe(committed.document);
+    expect(started.revision).toBe(committed.revision);
+    expect(undoSessionCommand(started, started.revision)).toBe(started);
+  });
+
+  it('keeps history when another step landed beside the template (an edit while it generated)', () => {
+    const edited = commitSessionCommand(session(), renameCommand(), 0);
+    const both = commitSessionCommand(edited, renameCommand('Renamed', 'Again'), edited.revision);
+    expect(forgetSessionHistory(both)).toBe(both);
   });
 });

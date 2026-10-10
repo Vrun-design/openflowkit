@@ -83,7 +83,8 @@ function parseGitgraph(segments: readonly DslSegment[], context: FamilyContext):
     if (segment.tokens[0]?.kind === 'comment' || segment.closes || segment.tokens.length === 0) continue;
     const keyword = segment.tokens[0]!.value;
     const parsed = readAttributes(segment.tokens.slice(1), context.diagnostics);
-    const name = joinTokens(parsed.body.filter((token) => token.kind !== 'comment'));
+    // A commit message is one line of single-spaced words, quoted or not.
+    const name = joinTokens(parsed.body.filter((token) => token.kind !== 'comment')).replace(/\s+/g, ' ').trim();
     const findAttr = (key: string) => parsed.attributes.find((attribute) => attribute.key?.toLowerCase() === key)?.value;
     const label = findAttr('label');
     const tag = findAttr('tag');

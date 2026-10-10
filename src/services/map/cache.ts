@@ -4,8 +4,8 @@ import { compare } from '../../dsl/discovery/imports/paths';
 import type { MapFacts } from '../../dsl/map/types';
 
 export const CACHE_CAP = 50;
-/** Bump when what the facts contain changes: old entries then simply never match. */
-export const FACTS_VERSION = 2;
+/** Bump when what the facts contain changes: old entries then simply never match. (3: partial reads carry `sampled`; 4: `ref`.) */
+export const FACTS_VERSION = 4;
 /** A repo whose facts are bigger than this is rebuilt each time rather than stored. */
 const MAX_ENTRY_CHARS = 5_000_000;
 
@@ -18,6 +18,10 @@ export interface CachedFacts {
   services: NonNullable<MapFacts['externals']>;
   /** Broken imports the scan found, for `stats.unresolved`. */
   unresolvedImports: number;
+  /** The map was not the whole repo (see `MapProgress.sampled`): a hit says so too. */
+  sampled?: { read: number; total: number; truncated?: boolean };
+  /** The ref the facts were read at: a tree sha names content, not which branch asked for it. */
+  ref?: string;
 }
 
 export interface CacheEntry {
@@ -44,6 +48,21 @@ export const cacheKey = (owner: string, repo: string, treeSha: string): string =
 export async function readCache(store: CacheStore, key: string): Promise<CachedFacts | undefined> {
   try {
     return (await store.get(key))?.facts;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * What to show when GitHub will not answer for the tree: the newest facts cached for this repo at `ref`, else the newest
+ * at any ref (the caller says which ref it is).
+ */
+export async function latestCache(store: CacheStore, owner: string, repo: string, ref: string): Promise<CachedFacts | undefined> {
+  try {
+    const prefix = `${owner}/${repo}@`.toLowerCase();
+    const mine = (await store.list()).filter((e) => e.key.startsWith(prefix) && e.key.endsWith(`#v${FACTS_VERSION}`)).sort((a, b) => b.usedAt - a.usedAt);
+    const all = (await Promise.all(mine.map((e) => readCache(store, e.key)))).filter((f): f is CachedFacts => f !== undefined);
+    return all.find((f) => f.ref === ref) ?? all[0];
   } catch {
     return undefined;
   }

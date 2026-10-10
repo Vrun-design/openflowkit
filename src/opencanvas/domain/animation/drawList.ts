@@ -11,7 +11,7 @@ import { connectorLabelLineHeight, connectorLabelLines, connectorLabelPlate } fr
 import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../nodes/basicNodeDecorations';
 import { nodeLabelBounds, nodeOutline } from '../nodes/nodeLabelBounds';
-import { isContainerNodeKind } from '../nodes/containerNodePresentation';
+import { isBackdropNode, isContainerNodeKind } from '../nodes/containerNodePresentation';
 import { measurePortableText } from '../text/measurement';
 import { resolveNodeSizingPolicy } from '../node-sizing/model';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
@@ -374,8 +374,8 @@ function projectPage(page: ScenePage): ProjectedPage {
 }
 
 /**
- * The frame's ops in paint order: background, connectors, nodes (zIndex then
- * id — the exporter's own order). The walkthrough camera is folded into every
+ * The frame's ops in paint order: background, containers, connectors, every
+ * other node (zIndex then id within a layer — the exporter's own order). The walkthrough camera is folded into every
  * op's transform except the background's, exactly like the SVG's root camera
  * group, so strokes scale with the glide the way the file does.
  */
@@ -390,17 +390,21 @@ export function frameDrawList(
     x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height, radius: 0,
     fill: paint(BACKGROUNDS[theme]), stroke: null, strokeWidth: 0,
   }];
+  const matrices = buildNodeWorldMatrices(page);
+  const ordered = [...nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id));
+  const paintNodes = (layer: readonly SceneNode[]) => {
+    for (const node of layer) {
+      const matrix = matrices.get(node.id);
+      if (!matrix) continue;
+      ops.push(...shapeNodeOps(node, matrix, frame.nodes[node.id], theme)
+        .map((op) => withCamera(op, camera)));
+    }
+  };
+  paintNodes(ordered.filter(isBackdropNode));
   for (const connector of connectors) {
     ops.push(...connectorOps(connector, frame.connectors[connector.id], theme)
       .map((op) => withCamera(op, camera)));
   }
-  const matrices = buildNodeWorldMatrices(page);
-  const ordered = [...nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id));
-  for (const node of ordered) {
-    const matrix = matrices.get(node.id);
-    if (!matrix) continue;
-    ops.push(...shapeNodeOps(node, matrix, frame.nodes[node.id], theme)
-      .map((op) => withCamera(op, camera)));
-  }
+  paintNodes(ordered.filter((node) => !isBackdropNode(node)));
   return ops;
 }

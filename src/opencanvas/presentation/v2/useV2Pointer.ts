@@ -14,7 +14,7 @@ import {
   CLICK_THRESHOLD_PX, OBJECT_SNAP_PX, MIN_CREATE_SIZE, HANDLE_CURSORS, modifiersOf, localPoint,
   latestLocalPoint, textOrigin, nodeCenterWorld, pickHandleNear, connectorPreview, stickyAppearance,
   ERASE_RADIUS_PX, pickChartPoint, inkPreview, retargetSample, strokeWorldPoints,
-  finishGesture, type V2Operation, type V2PointerOptions, type PointerLike,
+  finishGesture, keyboardGestures, type V2Operation, type V2PointerOptions, type PointerLike,
 } from './v2PointerGestures';
 import { useV2Touch } from './useV2Touch';
 
@@ -58,8 +58,8 @@ export function useV2Pointer(options: V2PointerOptions) {
     pendingTransformRef.current = null;
   }, []);
 
-  // Drops the drag in flight.
-  const abandonOperation = useCallback((): boolean => {
+  // Drops the drag in flight (Escape, window blur, a touch takeover).
+  const cancelGesture = useCallback((): boolean => {
     detachWindow();
     cancelTransformFrame();
     if (!operationRef.current) return false;
@@ -68,23 +68,18 @@ export function useV2Pointer(options: V2PointerOptions) {
     return true;
   }, [clearPreviews, detachWindow, cancelTransformFrame]);
 
-  const cancelGesture = useCallback((): boolean => {
-    detachWindow();
-    cancelTransformFrame();
-    return abandonOperation();
-  }, [abandonOperation, detachWindow, cancelTransformFrame]);
   useEffect(() => () => {
     detachWindow();
     cancelTransformFrame();
   }, [detachWindow, cancelTransformFrame]);
 
   useEffect(() => {
-    gestureApiRef.current = { cancelGesture };
+    gestureApiRef.current = { cancelGesture, ...keyboardGestures(() => optionsRef.current) };
   }, [gestureApiRef, cancelGesture]);
 
   const lastPointerTypeRef = useRef<string>('mouse');
   const doubleTapAt = useDoubleTap(optionsRef);
-  const { beginTouch, moveTouch, endTouch, resetTouch } = useV2Touch(optionsRef, abandonOperation);
+  const { beginTouch, moveTouch, endTouch, resetTouch } = useV2Touch(optionsRef, cancelGesture);
 
   const applyPendingTransformPreview = useCallback(() => {
     const opts = optionsRef.current;

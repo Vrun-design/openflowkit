@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listProviderCatalogProviders, loadProviderCatalog, loadProviderShapePreview } from './providerCatalog';
+import { listProviderCatalogProviders, loadProviderCatalog, loadProviderShapePreview, SVG_SOURCES } from './providerCatalog';
 
 describe('providerCatalog', () => {
     it('discovers bundled provider packs from manifest paths', () => {
@@ -45,5 +45,18 @@ describe('providerCatalog', () => {
         expect(items.length).toBeGreaterThan(300);
         expect(items[0]?.category).toBe('developer');
         expect(items.some((item) => item.archIconShapeId === 'languages-javascript')).toBe(true);
+    });
+
+    it('names every icon of a provider differently, adding the category only where a name repeats', () => {
+        const seen = new Set<string>();
+        const repeats = SVG_SOURCES.filter((source) => {
+            const key = `${source.provider}:${source.label}`;
+            const repeat = seen.has(key);
+            seen.add(key);
+            return repeat;
+        });
+        expect(repeats.map((source) => `${source.provider}:${source.label}`)).toEqual([]);
+        const label = (shapeId: string) => SVG_SOURCES.find((source) => source.shapeId === shapeId)?.label;
+        expect(label('databases-rds')).toBe('RDS');
     });
 });

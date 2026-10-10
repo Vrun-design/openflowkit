@@ -274,6 +274,22 @@ function addReferencedPorts(
   });
 }
 
+/**
+ * v1 deleted a node and could keep its edge (never drawn there: its end was gone). Such a connector is dropped,
+ * so the rest of the diagram opens: every v1 import path (boot import, backup, Open file) runs this.
+ */
+export function dropDanglingConnectors(document: SceneDocumentV1): { readonly document: SceneDocumentV1; readonly dropped: number } {
+  let dropped = 0;
+  const pages = document.pages.map((page) => {
+    const ids = new Set(page.nodes.map((node) => node.id));
+    const connectors = page.connectors.filter(({ source, target }) =>
+      [source.nodeId, target.nodeId].every((nodeId) => nodeId === null || ids.has(nodeId)));
+    dropped += page.connectors.length - connectors.length;
+    return { ...page, connectors };
+  });
+  return { document: { ...document, pages }, dropped };
+}
+
 export function projectLegacyDocument(
   value: unknown,
   options: LegacyProjectionOptions

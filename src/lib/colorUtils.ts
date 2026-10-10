@@ -56,6 +56,17 @@ export function getLuminance(hex: string): number {
   return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
+/** WCAG contrast ratio between two colours, 1 (none) to 21. */
+export function contrastRatio(a: string, b: string): number {
+  const [light, dark] = [getLuminance(a), getLuminance(b)].sort((x, y) => y - x);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
+/** The label ink, slate-900 or white, with the higher contrast on `fill` (white wins only where it reads better). */
+export function readableTextOn(fill: string): '#0f172a' | '#ffffff' {
+  return contrastRatio(fill, '#0f172a') >= contrastRatio(fill, '#ffffff') ? '#0f172a' : '#ffffff';
+}
+
 export function getContrastText(hex: string): '#0f172a' | '#ffffff' {
   return getLuminance(hex) > DARK_TEXT_LUMINANCE_THRESHOLD ? '#0f172a' : '#ffffff';
 }

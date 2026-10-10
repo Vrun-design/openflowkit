@@ -10,6 +10,8 @@ import { clearSelection, replaceSelection, type CanvasSelection } from '../../ap
 import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
+import type { V2GestureApi } from './v2PointerGestures';
+import { defaultShapeSize } from '../../domain/nodes/shapeNode';
 import { DEFAULT_TOOL_CONFIG } from './v2ToolCatalog';
 import type { V2Tool } from './V2CreationToolbar';
 
@@ -31,6 +33,7 @@ function setup(
   const selectedConnectorIdsRef = { current: [] as readonly string[] };
   const host = {
     screenToWorld: (point: { x: number; y: number }) => point,
+    getViewportSize: vi.fn(() => ({ width: 1000, height: 800 })),
     pickNode: vi.fn((_point: { x: number; y: number }): string | null => 'a'),
     pickConnector: vi.fn((): string | null => null),
     getSelectedConnectorId: vi.fn((): string | null => null),
@@ -49,7 +52,9 @@ function setup(
   const openEditor = vi.fn();
   const toolRef: { current: V2Tool } = { current: 'select' };
   const toolConfigRef = { current: DEFAULT_TOOL_CONFIG };
-  const gestureApiRef = { current: null as null | { cancelGesture: () => boolean; commitGesture: () => boolean } };
+  const gestureApiRef = { current: null as V2GestureApi | null };
+  const onToolChange = vi.fn();
+  const updateCamera = vi.fn();
   const { result } = renderHook(() => useV2Pointer({
     hostRef: { current: host as unknown as PixiRendererHost },
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
@@ -59,14 +64,14 @@ function setup(
     ...(readOnly ? { onNodeDrag: readOnly.onNodeDrag } : {}),
     ...(readOnly?.onNodeDoubleClick ? { onNodeDoubleClick: readOnly.onNodeDoubleClick } : {}),
     applySelection, applyConnectorSelection,
-    updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
+    updateCamera, openEditor, openConnectorEditor: vi.fn(), onToolChange, mintId: () => 'new',
   }));
   function event(x: number, y: number, target: HTMLElement = canvas): ReactPointerEvent<HTMLElement> {
     return { currentTarget: section, target, clientX: x, clientY: y, button: 0,
       pointerId: 1, preventDefault: vi.fn() } as unknown as ReactPointerEvent<HTMLElement>;
   }
   return { result, host, commit, page, selectionRef, applySelection, applyConnectorSelection, openEditor, event,
-    toolRef, toolConfigRef, gestureApiRef };
+    toolRef, toolConfigRef, gestureApiRef, onToolChange, updateCamera };
 }
 
 async function flushFrame(): Promise<void> {
@@ -336,6 +341,21 @@ describe('V2 quick-create from side handles', () => {
     expect(openEditor).toHaveBeenCalledWith('new', { isNew: true });
   });
 
+  it('pans the least it takes, zoom kept, when the new node lands off-screen', () => {
+    const { result, event, host, updateCamera } = setup();
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    host.getViewportSize.mockReturnValue({ width: 260, height: 800 });
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    act(() => result.current.handlePointerUp(event(123, 25)));
+    const camera = updateCamera.mock.calls.at(-1)?.[0];
+    expect(camera?.zoom).toBe(1);
+    // The node spans x 200–300; it ends inside the 260px viewport, its gap clear of the edge.
+    expect(camera!.x).toBeLessThan(-40);
+    expect(camera!.x).toBeGreaterThan(-120);
+    expect(Math.abs(camera!.y)).toBeLessThan(40);
+  });
+
   it('drags from a handle onto another node: binds node to node', () => {
     const other = createTestNode('b', {
       size: { width: 100, height: 50 },
@@ -400,5 +420,47 @@ describe('V2 quick-create from side handles', () => {
       kind: 'set-connector',
       after: { target: { nodeId: null, point: { x: 200, y: 100 } } },
     });
+  });
+
+  it('Enter with a shape tool armed places that shape centred on the view, selected, tool back to select', () => {
+    const { gestureApiRef, toolRef, commit, selectionRef, onToolChange } = setup();
+    toolRef.current = 'select';
+    expect(gestureApiRef.current!.placeShape({ x: 500, y: 300 })).toBe(false);
+    toolRef.current = 'rectangle';
+    expect(gestureApiRef.current!.placeShape({ x: 500, y: 300 })).toBe(true);
+    expect(commit).toHaveBeenCalledOnce();
+    const { node } = commit.mock.calls[0][0];
+    expect(node.transform.translation.x + node.size.width / 2).toBe(500);
+    expect(node.transform.translation.y + node.size.height / 2).toBe(300);
+    expect(selectionRef.current.nodeIds).toEqual(['new']);
+    expect(onToolChange).toHaveBeenLastCalledWith('select');
+  });
+
+  it('a second Enter steps off the first shape instead of stacking on it', () => {
+    const size = defaultShapeSize('rectangle');
+    const at = { x: 500 - size.width / 2, y: 300 - size.height / 2 };
+    const { gestureApiRef, toolRef, commit } = setup([createTestNode('placed', {
+      size, transform: { translation: at, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    })]);
+    toolRef.current = 'rectangle';
+    gestureApiRef.current!.placeShape({ x: 500, y: 300 });
+    expect(commit.mock.calls[0][0].node.transform.translation).toEqual({ x: at.x + 24, y: at.y + 24 });
+  });
+
+  it('a keyboard pick in Shapes places the picked shape, whatever is armed', () => {
+    const { gestureApiRef, commit } = setup();
+    expect(gestureApiRef.current!.placeShape({ x: 0, y: 0 }, 'ellipse')).toBe(true);
+    expect(commit.mock.calls[0][0].node.content.shape).toBe('ellipse');
+  });
+
+  it('connects exactly two selected shapes, first-selected to second, as one step', () => {
+    const { gestureApiRef, commit, selectionRef, applyConnectorSelection } = setup([createTestNode('b')]);
+    selectionRef.current = replaceSelection(['a']);
+    expect(gestureApiRef.current!.connectSelection()).toBe(false);
+    selectionRef.current = replaceSelection(['b', 'a']);
+    expect(gestureApiRef.current!.connectSelection()).toBe(true);
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0]).toMatchObject({ kind: 'insert-connector', connector: { source: { nodeId: 'b' }, target: { nodeId: 'a' } } });
+    expect(applyConnectorSelection).toHaveBeenLastCalledWith(['new']);
   });
 });

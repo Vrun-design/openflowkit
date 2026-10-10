@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { projectLegacyDocument, restoreLegacyDocumentSnapshot } from './legacyProjection';
+import { dropDanglingConnectors, projectLegacyDocument, restoreLegacyDocumentSnapshot } from './legacyProjection';
+import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { validateSceneDocumentV1 } from './validation';
 
 const options = {
@@ -492,5 +493,17 @@ describe('legacy document projection', () => {
   it('returns null when no recovery snapshot exists', () => {
     const document = projectLegacyDocument(createLegacyDocument(), options);
     expect(restoreLegacyDocumentSnapshot({ ...document, extensions: {} })).toBeNull();
+  });
+});
+
+describe('dropDanglingConnectors', () => {
+  it('drops only connectors whose end node is gone, and counts them', () => {
+    const document = createTestDocument({
+      nodes: [createTestNode('a'), createTestNode('b')],
+      connectors: [createTestConnector('kept', 'a', 'b'), createTestConnector('gone', 'a', 'missing')],
+    });
+    const { document: repaired, dropped } = dropDanglingConnectors(document);
+    expect(dropped).toBe(1);
+    expect(repaired.pages[0]!.connectors.map(({ id }) => id)).toEqual(['kept']);
   });
 });

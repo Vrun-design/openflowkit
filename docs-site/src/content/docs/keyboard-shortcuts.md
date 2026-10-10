@@ -27,6 +27,8 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Laser pointer | `K` |
 | Frame | `F` |
 | Sticky note | `N` |
+| Place the armed shape at the centre | `Enter` |
+| Connect two selected shapes | `A` |
 | Insert: media, charts, frames, wireframe | `Shift + S` |
 | Icons and emoji | `I / E` |
 | Image | `Shift + I` |
@@ -43,6 +45,9 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Zoom in / out | `⌘ + = / −` |
 | Find on canvas | `⌘ + F` |
 | Layers | `L` |
+| Canvas / Map | `M` |
+| Move between boxes (Map) | `Arrows` |
+| Edit map as drawing (Map) | `Shift + M` |
 | Snap bypass while dragging | `⌘` |
 | Resize from the centre | `Alt + drag a handle` |
 
@@ -58,6 +63,7 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Remove from model | `⌘ + Shift + Backspace` |
 | Nudge (10 px with Shift) | `Arrows` |
 | Edit label | `Enter / F2` |
+| With one shape selected, typing edits its label | `Any letter` |
 | Select all | `⌘ + A` |
 | Lock / unlock | `⌘ + L` |
 | Bold / italic / underline | `⌘ + B / I / U` |
@@ -70,6 +76,7 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Action | Keys |
 | --- | --- |
 | Group / ungroup | `⌘ + G / Shift + G` |
+| Wrap in a section | `⌘ + Alt + G` |
 | Align left/right/top/bottom | `Alt + A / D / W / S` |
 | Align centre | `Alt + H / V` |
 | Distribute | `Alt + Shift + H / V` |
@@ -87,8 +94,10 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Action | Keys |
 | --- | --- |
 | Architecture model | `Alt + M` |
-| Diagram as code | `Alt + D` |
+| Diagram as code | `Alt + C` |
+| Convert pasted Mermaid / Structurizr / D2 (code panel) | `⌘ + Shift + M` |
 | Inspect selection | `Alt + I` |
 | AI assistant | `⌘ + J` |
 | This cheatsheet | `?` |
 | Dismiss panel | `Esc` |
+| Leave the code editor (again: close it) | `Esc` |

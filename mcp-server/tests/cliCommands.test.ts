@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, symlinkSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -266,6 +266,16 @@ describe('openflowkit render / convert / validate', () => {
     });
     expect(result.stderr).not.toContain('\uFFFD');
     expect(result.stdout).not.toContain('\uFFFD');
+    expect(result.status).toBe(0);
+  });
+
+  it('runs when invoked through a symlink, the way npm and npx install bins', async () => {
+    const bin = join(await tempDir(), 'openflowkit');
+    symlinkSync(new URL('../src/cli.ts', import.meta.url).pathname, bin);
+    const result = spawnSync(process.execPath, ['--import', 'tsx', bin, 'validate', '-'], {
+      cwd: new URL('..', import.meta.url).pathname, input: 'flowchart\nA -> B\n', encoding: 'utf8',
+    });
+    expect(result.stdout).toContain('ok — flowchart');
     expect(result.status).toBe(0);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkspace } from '../compile';
 import { deterministicLayout } from '../layout';
-import { acceptsArchitectureFile, capUnits, discoverArchitecture, discoveryToDsl } from './discovery';
+import { acceptsArchitectureFile, capUnits, definesUnit, discoverArchitecture, discoveryToDsl } from './discovery';
 
 // The browser entry point: files already read (the repo page fetches them from
 // GitHub). mcp-server/tests/discoveryFixtures.test.ts runs the fixtures through the Node walk.
@@ -125,6 +125,14 @@ describe('Cloudflare Workers', () => {
       { path: 'package.json', content: '{"name":"site","dependencies":{"react":"^19"}}' },
     ];
     expect(discoverArchitecture(files, 'repo').units.map((unit) => unit.tech)).toEqual(['React']);
+  });
+
+  it('names the files that can define a unit on their own, so a capped reader takes them first', () => {
+    for (const path of ['Dockerfile', 'api/Dockerfile.prod', 'web.dockerfile', 'compose.yaml', 'docker-compose.yml', 'k8s/web.yaml', 'infra/main.tf',
+      'worker/wrangler.toml', 'worker/wrangler.jsonc', 'package.json', 'svc/go.mod', 'py/pyproject.toml', 'py/requirements.txt', 'java/pom.xml']) {
+      expect(definesUnit(path), path).toBe(true);
+    }
+    for (const path of ['src/index.ts', 'README.md', 'tsconfig.json', 'Cargo.toml', 'netlify.toml']) expect(definesUnit(path), path).toBe(false);
   });
 
   it('accepts every wrangler config spelling', () => {

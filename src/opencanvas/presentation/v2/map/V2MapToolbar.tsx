@@ -2,7 +2,11 @@ import { useRef, useState } from 'react';
 import type { Depth, LinkKind } from '../../../../dsl/map/types';
 import { Button, Menu, MenuItem, Toolbar, Tooltip } from '../../design-system';
 
-const DEPTHS: { value: Depth; label: string; tip: string }[] = [
+/** What each kind of connection is called, as the arrows say it ("calls", "uses"): the Connections menu, the box panel and the CLI viewer. */
+export const MAP_LINK_WORDS: Readonly<Record<LinkKind, string>> = { import: 'imports', call: 'calls', data: 'uses', build: 'builds' };
+
+/** The depth dial's words, shared with the CLI's one-file viewer so both say the same thing. */
+export const MAP_DEPTHS: readonly { value: Depth; label: string; tip: string }[] = [
   { value: 'overview', label: 'Top level', tip: 'Only the top-level boxes, shut' },
   { value: 'detailed', label: 'One level in', tip: 'Open the top-level boxes' },
   { value: 'everything', label: 'All levels', tip: 'Open as deep as the screen allows' },
@@ -17,6 +21,8 @@ export interface V2MapToolbarProps {
   /** Pin the map as a Canvas page; absent when pinning cannot be offered (a shared view), disabled while nothing is drawn. */
   readonly onPin?: () => void;
   readonly canPin?: boolean;
+  /** The map is still being laid out (or read): the toolbar says so instead of leaving a blank canvas unexplained. */
+  readonly drawing?: boolean;
 }
 
 /** Map mode's depth, connection layers and Edit as drawing. The host places it (beside the camera controls). */
@@ -29,12 +35,13 @@ export function V2MapToolbar(p: V2MapToolbarProps): React.JSX.Element {
       <Toolbar label="Map depth" className="ofk-v2-map-toolbar">
         {/* One dial, the same segmented track as Canvas | Map: how deep the boxes open. A click on a box opens or shuts just that one. */}
         <div className="ofk-v2-mode" role="group" aria-label="Depth">
-          {DEPTHS.map((d) => (
+          {MAP_DEPTHS.map((d) => (
             <Tooltip key={d.value} content={d.tip}>
               <Button variant="quiet" selected={p.depth === d.value} onClick={() => p.onDepth(d.value)}>{d.label}</Button>
             </Tooltip>
           ))}
         </div>
+        {p.drawing ? <span className="ofk-caption" role="status">Drawing the map…</span> : null}
         {layers && onToggleLayer ? (
           <>
             <span className="ofk-v2-divider" aria-hidden="true" />

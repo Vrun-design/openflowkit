@@ -60,7 +60,7 @@ export const foundation = {
 } as const;
 
 // Shared sRGB values keep DOM/Pixi feedback identical; neutrals have a warm tint.
-// The brand seed is not a normal-text foreground or a white-text button background.
+// The brand seed (foundation.brand, --ofk-brand) is not a normal-text foreground or a white-text button background.
 export const lightColors = {
   canvas: '#f7f7f5',
   surface: '#fdfdfb',
@@ -74,9 +74,9 @@ export const lightColors = {
   accent: '#b63e14',
   accentHover: '#99330f',
   accentSoft: '#fce9df',
-  /** Brand seed as the single primary action. 3.1:1 with white: an accepted brand exception for one bold CTA. */
-  primary: '#e95420',
-  primaryHover: '#d64a1a',
+  /** The single primary action: the brand hue darkened to 4.5:1 with white (13px label, AA). Was the seed #e95420 at 3.6:1. */
+  primary: '#d34615',
+  primaryHover: '#c24013',
   onPrimary: '#ffffff',
   /** Selected chrome is inverse neutral, never orange; orange is reserved for canvas selection and the CTA. */
   inverse: '#252724',
@@ -110,8 +110,8 @@ export const darkColors: ThemeColors = {
   accent: '#ffb18e',
   accentHover: '#ffc6ad',
   accentSoft: '#482b20',
-  primary: '#e95420',
-  primaryHover: '#f26a3a',
+  primary: '#d34615',
+  primaryHover: '#c24013',
   onPrimary: '#ffffff',
   inverse: '#f1f2ec',
   onInverse: '#191b19',

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   archModelFromJson, archModelOfPage, archViewIdOfPage, childViewOf, createArchIndex, crossingRelations,
   deriveImpliedRelations, elementAncestors, elementDescendantIds, elementPathRef, flattenFlowSteps,
-  hasChildren, nearestShown, placedElementId, resolveElementRef, viewsOf,
+  hasChildren, modelKindLabel, nearestShown, placedElementId, resolveElementRef, viewsOf,
 } from './model';
 import { selectViewElements, modelTags } from './predicates';
 import type { ArchModel } from './types';
@@ -203,3 +203,25 @@ describe('crossingRelations', () => {
     expect(crossingRelations(index, 'shop.api.orders')).toEqual({ talksTo: [], usedBy: [] });
   });
 });
+
+describe('modelKindLabel', () => {
+  it('names C4 kinds in the Model panel, and a container by the shape it is drawn as', () => {
+    expect(modelKindLabel({ kind: 'container' })).toBe('Container');
+    expect(modelKindLabel({ kind: 'container', attrs: [{ value: 'cylinder' }] })).toBe('Database');
+    expect(modelKindLabel({ kind: 'container', attrs: [{ value: 'queue' }] })).toBe('Queue');
+    expect(modelKindLabel({ kind: 'store' })).toBe('Database');
+    expect(modelKindLabel({ kind: 'queue' })).toBe('Queue');
+    expect(modelKindLabel({ kind: 'system' })).toBe('Software system');
+  });
+
+  it('resolves an explicit mixed-case id exactly, and a slug case-insensitively', () => {
+    const model: ArchModel = {
+      elements: [{ id: 'opsEngineer', kind: 'person', name: 'Ops Engineer', parent: null, ...ELEMENT }],
+      relations: [], views: [], flows: [],
+    };
+    const index = createArchIndex(model);
+    expect(resolveElementRef(index, 'opsEngineer')?.id).toBe('opsEngineer');
+    expect(resolveElementRef(index, 'Ops Engineer')?.id).toBe('opsEngineer');
+  });
+});
+

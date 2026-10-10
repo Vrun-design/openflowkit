@@ -48,7 +48,8 @@ A typed view starts from its scope's default elements and `include` / `exclude` 
 | `where tag is @core` | by tag; `is not` negates |
 | `and` / `or` | combine predicates; later rules override earlier ones |
 
-Anything outside this subset is warning W160 — kept verbatim but not applied.
+An unsupported `where` clause or view statement is warning W160 — kept verbatim but not
+applied. An `include` that names no element matches nothing, without a warning.
 
 ## Flows
 
@@ -89,7 +90,8 @@ element inside a deployment node, and `view deployment of Shop in Prod` renders 
 
 ## What it cannot do
 
-- **Only the documented predicate subset.** Everything else warns W160.
+- **Only the documented predicate subset.** Unsupported `where` clauses and view statements
+  warn W160; a subject that names no element silently matches nothing.
 - **One model per document.** The workspace is the document; a second `model` block is not a
   second model.
 - **No automatic code discovery inside the editor.** Discovery and drift live in the MCP

@@ -11,7 +11,7 @@ import {
   IconPlus, IconRefresh, IconSearch, IconSparkles, IconStack2, IconRoute, IconTarget, IconTrash, IconX,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
-import { AI_PROVIDERS } from '../../../services/ai/providers';
+import { AI_PROVIDERS, sendsThinking } from '../../../services/ai/providers';
 import { parseAssistantReply } from '../../application/ai/assistantPrompt';
 import { assistantIssueUrl } from '../../application/ai/assistantReport';
 import {
@@ -117,16 +117,20 @@ function Markdown({ text }: { readonly text: string }) {
   })}</div>;
 }
 
-function CopyButton({ text, label = 'Copy' }: { readonly text: string; readonly label?: string }) {
-  const [copied, setCopied] = useState(false);
+export function CopyButton({ text, label = 'Copy' }: { readonly text: string; readonly label?: string }) {
+  const [copied, setCopied] = useState<'Copied' | 'Copy failed' | null>(null);
   useEffect(() => {
     if (!copied) return undefined;
-    const timer = setTimeout(() => setCopied(false), 1400);
+    const timer = setTimeout(() => setCopied(null), 1400);
     return () => clearTimeout(timer);
   }, [copied]);
-  return <IconButton variant="quiet" label={copied ? 'Copied' : label}
-    icon={<Icon icon={copied ? IconCheck : IconCopy} />}
-    onClick={() => { void navigator.clipboard?.writeText(text).then(() => setCopied(true)); }} />;
+  return <IconButton variant="quiet" label={copied ?? label}
+    icon={<Icon icon={copied === 'Copied' ? IconCheck : copied ? IconAlertTriangle : IconCopy} />}
+    onClick={() => {
+      // No clipboard (http, an iframe) or a refused permission: say so, not nothing.
+      (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error('no clipboard')))
+        .then(() => setCopied('Copied'), () => setCopied('Copy failed'));
+    }} />;
 }
 
 function Thinking({ message, live: streaming }: { readonly message: ChatMessage; readonly live: boolean }) {
@@ -556,12 +560,12 @@ export function V2AgentPanel({
                 onClick={() => setScopePick(scope === 'selection' ? 'page' : 'selection')}>
                 <Icon icon={scope === 'selection' ? IconTarget : IconStack2} /><span>{scopeText}</span>
               </button>
-              <button type="button" className="ofk-v2-chip" aria-pressed={assistant.think}
+              {sendsThinking(settings.provider) ? <button type="button" className="ofk-v2-chip" aria-pressed={assistant.think}
                 data-active={assistant.think || undefined}
                 title="Let the model reason before it answers. Slower, better on hard asks."
                 onClick={() => assistant.setThink(!assistant.think)}>
                 <Icon icon={IconBulb} />Think
-              </button>
+              </button> : null}
               <span className="ofk-v2-prompt-spacer" />
               {!busy && (draft.trim() || images.length) ? <span className="ofk-v2-prompt-hint"><Kbd keys="Enter" /></span> : null}
               {busy

@@ -46,6 +46,18 @@ function inferLabelFromId(id: string): string {
     .join(' ');
 }
 
+/**
+ * A catalogue icon's own name, as its vendor writes it: `Databases/RDS_Multi-AZ`
+ * reads "RDS Multi-AZ", not "Databases Rds Multi Az". The folders above it are
+ * categories, not part of the product's name; lowercase packs are title-cased.
+ */
+function iconLabel(name: string): string {
+  return name.split(/[-_\s]+/).filter(Boolean)
+    .map((word) => (/[A-Z]/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ')
+    .replace(/\bMulti /g, 'Multi-');
+}
+
 function getPackIdForProvider(provider: string): string {
   return KNOWN_PROVIDER_PACK_IDS[provider] ?? `${provider}-processed-pack-v1`;
 }
@@ -80,7 +92,7 @@ function providerSource(folder: string, iconPath: string): SvgSource {
     provider,
     packId: getPackIdForProvider(provider),
     shapeId,
-    label: inferLabelFromId(shapeId),
+    label: iconLabel(pathParts[pathParts.length - 1]!),
     category,
     previewLoader: async () => (await loadProviderIconUrl(folder, iconPath)) ?? '',
   };
@@ -95,12 +107,20 @@ const tablerSources: SvgSource[] = TABLER_ICON_NAMES.map((name) => ({
   previewLoader: async () => (await loadTablerIconUrl(name)) ?? '',
 }));
 
+/** A name a provider files twice ("Shield" in Security and in Resource) says its category, so picks can be told apart. */
+function distinctLabels(sources: SvgSource[]): SvgSource[] {
+  const count = new Map<string, number>();
+  for (const source of sources) count.set(`${source.provider}:${source.label}`, (count.get(`${source.provider}:${source.label}`) ?? 0) + 1);
+  return sources.map((source) => (count.get(`${source.provider}:${source.label}`)! > 1
+    ? { ...source, label: `${source.label} (${source.category})` } : source));
+}
+
 // Standard icons first, so an unfiltered picker opens on the general set.
-export const SVG_SOURCES: SvgSource[] = tablerSources.concat(
+export const SVG_SOURCES: SvgSource[] = tablerSources.concat(distinctLabels(
   Object.entries(PROVIDER_ICON_MANIFEST).flatMap(([folder, categories]) =>
     Object.entries(categories).flatMap(([category, names]) =>
       names.map((name) => providerSource(folder, category ? `${category}/${name}` : name))))
-);
+));
 
 function createProviderItem(provider: DomainLibraryCategory, source: SvgSource): DomainLibraryItem {
   return {

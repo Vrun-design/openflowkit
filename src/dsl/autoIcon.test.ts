@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inferIcon } from './autoIcon';
+import { iconAliases, inferIcon } from './autoIcon';
 import { compile, type CompileResult } from './compile';
 import { serialize } from './serialize';
 
@@ -48,9 +48,37 @@ describe('inferIcon', () => {
     expect(inferIcon('Bank clerk')).toBeNull();
   });
 
+  it('reads unambiguous Kubernetes words as Kubernetes; a bare svc leaves the domain word to decide', () => {
+    expect(inferIcon('Payments svc')).toBe('tabler/credit-card');
+    expect(inferIcon('svc')).not.toBe('developer/devops-ai-ml-kubernetes');
+    expect(inferIcon('orders k8s service')).toBe('developer/devops-ai-ml-kubernetes');
+    expect(inferIcon('k8s pod')).toBe('developer/devops-ai-ml-kubernetes');
+    expect(inferIcon('k8s ingress')).toBe('developer/devops-ai-ml-kubernetes');
+    expect(inferIcon('StatefulSet')).toBe('developer/devops-ai-ml-kubernetes');
+    for (const label of ['Payments pod', 'Growth pod', 'Data ingress']) expect(inferIcon(label)).not.toBe('developer/devops-ai-ml-kubernetes');
+    expect(inferIcon('Elastic Kubernetes Service')).toBe('aws/containers-elastic-kubernetes-service');
+    expect(inferIcon('Azure Kubernetes Service')).toBe('azure/containers-kubernetes-services');
+  });
+
   it('checks the tech hint before the label', () => {
     expect(inferIcon('Orders store', 'PostgreSQL 16')).toBe('developer/database-postgresql');
     expect(inferIcon('Redis cache', 'custom')).toBe('developer/database-redis');
+  });
+});
+
+describe('iconAliases', () => {
+  it('finds named technologies by acronym, ignoring spaces and punctuation', () => {
+    expect(iconAliases('eks')).toEqual(['aws/containers-elastic-kubernetes-service']);
+    expect(iconAliases('Route 53')).toEqual(iconAliases('route53'));
+    expect(iconAliases('route53')).toEqual(['aws/networking-content-delivery-route-53']);
+    expect(iconAliases('ALB')).toEqual(['aws/networking-content-delivery-elastic-load-balancing']);
+    expect(iconAliases('kubernetes pod')).toEqual(['developer/devops-ai-ml-kubernetes']);
+  });
+
+  it('leaves concepts and partial words to the catalogue search', () => {
+    expect(iconAliases('database')).toEqual([]);
+    expect(iconAliases('rout')).toEqual([]);
+    expect(iconAliases(' - ')).toEqual([]);
   });
 });
 

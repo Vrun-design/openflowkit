@@ -78,6 +78,20 @@ describe('assistant conversation', () => {
     compileGate = Promise.resolve();
   });
 
+  it('closing the editor mid-reply aborts the request', async () => {
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => { signal = init.signal ?? undefined; return new Promise<Response>(() => undefined); }));
+    const document = createTestDocument({ nodes: [], connectors: [] });
+    const hook = renderHook(() => useV2Assistant({
+      documentId: null, page: document.pages[0]!, selectedIds: [], settings, loadGrammar: async () => GRAMMAR, undo: vi.fn(), announce: vi.fn(),
+      proposal: useV2Proposal({ document, revision: 1, pageId: 'page-1', commit: vi.fn(), readOnly: false, announce: vi.fn(), compileDsl: async (text) => compile(text, { layout: deterministicLayout }) }),
+    }));
+    act(() => hook.result.current.send('hi', 'page'));
+    await waitFor(() => expect(signal).toBeDefined());
+    hook.unmount();
+    expect(signal!.aborted).toBe(true);
+  });
+
   it('retries a 503 once, quietly, before anything streamed', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const down = { ok: false, status: 503, headers: new Headers(), text: async () => '{}' } as Response;

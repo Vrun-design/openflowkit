@@ -5,6 +5,8 @@ import { dslFrameRaw, dslNodeMeta } from '../../sceneMeta';
 import { measurePortableText } from '../../../opencanvas/domain/text/measurement';
 import { elementNode } from './scene';
 import { paletteResolver } from '../../../opencanvas/domain/nodes/nodePalette';
+import { nodeLabelBounds } from '../../../opencanvas/domain/nodes/nodeLabelBounds';
+import { contrastRatio } from '../../../lib/colorUtils';
 
 const CONTEXT = `architecture
 model {
@@ -533,5 +535,51 @@ describe('plain C4 shape sizing', () => {
       expect(label.height + 4 + sub.height + 32, name).toBeLessThanOrEqual(node.size.height);
       expect(sub.truncated || sub.lines.length <= 4, name).toBe(true);
     }
+  });
+});
+
+describe('readable C4 styling', () => {
+  const swatch = paletteResolver(undefined);
+  const draw = (element: Record<string, unknown>) => elementNode(
+    { id: 'x', name: 'X', kind: 'person', tags: [], links: [], ...element } as never, null, 0, { origin: { x: 0, y: 0 }, swatch });
+
+  it('picks the label ink that reads on an authored fill', () => {
+    for (const color of ['#08427b', '#999999', '#438dd5', '#ffffff', '#1168bd']) {
+      for (const bold of [false, true]) {
+        const node = draw({ color, icon: 'none', attrs: bold ? [{ value: 'bold' }] : [] });
+        const { fill, textColor } = node.appearance as { fill: string; textColor: string };
+        expect(fill, color).toBe(color);
+        expect(contrastRatio(fill, textColor), `${color} ${bold ? 'bold' : 'pastel'}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('draws an icon card in its authored hex colour', () => {
+    const node = draw({ kind: 'container', icon: 'tabler/user', color: '#08427b' });
+    expect(node.content).toMatchObject({ color: 'custom', customColor: '#08427b' });
+  });
+
+  it('fits a person silhouette name, kind and description inside its body, below the head', () => {
+    for (const [name, desc] of [['Customer', 'Buys goods online'], ['Ops Engineer', 'Runs the platform'], ['Personal Banking Customer', 'A customer of the bank, with personal bank accounts']]) {
+      const node = draw({ name, desc, attrs: [{ value: 'person' }] });
+      expect(node.content.shape, name).toBe('actor');
+      const area = nodeLabelBounds(node);
+      const inner = area.width - 20;
+      const label = measurePortableText(name!, { fontSize: 14, fontWeight: 600, lineHeight: 16.8, maxWidth: inner, maxLines: 4, overflow: 'wrap' });
+      const sub = measurePortableText(String(node.content.subLabel), { fontSize: 11, fontWeight: 400, maxWidth: inner, maxLines: 4, overflow: 'wrap' });
+      expect(label.height + 4 + sub.height + 20, name).toBeLessThanOrEqual(area.height);
+      expect(sub.truncated, name).toBe(false);
+    }
+  });
+});
+
+
+describe('element colour spellings', () => {
+  it('reads a bare colour as the colour, and warns when `color:` is also written', async () => {
+    const one = await compile('architecture\nmodel {\n  person Ops [#08427b]\n}\n');
+    expect(one.nodes[0]!.appearance.fill).toBe('#08427b');
+    const two = await compile('architecture\nmodel {\n  person Ops [#08427b, color: #999999]\n}\n');
+    expect(two.nodes[0]!.appearance.fill).toBe('#999999');
+    expect(two.diagnostics.filter((item) => item.code === 'W130')).toHaveLength(1);
   });
 });

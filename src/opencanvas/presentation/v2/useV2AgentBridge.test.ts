@@ -32,4 +32,55 @@ describe('useV2AgentBridge', () => {
     expect(calls.every((call) => call.endsWith('token=secret'))).toBe(true);
     unmount();
   });
+
+  const parkedNext = (url: string, init?: RequestInit) => new URL(url).pathname === '/next'
+    ? new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+    : null;
+  const options: V2AgentBridgeOptions = {
+    enabled: true, port: 43119, token: '', document: createTestDocument(), pageId: 'page-1', revision: 1,
+    capabilities: {} as OpCapabilities, commit: vi.fn(), onActivity: vi.fn(),
+  };
+
+  it('a hello the server refuses is a failure, whatever the status', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => parkedNext(url, init) ?? Promise.resolve(new Response('{}', { status: 500 }))));
+    const { result, unmount } = renderHook(() => useV2AgentBridge(options));
+    await waitFor(() => expect(result.current).toMatchObject({ status: 'error', detail: 'The agent bridge answered 500.' }));
+    unmount();
+  });
+
+  it('a retry keeps the error on screen instead of flickering back to connecting', async () => {
+    let hellos = 0;
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (new URL(url).pathname === '/hello') hellos += 1;
+      // A real refused connection takes a moment, long enough for React to paint what came before it.
+      return new Promise<Response>((_, reject) => setTimeout(() => reject(new TypeError('Failed to fetch')), 20));
+    }));
+    const seen: string[] = [];
+    const { result, unmount } = renderHook(() => {
+      const bridge = useV2AgentBridge(options);
+      seen.push(bridge.status);
+      return bridge;
+    });
+    await waitFor(() => expect(hellos).toBeGreaterThanOrEqual(2), { timeout: 4000 });
+    expect(result.current).toMatchObject({ status: 'error', detail: 'Nothing is listening on 127.0.0.1:43119.' });
+    expect(seen.slice(seen.indexOf('error'))).not.toContain('connecting');
+    unmount();
+  });
+  it('after an agent edit it reports what changed, for the camera and the panel', async () => {
+    let served = false;
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (new URL(url).pathname === '/next' && !served) {
+        served = true;
+        return Promise.resolve(new Response(JSON.stringify({ id: 'r1', op: 'add_shape', input: { kind: 'rectangle', id: 'n1' } }), { status: 200 }));
+      }
+      return parkedNext(url, init) ?? Promise.resolve(new Response('{}', { status: 200 }));
+    }));
+    const onApplied = vi.fn();
+    const commit = vi.fn();
+    const { result, unmount } = renderHook(() => useV2AgentBridge({ ...options, commit, onApplied }));
+    await waitFor(() => expect(onApplied).toHaveBeenCalledWith(['n1']));
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(result.current.activity).toBe('Create rectangle');
+    unmount();
+  });
 });

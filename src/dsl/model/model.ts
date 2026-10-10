@@ -1,7 +1,7 @@
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../opencanvas/domain/document/types';
 import { slugifyDslId } from '../text';
 import {
-  ELEMENT_KINDS, ELEMENT_KINDS_WITH_CHILDREN, FLOW_STEP_KINDS, VIEW_KINDS,
+  ELEMENT_KINDS, ELEMENT_KINDS_WITH_CHILDREN, FLOW_STEP_KINDS, MODEL_KIND_LABEL, VIEW_KINDS,
   type ArchElement, type ArchModel, type ArchRelation, type ArchView,
   type ElementKind, type FlowStep, type FlowStepKind, type ViewKind, type ViewRuleWhere,
 } from './types';
@@ -161,11 +161,12 @@ export function resolveElementRef(index: ArchIndex, reference: string, scopeId: 
   const wanted = reference.trim();
   if (!wanted) return null;
   const lower = wanted.toLowerCase();
-  const direct = index.byId.get(lower);
+  // Explicit ids match exactly (`opsEngineer`, grammar §9.2); slugs case-insensitively.
+  const direct = index.byId.get(wanted) ?? index.byId.get(lower);
   if (direct) return direct;
   if (scopeId) {
     for (let scope: string | null = scopeId; scope; scope = index.byId.get(scope)?.parent ?? null) {
-      const relative = index.byId.get(`${scope}.${lower}`);
+      const relative = index.byId.get(`${scope}.${wanted}`) ?? index.byId.get(`${scope}.${lower}`);
       if (relative) return relative;
       const byName = index.byNamePath.get(`${namePathOf(index, scope).toLowerCase()}.${lower}`);
       if (byName) return byName;
@@ -178,6 +179,15 @@ export function resolveElementRef(index: ArchIndex, reference: string, scopeId: 
   // names stay unresolved rather than guessing.
   const byName = index.model.elements.filter((element) => element.name.toLowerCase() === lower);
   return byName.length === 1 ? byName[0]! : null;
+}
+
+/** The Model panel's kind word; a container drawn as a cylinder or a queue says what it holds. */
+export function modelKindLabel(element: Pick<ArchElement, 'kind' | 'attrs'>): string {
+  if (element.kind === 'container') {
+    const shape = element.attrs?.find((entry) => !entry.key && (entry.value === 'cylinder' || entry.value === 'queue'))?.value;
+    if (shape) return shape === 'queue' ? 'Queue' : 'Database';
+  }
+  return MODEL_KIND_LABEL[element.kind];
 }
 
 /** Display reference for text output: `Shop.API` when ids are the slug chain, else the id. */

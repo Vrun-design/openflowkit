@@ -67,4 +67,49 @@ describe('serialize', () => {
     expect(text).toContain('align row A, B');
     expect(text.indexOf('align row A, B')).toBeLessThan(text.indexOf('note A : retries'));
   });
+
+  // A label typed on the canvas is whatever the user typed; the text must read it back unchanged.
+  it('writes every canvas label so it re-reads as itself, in every family', async () => {
+    const sources: Record<string, string> = {
+      flowchart: 'flowchart\nA -> B : go', state: 'state\nA -> B : go', sequence: 'sequence\nA -> B : go',
+      architecture: 'architecture\nA -> B : go\ngroup G {\n  C\n}',
+      erd: 'erd\nA { id int pk }\nB { id int pk }\nA 1:N B : go', class: 'class\nA { +id: int }\nB { +id: int }\nA --> B : go',
+      mindmap: 'mindmap\ncentral: A\n- B',
+    };
+    const labels = ['Say "hi"', 'Loading...', 'v1..v2', 'opt --verbose', 'A || B', 'Polo|x', 'one o{ many', '  padded', 'trail ', 'two  spaces', 'tab\tx', 'line1\nline2', 'trail\\', 'note this', 'store'];
+    const failures: string[] = [];
+    for (const [family, source] of Object.entries(sources)) {
+      for (const label of labels) {
+        const compiled = await compile(source);
+        const edge = family === 'mindmap' ? undefined : compiled.connectors[0];
+        const scene = {
+          ...compiled,
+          nodes: compiled.nodes.map((node) => node.content.label === 'A' ? { ...node, content: { ...node.content, label } } : node),
+          connectors: compiled.connectors.map((connector) => connector === edge ? { ...connector, labels: [{ ...connector.labels[0]!, text: label }] } : connector),
+        };
+        const again = await compile(serialize(scene));
+        const ok = again.nodes.some((candidate) => candidate.content.label === label)
+          && again.nodes.length === scene.nodes.length && again.connectors.length === scene.connectors.length
+          && (!edge || again.connectors[0]?.labels[0]?.text === label);
+        if (!ok) failures.push(`${family} ${JSON.stringify(label)}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it('quotes exactly the values that do not lex back to themselves as words', () => {
+    for (const bare of ['Join', 'API Gateway', 'a/b', 'https://x.io/a', 'v2.1', 'C# app', 'trail\\']) expect(quote(bare)).toBe(bare);
+    for (const value of ['Loading...', 'a -- b', 'x || y', 'Polo|x', 'Say "hi"', ' lead', 'tail ', 'a  b', 'a\tb', 'note x', '...etc', 'a ; b']) {
+      expect(quote(value)).toBe(`"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
+    }
+  });
+
+  it('keeps two canvas nodes apart when their labels differ only in spacing', async () => {
+    const compiled = await compile('flowchart\nA -> B');
+    const scene = { ...compiled, nodes: compiled.nodes.map((node) => ({ ...node, content: { ...node.content, label: node.content.label === 'A' ? 'API  Gateway' : 'API Gateway' } })) };
+    const again = await compile(serialize(scene));
+    expect(again.nodes.map((node) => node.content.label).sort()).toEqual(['API  Gateway', 'API Gateway']);
+    expect(again.connectors).toHaveLength(1);
+  });
 });
+

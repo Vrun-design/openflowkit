@@ -17,7 +17,8 @@ export function FlyoutButton<T extends string>(props: {
   readonly options: readonly ToolOption<T>[] | readonly ToolSection<T>[];
   /** Nothing picked yet (More): focus lands on the first cell. */
   readonly selectedId: T | null;
-  readonly onPick: (id: T) => void;
+  /** `keyboard`: Enter or Space picked the cell (a click with no pointer: detail 0). */
+  readonly onPick: (id: T, keyboard: boolean) => void;
   /** Narrow grids (connectors) read better at half width. */
   readonly columns?: number;
 }): React.JSX.Element {
@@ -68,8 +69,8 @@ export function FlyoutButton<T extends string>(props: {
         data-selected={option.id === props.selectedId || undefined}
         {...(autofocusId === option.id ? { 'data-autofocus': '' } : {})}
         tabIndex={-1}
-        onClick={() => {
-          props.onPick(option.id);
+        onClick={(event) => {
+          props.onPick(option.id, event.detail === 0);
           props.onOpenChange(false);
         }}
       >

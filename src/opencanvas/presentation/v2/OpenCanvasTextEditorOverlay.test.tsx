@@ -22,6 +22,16 @@ describe('OpenCanvas text editor overlay', () => {
     expect([seeded.selectionStart, seeded.selectionEnd]).toEqual([1, 1]);
   });
 
+  it('Enter that confirms an IME composition does not commit the label', () => {
+    const onCommit = vi.fn();
+    render(<OpenCanvasTextEditorOverlay style={style} bounds={{ x: 0, y: 0, width: 80, height: 40 }}
+      value="Before" onCommit={onCommit} onCancel={vi.fn()} />);
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', isComposing: true });
+    expect(onCommit).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledOnce();
+  });
+
   it('Tab commits', () => {
     const onCommit = vi.fn();
     render(<OpenCanvasTextEditorOverlay style={style} bounds={{ x: 0, y: 0, width: 80, height: 40 }}

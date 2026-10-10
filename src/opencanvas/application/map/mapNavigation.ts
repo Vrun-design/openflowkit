@@ -27,10 +27,21 @@ export function depthOf(model: MapModel, open: ReadonlySet<string>): Depth | nul
   return (['overview', 'detailed', 'everything'] as const).find((d) => sameOpen(all[d], open)) ?? null;
 }
 
-/** Top-left first, ties by id so the pick is deterministic. */
-export const topLeftFirst = (rects: ReadonlyMap<string, { x: number; y: number }>) => (a: string, b: string): number => {
-  const [p, q] = [rects.get(a)!, rects.get(b)!];
-  return p.y - q.y || p.x - q.x || (a < b ? -1 : 1);
+/**
+ * Reading order: rows top to bottom, left to right within a row, ties by id so the pick is deterministic. Rows are bucketed
+ * once (by top, a new row when a box starts more than half the median box height below the row's first): ELK staggers a
+ * row by a few px when the boxes differ in height, and a fixed bucket keeps the comparator transitive.
+ */
+export const topLeftFirst = (rects: ReadonlyMap<string, { x: number; y: number; height?: number }>) => {
+  const heights = [...rects.values()].map((r) => r.height ?? 0).sort((a, b) => a - b);
+  const tolerance = (heights[Math.floor(heights.length / 2)] ?? 0) / 2;
+  const row = new Map<string, number>();
+  let [count, start] = [-1, -Infinity];
+  for (const [id, r] of [...rects].sort(([a, p], [b, q]) => p.y - q.y || (a < b ? -1 : 1))) {
+    if (r.y - start > tolerance) { count += 1; start = r.y; }
+    row.set(id, count);
+  }
+  return (a: string, b: string): number => row.get(a)! - row.get(b)! || rects.get(a)!.x - rects.get(b)!.x || (a < b ? -1 : 1);
 };
 
 /**

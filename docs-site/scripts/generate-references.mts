@@ -55,6 +55,7 @@ function typeOf(schema: ZodLike): string {
     case 'ZodDefault': return `${typeOf(def.innerType as ZodLike)} *(default \`${JSON.stringify((def.defaultValue as () => unknown)())}\`)*`;
     case 'ZodArray': return `${typeOf(def.type as ZodLike)}[]`;
     case 'ZodNullable': return `${typeOf(def.innerType as ZodLike)} or null`;
+    case 'ZodEffects': return typeOf(def.schema as ZodLike);
     case 'ZodUnion': return (def.options as ZodLike[]).map(typeOf).join(' \\| ');
     case 'ZodObject': return `object: ${Object.entries(shapeOf(schema))
       .map(([key, value]) => `${key} (${typeOf(value)})`).join(', ')}`;
@@ -105,6 +106,12 @@ async function sourceResourceNames(): Promise<readonly string[]> {
   return [...names].sort();
 }
 
+// Page-scoped ops whose own schema has no pageId: the MCP server adds one (mcp-server/src/tools/ops.ts).
+const MCP_PAGE_ID = new Set(['update_diagram', 'move', 'style', 'delete', 'add_shape']);
+
+// Rules an argument table cannot show.
+const OP_NOTES: Record<string, string> = { move: 'Pass exactly one of `to` or `delta`.' };
+
 function opSections(): string {
   const rows = new Map(CAPABILITY_MANIFEST.map((row) => [row.action, row]));
   const surfaces: Record<string, string> = {
@@ -119,13 +126,15 @@ function opSections(): string {
   return AGENT_OPS.map((op) => {
     const row: CapabilityRow = rows.get(op.name)!;
     const args = shapeOf(op.schema as unknown as ZodLike);
-    const argumentTable = argumentRows(op.schema as unknown as ZodLike);
+    const argumentTable = argumentRows(op.schema as unknown as ZodLike)
+      + (MCP_PAGE_ID.has(op.name) ? '| `pageId` | string (MCP tool; the CLI says `--page`) |\n' : '');
     // `documentId` is added to every op tool by the MCP server; document it once.
     const where = row.mutates ? 'changes the document (one undo step in live mode)' : 'read-only';
     const mirrors = row.surface === 'agent'
       ? 'an agent-only lookup'
       : `mirrors **${row.operation}** in ${surfaces[row.surface] ?? row.surface}`;
-    return `### \`${op.name}\`\n\n${op.title} — ${mirrors}; ${where}.\n\n`
+    const note = OP_NOTES[op.name] ? ` ${OP_NOTES[op.name]}` : '';
+    return `### \`${op.name}\`\n\n${op.title} — ${mirrors}; ${where}.${note}\n\n`
       + (Object.keys(args).length > 0
         ? `| Argument | Type |\n| --- | --- |\n${argumentTable}`
         : 'Takes no arguments.\n');
@@ -140,11 +149,12 @@ async function mcpPage(): Promise<string> {
     'Drive the live editor or edit .openflow.json files from any MCP client — the full tool surface, generated from the manifest.',
   )
     + GENERATED('`src/agent/manifest.ts`, `src/agent/ops/` and the tool registrations under `mcp-server/src`')
-    + `OpenFlowKit ships a local MCP server: a stdio process that gives Claude Desktop, Claude\nCode, Cursor, Windsurf and anything else that speaks MCP a set of diagram tools. It runs on\nyour machine, needs no API key of its own, and returns deterministic results — your MCP\nclient's model does the thinking.\n\n## Run it\n\n\`\`\`bash\nnpx -y @vrun-design/openflowkit-mcp\n\`\`\`\n\nPoint your client at that command. In Claude Desktop's \`claude_desktop_config.json\`:\n\n\`\`\`json\n{\n  "mcpServers": {\n    "openflowkit": { "command": "npx", "args": ["-y", "@vrun-design/openflowkit-mcp"] }\n  }\n}\n\`\`\`\n\nNode 18 or newer is required.\n\n`
+    + `OpenFlowKit ships a local MCP server: a stdio process that gives Claude Desktop, Claude\nCode, Cursor, Windsurf and anything else that speaks MCP a set of diagram tools. It runs on\nyour machine, needs no API key of its own, and returns deterministic results — your MCP\nclient's model does the thinking.\n\n## Run it\n\n\`\`\`bash\nnpx -y @vrun-design/openflowkit-mcp\n\`\`\`\n\nPoint your client at that command. In Claude Desktop's \`claude_desktop_config.json\`:\n\n\`\`\`json\n{\n  "mcpServers": {\n    "openflowkit": { "command": "npx", "args": ["-y", "@vrun-design/openflowkit-mcp"] }\n  }\n}\n\`\`\`\n\nNode 20.11 or newer is required.\n\n`
     + `## Two modes\n\n`
-    + `- **Live** — open the app, click **Connect agent**, and every op runs against the document\nyou see. The bridge listens on \`127.0.0.1:43119\` by default (change it in Settings), checks\nthe request origin, and can be gated with a shared token. Edits land as one undo step per\ncall; \`screenshot\` returns a real PNG; \`fit_view\` moves your view.\n`
-    + `- **File** — \`openflow_open\` a \`.openflow.json\` path and the same ops run headlessly on\nthat document, with \`openflow_save\` writing it back. There is no canvas here, so PNG/GIF/\nMP4/WebM export and \`screenshot\` ask you to connect the live editor; SVG, animated SVG and\nJSON export work.\n\n`
-    + `If no editor is paired, pass \`documentId\` (from \`openflow_open\`) to target a file-mode\ndocument; without it, tools use the paired editor or the first open document.\n\n`
+    + `- **Live** — open the app, click **Connect agent**, and every op runs against the document\nyou see. The bridge listens on \`127.0.0.1:43119\` by default (change it in the Connect agent panel;\nthe server reads \`OPENFLOWKIT_BRIDGE_PORT\`), checks the request's host and origin, and can be gated\nwith a shared token (\`OPENFLOWKIT_BRIDGE_TOKEN\` on the server, the same token in the panel). Edits land as one undo step per\ncall; \`screenshot\` returns a real PNG; \`fit_view\` moves your view.\n`
+    + `- **File** — \`openflow_open\` a \`.openflow.json\` path and the same ops run headlessly on\nthat document, with \`openflow_save\` writing it back. There is no canvas here, so PNG/GIF/\nMP4/WebM export and \`screenshot\` ask you to connect the live editor; SVG, animated SVG,\nJSON and PDF (a print-ready HTML page) export work.\n\n`
+    + `If no editor is paired, pass \`documentId\` (from \`openflow_open\`) to target a file-mode\ndocument; without it, tools use the paired editor or, in file mode, the document opened or
+created last. Page-scoped ops take a \`pageId\` from \`list_pages\`.\n\n`
     + `## Document and server tools\n\n`
     + `| Tool | What it does |\n| --- | --- |\n`
     + tools.map((name) => {
@@ -163,7 +173,7 @@ async function mcpPage(): Promise<string> {
         whoami: 'Which mode the server is in, and which documents it holds',
         server_info: 'Server name, version and capabilities',
         render_diagram: 'Remote endpoint only (`npm run start:http`): draw DSL or Mermaid inline in the chat, with an editor link',
-        get_syntax: 'Remote endpoint only: the DSL grammar, whole or one family, for `render_diagram`',
+        get_syntax: 'The DSL grammar, whole or one family (unknown families are rejected); also listed as an op below',
       };
       return `| \`${name}\` | ${descriptions[name] ?? 'See the tool description in your client'} |`;
     }).join('\n') + '\n\n'

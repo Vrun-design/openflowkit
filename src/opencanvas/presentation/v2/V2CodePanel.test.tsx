@@ -32,4 +32,23 @@ describe('V2CodePanel', () => {
     expect(onCodeChange).not.toHaveBeenCalled();
     expect(screen.getByRole('listbox')).toBeTruthy();
   });
+
+  it('is no keyboard trap: Esc leaves the editor for Close, Tab indents, Shift+Tab moves on (WCAG 2.1.2)', () => {
+    const onClose = vi.fn();
+    const onCodeChange = vi.fn();
+    render(<V2CodePanel code="flowchart" diagnostics={[]} generating={false} canvasEdited={false} palette="pastel"
+      onPaletteChange={vi.fn()} onCodeChange={onCodeChange} onGenerate={vi.fn()} onClose={onClose} />);
+    const editor = screen.getByRole('textbox', { name: 'Diagram source' });
+    expect(editor).toHaveAccessibleDescription(/Esc leaves the editor/);
+    editor.focus();
+    fireEvent.keyDown(editor, { key: 'Tab', shiftKey: true });
+    expect(onCodeChange).not.toHaveBeenCalled();
+    fireEvent.keyDown(editor, { key: 'Tab' });
+    expect(onCodeChange).toHaveBeenCalledWith('  flowchart');
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Close panel' })).toHaveFocus();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Close panel' }), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

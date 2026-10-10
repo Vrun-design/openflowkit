@@ -111,7 +111,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
           ...(request.selectedConnectorIds?.length ? { selectedConnectorIds: request.selectedConnectorIds } : {}),
         });
         return request.format === 'pdf'
-          ? [{ filename: `${request.document.id}${suffix}.html`, mime: 'text/html', text: buildPrintDocument(svg, request.document.name) }]
+          ? [{ filename: `${request.document.id}${suffix}.html`, mime: 'text/html', text: buildPrintDocument([svg], request.document.name, { theme: request.theme ?? 'light' }) }]
           : [{ filename: `${request.document.id}${suffix}.svg`, mime: 'image/svg+xml', text: svg }];
       });
     },

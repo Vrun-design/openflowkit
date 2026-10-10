@@ -6,7 +6,7 @@ export const SHARE_ORIGIN: string = import.meta.env.VITE_SHARE_ORIGIN ?? 'https:
 /** Same ceiling as the Worker's (worker/index.ts); checked here first so an oversize document never leaves the browser. */
 export const MAX_SHARE_BYTES = 1_048_576;
 
-export type ShareErrorCode = 'too-large' | 'offline' | 'turnstile' | 'rate-limited' | 'not-found' | 'server' | 'forbidden' | 'no-site-key';
+export type ShareErrorCode = 'too-large' | 'offline' | 'unreachable' | 'turnstile' | 'rate-limited' | 'not-found' | 'server' | 'forbidden' | 'no-site-key';
 
 export class ShareError extends Error {
   constructor(readonly code: ShareErrorCode, message: string) {
@@ -15,13 +15,13 @@ export class ShareError extends Error {
   }
 }
 
-const OFFLINE = 'Couldn’t reach the share service. Check your connection and try again.';
-
 async function call(fetcher: typeof fetch, url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetcher(url, init);
   } catch {
-    throw new ShareError('offline', OFFLINE);
+    // A failed fetch while the browser says it is online is the service's fault, not the user's connection.
+    if (globalThis.navigator?.onLine === false) throw new ShareError('offline', 'You’re offline. Check your connection and try again.');
+    throw new ShareError('unreachable', 'The share service isn’t reachable right now.');
   }
 }
 
@@ -93,7 +93,9 @@ export async function loadSharedDocument(
         ? { title: 'This link has been deleted.', detail: 'Whoever shared it removed it, or it never existed.', retry: false }
         : error.code === 'offline'
           ? { title: 'You’re offline.', detail: 'Shared diagrams open when you’re connected.', retry: true }
-          : { title: 'The share service didn’t answer.', detail: error.message, retry: true } };
+          : error.code === 'unreachable'
+            ? { title: error.message, detail: 'Try again in a minute.', retry: true }
+            : { title: 'The share service didn’t answer.', detail: error.message, retry: true } };
     }
     if (error instanceof ShareCryptoError) {
       return { problem: {

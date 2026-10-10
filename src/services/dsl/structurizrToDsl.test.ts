@@ -523,7 +523,7 @@ describe('styles and dropped blocks', () => {
     }`);
     expect(result.dsl).toContain('person Plain [color: #08427b, desc: desc]');
     expect(result.dsl).toContain('person Guest [rect, color: #999999, desc: desc, tags: external]');
-    expect(result.dsl).toContain('container DB [cylinder, color: #438dd5, icon: aws/rds, tech: Postgres, desc: desc, tags: database]');
+    expect(result.dsl).toContain('store DB [cylinder, color: #438dd5, icon: aws/rds, tech: Postgres, desc: desc, tags: database]');
     expect(result.losses.filter((loss) => loss.startsWith('styles'))).toHaveLength(1);
     const styleDiagnostics = result.diagnostics.filter((item) => item.message.startsWith('styles'));
     expect(styleDiagnostics).toHaveLength(1);
@@ -745,3 +745,125 @@ describe('real workspaces (structurizr/structurizr test corpus)', () => {
     expect(workspace.views[0]!.result.connectors.map((connector) => connector.labels[0]?.text)).toEqual(['forwards [HTTPS]']);
     await expectCleanAndIdempotent(result.dsl);
   });
+
+/** A Structurizr architect's workspace: styled people, tagged externals, a database and a queue. */
+const PAYMENTS = `workspace "Payments Platform" "Card payments for the online store" {
+    !identifiers hierarchical
+    model {
+        customer = person "Customer" "Buys goods online" "External"
+        opsEngineer = person "Ops Engineer" "Runs the platform"
+        payments = softwareSystem "Payments Platform" "Takes card payments and issues refunds" {
+            web = container "Checkout Web" "Checkout pages" "React, TypeScript" "Web Browser"
+            api = container "Payments API" "Authorises and captures payments" "Java, Spring Boot"
+            ledger = container "Ledger DB" "Stores payments and refunds" "PostgreSQL 15" "Database"
+            queue = container "Event Bus" "Payment events" "Kafka" "Queue"
+        }
+        bank = softwareSystem "Acquiring Bank" "Card network gateway" "External"
+        customer -> payments.web "Pays using" "HTTPS"
+        payments.web -> payments.api "Calls" "JSON/HTTPS"
+        payments.api -> payments.ledger "Reads from and writes to" "JDBC"
+        payments.api -> payments.queue "Publishes PaymentCaptured" "Kafka protocol"
+        payments.api -> bank "Authorises cards with" "ISO 8583"
+        opsEngineer -> payments.api "Monitors" "Grafana"
+    }
+    views {
+        systemContext payments "Context" "System context for payments" {
+            include *
+            autolayout lr
+        }
+        container payments "Containers" {
+            include *
+            autolayout lr
+        }
+        dynamic payments "CheckoutFlow" "A card payment" {
+            customer -> payments.web "Submits card details"
+            autolayout lr
+        }
+        styles {
+            element "Person" {
+                shape Person
+                background #08427b
+                color #ffffff
+            }
+            element "Database" {
+                shape Cylinder
+            }
+            element "Queue" {
+                shape Pipe
+            }
+            element "External" {
+                background #999999
+            }
+        }
+    }
+}`;
+
+/** What each view draws: element, fill, text colour, card colour and where it sits. */
+async function drawnViews(dsl: string) {
+  const workspace = await compileWorkspace(dsl);
+  return workspace.views.map((view) => ({
+    view: view.viewId,
+    nodes: view.result.nodes.map((node) => [
+      node.id, node.kind, node.content.shape, node.content.color, node.appearance.fill, node.appearance.textColor,
+      node.transform.translation, node.size,
+    ]),
+  }));
+}
+
+describe('import → generate → generate', () => {
+  it.each(['payments', ...Object.keys(realFiles).sort()])('%s draws the same after two regenerates', async (path) => {
+    const imported = convert(path === 'payments' ? PAYMENTS : realFiles[path]!).dsl;
+    const generated = await format(imported);
+    const regenerated = await format(generated);
+    expect(regenerated).toBe(generated);
+    const first = await drawnViews(imported);
+    expect(await drawnViews(generated)).toEqual(first);
+  });
+
+  it('keeps the styled colours and the autolayout direction in the generated text', async () => {
+    const generated = await format(convert(PAYMENTS).dsl);
+    expect(generated).toMatch(/opsEngineer = person Ops Engineer \[person, #08427b/);
+    expect(generated).toContain('view context of payments right {');
+    expect(generated).toContain('view container of payments right {');
+    const [context] = (await compileWorkspace(generated)).views;
+    const ops = context!.result.nodes.find((node) => node.id === 'opsEngineer')!;
+    expect(ops.appearance.fill).toBe('#08427b');
+  });
+});
+
+describe('what the DSL cannot hold is reported', () => {
+  it('reports view descriptions, text colours and Pipe as cylinder; maps External and Database tags to kinds', () => {
+    const result = convert(PAYMENTS);
+    expect(result.losses).toContain('view description "System context for payments" dropped');
+    expect(result.losses).toContain('dynamic view description "A card payment" dropped');
+    expect(result.losses).toContain('styles: element "Person" color (text colour) dropped');
+    expect(result.losses).toContain('styles: shape Pipe drawn as a cylinder');
+    expect(result.dsl).toMatch(/bank = external Acquiring Bank/);
+    expect(result.dsl).toMatch(/ledger = store Ledger DB/);
+    expect(result.dsl).toMatch(/queue = queue Event Bus/);
+    // A person stays a person: the DSL has no external person.
+    expect(result.dsl).toMatch(/^ {2}customer = person Customer|^ {2}person Customer/m);
+  });
+
+  it('keeps Structurizr identifiers as written', () => {
+    const result = convert(PAYMENTS);
+    expect(result.dsl).toContain('opsEngineer = person Ops Engineer');
+  });
+});
+
+describe('tag-refined kinds keep type filters whole', () => {
+  it('element.type==SoftwareSystem still selects a system tagged External', async () => {
+    const result = convert(`workspace { model {
+      shop = softwareSystem "Shop"
+      bank = softwareSystem "Bank" "" "External"
+      shop -> bank "pays"
+    } views {
+      systemLandscape { include element.type==SoftwareSystem }
+      systemLandscape "tagged" { include "element.type==SoftwareSystem && element.tag==External" }
+    } }`);
+    expect(result.dsl).toContain('include * where kind is system or kind is external');
+    expect(result.dsl).toContain('include * where kind is system and tag is @external or kind is external and tag is @external');
+    const [all] = (await compileWorkspace(result.dsl)).views;
+    expect(all!.result.nodes.map((node) => node.id).sort()).toEqual(['bank', 'shop']);
+  });
+});

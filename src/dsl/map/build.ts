@@ -75,7 +75,7 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
   interface Item { key: string; label: string; noun: string; degree: number; make: (parent: string) => void }
   const fileItem = (f: string): Item => ({ key: f, label: baseName(f).split('.')[0], noun: 'file', degree: degree.get(f) ?? 0, make: (p) => addFile(f, p) });
   const folderItem = (dir: string, files: string[], kind: MapNodeKind = 'folder'): Item => ({
-    key: dir, label: baseName(dir), noun: kind === 'part' ? 'part' : 'folder', degree: sum(files), make: (p) => folder(dir, p, files, kind),
+    key: dir, label: baseName(dir), noun: kind === 'part' ? 'module' : 'folder', degree: sum(files), make: (p) => folder(dir, p, files, kind),
   });
   // Overlay group ids are reserved up front: a folded group is only built later, inside `more`.
   const reserved = new Set<string>();
@@ -169,7 +169,7 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
     else rest.push(f);
   }
   const items: Item[] = parts.map((p) => ({
-    key: p.dir, label: p.name, noun: 'part', degree: sum(byPart.get(p.dir) ?? []),
+    key: p.dir, label: p.name, noun: 'module', degree: sum(byPart.get(p.dir) ?? []),
     make: (parent: string) => {
       alias.set(p.dir, p.dir);
       add(p.dir, 'part', parent, p.name, { desc: p.desc, path: p.dir });

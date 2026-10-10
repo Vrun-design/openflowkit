@@ -8,6 +8,7 @@ import {
   type BridgeClientInfo, type BridgePageSummary, type BridgeRequest,
 } from '../../../agent/bridge/protocol';
 import { resolveAgentOpCommand } from '../../../agent/runAction';
+import { commandTouchedRoots } from '../../application/ai/proposalSession';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { OpCapabilities } from '../../../agent/ops/types';
@@ -29,18 +30,32 @@ export interface V2AgentBridgeOptions {
   /** A page that stays as it is (a repo document's map page): a request addressed to it is refused, whichever page the reader is on. */
   readonly lockedPageId?: string | null;
   readonly onActivity: (message: string) => void;
+  /** After an agent edit on the page in view, with the top-level nodes it added or changed (to bring them into view). */
+  readonly onApplied?: (nodeIds: readonly string[]) => void;
 }
 
 export interface V2AgentBridge {
   readonly status: V2BridgeStatus;
   readonly detail: string;
+  /** The last change the agent applied, as its undo label ("Style 2 shapes"); null before the first. */
+  readonly activity: string | null;
 }
+
+export const TOKEN_REJECTED = 'The agent server did not accept this token. Copy the MCP configuration again and restart your MCP client.';
 
 const RETRY_MS = 1500;
 
 export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
   const [status, setStatus] = useState<V2BridgeStatus>('off');
   const [detail, setDetail] = useState('');
+  const [activity, setActivity] = useState<string | null>(null);
+  // The poll loop outlives renders; it reads the status it last set from here, not from its closure.
+  const statusRef = useRef<V2BridgeStatus>('off');
+  const show = useCallback((next: V2BridgeStatus, message?: string) => {
+    statusRef.current = next;
+    setStatus(next);
+    if (message !== undefined) setDetail(message);
+  }, []);
   const optionsRef = useRef(options);
   optionsRef.current = options;
   const { enabled, port, token } = options;
@@ -49,10 +64,7 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
   const lastHelloRef = useRef(identity);
   const announceRef = useRef<(() => Promise<void>) | null>(null);
 
-  const stop = useCallback(() => {
-    setStatus('off');
-    setDetail('');
-  }, []);
+  const stop = useCallback(() => show('off', ''), [show]);
 
   useEffect(() => {
     if (!enabled) { stop(); return; }
@@ -81,7 +93,8 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
         app: 'openflowkit-editor',
       };
       const response = await post(urls.hello, { document: info });
-      if (response.status === 401) throw new Error('The agent server did not accept this token. Copy the MCP configuration again and restart your MCP client.');
+      if (response.status === 401) throw new Error(TOKEN_REJECTED);
+      if (!response.ok) throw new Error(`The agent bridge answered ${response.status}.`);
     };
 
     const runRequest = async (request: BridgeRequest): Promise<void> => {
@@ -96,7 +109,15 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
         const pageId = request.pageId ?? optionsRef.current.pageId ?? document.pages[0]?.id ?? '';
         const outcome = await resolveAgentOpCommand(op, request.input, { document, pageId, capabilities });
         if (outcome.command && (optionsRef.current.readOnly || (optionsRef.current.lockedPageId ?? null) === pageId)) throw new Error('This document is read-only, so the editor did not apply the change.');
-        if (outcome.command) commit(outcome.command);
+        if (outcome.command) {
+          commit(outcome.command);
+          setActivity(outcome.command.label);
+          // Only an edit on the page in view moves the camera, so only that one pays for the diff.
+          if (pageId === optionsRef.current.pageId && optionsRef.current.onApplied) {
+            const touched = commandTouchedRoots(document, outcome.command, pageId);
+            if (touched.length) optionsRef.current.onApplied(touched);
+          }
+        }
         onActivity(`${request.op} ran from the connected agent.`);
         await post(urls.result, { id: request.id, ok: true, output: outcome.output });
       } catch (error) {
@@ -111,7 +132,7 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
       if (lastHelloRef.current !== current) await hello();
       const response = await fetch(withToken(urls.next, { wait: String(BRIDGE_POLL_SECONDS) }), { signal: controller.signal });
       if (response.status === 204) return;
-      if (response.status === 401) throw new Error('The agent server did not accept this token. Copy the MCP configuration again and restart your MCP client.');
+      if (response.status === 401) throw new Error(TOKEN_REJECTED);
       if (!response.ok) throw new Error(`The agent bridge answered ${response.status}.`);
       const payload: unknown = await response.json();
       if (isBridgeRequest(payload)) await runRequest(payload);
@@ -121,9 +142,10 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
     void (async () => {
       while (!controller.signal.aborted) {
         try {
-          if (status !== 'connected') { setStatus('connecting'); setDetail(`127.0.0.1:${port}`); }
+          // A retry leaves the error up until it succeeds; only the first attempt says "connecting".
+          if (statusRef.current === 'off') show('connecting', `127.0.0.1:${port}`);
           await hello();
-          setStatus('connected');
+          show('connected');
           for (;;) {
             if (controller.signal.aborted) return;
             await poll();
@@ -133,8 +155,7 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
           // fetch rejects with a TypeError when no server answers at all.
           const message = error instanceof TypeError ? `Nothing is listening on 127.0.0.1:${port}.`
             : error instanceof Error ? error.message : String(error);
-          setStatus('error');
-          setDetail(message);
+          show('error', message);
           await new Promise((resolve) => window.setTimeout(resolve, RETRY_MS));
         }
       }
@@ -158,5 +179,5 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId]);
 
-  return { status, detail };
+  return { status, detail, activity };
 }

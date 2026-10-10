@@ -6,11 +6,9 @@ import {
   IconArrowLeft, IconArrowsSplit2, IconChevronDown, IconDots, IconExternalLink, IconEye, IconPlus, IconTrash,
 } from '@tabler/icons-react';
 import { defaultChildKind, type ArchElementPatch } from '../../application/dsl/architectureCommands';
-import { crossingRelations, elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex, type CrossingRelation } from '../../../dsl/model/model';
+import { crossingRelations, elementAncestors, elementDescendantIds, elementPathRef, modelKindLabel, type ArchIndex, type CrossingRelation } from '../../../dsl/model/model';
 import { safeHttpsUrl } from '../../../dsl/model/relationSource';
-import {
-  ELEMENT_KIND_LABEL, type ArchElement, type ArchRelation, type ArchView, type ElementKind,
-} from '../../../dsl/model/types';
+import type { ArchElement, ArchRelation, ArchView, ElementKind } from '../../../dsl/model/types';
 import { Button, Icon, IconButton, Menu, MenuItem } from '../design-system';
 import { ElementKindIcon } from './V2ElementKindIcon';
 
@@ -106,6 +104,8 @@ export interface ElementCardProps {
   /** Opens the element in the other surface (Map from Canvas, Canvas from Map), when that is possible. */
   readonly mapAction?: { readonly label: string; readonly run: () => void } | undefined;
   readonly onShowInView?: (() => void) | undefined;
+  /** Includes the element in the current view's rules, when the page has a view. */
+  readonly onAddToView?: (() => void) | undefined;
   readonly onBack: () => void;
   readonly onInspect: (elementId: string) => void;
   readonly onEdit: (patch: ArchElementPatch) => void;
@@ -188,7 +188,7 @@ export function V2ModelElementCard(props: ElementCardProps): React.JSX.Element {
         <span className="ofk-v2-card-tile" aria-hidden="true"><ElementKindIcon kind={element.kind} /></span>
         <input ref={nameRef} className="ofk-v2-card-name" aria-label="Name" title={element.name} readOnly={readOnly} {...name} />
         <p className="ofk-v2-card-sub" title={elementPathRef(index, element.id)}>
-          {ELEMENT_KIND_LABEL[element.kind]}{element.tech ? ` · ${element.tech}` : ''}
+          {modelKindLabel(element)}{element.tech ? ` · ${element.tech}` : ''}
           {descendantCount > 0 ? ` · ${descendantCount} inside` : ''}
         </p>
       </header>
@@ -198,7 +198,7 @@ export function V2ModelElementCard(props: ElementCardProps): React.JSX.Element {
         {props.childView ? <Button onClick={props.onOpenView}>Open {viewKindLabel(props.childView)} view</Button> : null}
         {canCreateView ? <Button onClick={props.onCreateView}>Create {element.kind === 'system' ? 'Container' : 'Component'} view</Button> : null}
         {readOnly ? null : (
-          <Button disabled={!childKind} title={childKind ? undefined : `${ELEMENT_KIND_LABEL[element.kind]} cannot contain other elements.`}
+          <Button disabled={!childKind} title={childKind ? undefined : `${modelKindLabel(element)} cannot contain other elements.`}
             onClick={() => childKind && props.onAddInside(childKind)}><Icon icon={IconPlus} />Add inside</Button>
         )}
         {hasMenu ? (
@@ -226,7 +226,8 @@ export function V2ModelElementCard(props: ElementCardProps): React.JSX.Element {
       ) : null}
 
       {!props.inCurrentView ? (
-        <p className="ofk-v2-card-note"><Icon icon={IconArrowsSplit2} />Not shown in this view.</p>
+        <p className="ofk-v2-card-note"><Icon icon={IconArrowsSplit2} />Not shown in this view.
+          {props.onAddToView && !readOnly ? <Button onClick={props.onAddToView}><Icon icon={IconPlus} />Add to this view</Button> : null}</p>
       ) : null}
 
       <Section title="About">
@@ -263,7 +264,7 @@ export function V2ModelElementCard(props: ElementCardProps): React.JSX.Element {
         </Section>
       ) : null}
       {talksTo.length === 0 && usedBy.length === 0 ? (
-        <p className="ofk-v2-card-note">No relationships yet. Draw a connector to another element to add one.</p>
+        <p className="ofk-v2-card-note">{props.inCurrentView ? 'No relationships yet. Draw a connector to another element to add one.' : 'No relationships yet.'}</p>
       ) : null}
       {children.length > 0 ? (
         <Section title="Inside" count={children.length}>
@@ -273,7 +274,7 @@ export function V2ModelElementCard(props: ElementCardProps): React.JSX.Element {
                 <button type="button" className="ofk-v2-card-child" onClick={() => props.onInspect(child.id)}>
                   <ElementKindIcon kind={child.kind} />
                   <span>{child.name}</span>
-                  <span>{child.tech ?? ELEMENT_KIND_LABEL[child.kind]}</span>
+                  <span>{child.tech ?? modelKindLabel(child)}</span>
                 </button>
               </li>
             ))}

@@ -24,7 +24,9 @@ export function serialize(scene: DslFrameScene): string {
   const meta = dslFrameMeta(frame);
   const raw = dslFrameRaw(frame);
   const direction = meta.direction && meta.direction !== dslFamilyDirection(meta.family) ? meta.direction : undefined;
-  const title = typeof raw.viewTitle === 'string' ? meta.title : typeof frame.content.label === 'string' && frame.content.label.length > 0 ? frame.content.label : meta.title;
+  const family = familyFor(meta.family as DslFamily);
+  const title = family.title ? family.title(scene)
+    : typeof raw.viewTitle === 'string' ? meta.title : typeof frame.content.label === 'string' && frame.content.label.length > 0 ? frame.content.label : meta.title;
   // A family may need words on its header line (the chart kind, for one).
   const header = [meta.family, ...(meta.familyHeader ?? []), ...(direction ? [direction] : [])];
   const lines: string[] = ['%% ofk 1', header.join(' ')];
@@ -32,7 +34,7 @@ export function serialize(scene: DslFrameScene): string {
   const palette = meta.appearance?.palette;
   if (palette && palette !== 'pastel') lines.push(`appearance: ${palette}`);
   if (meta.icons) lines.push(`icons: ${meta.icons}`);
-  lines.push('', ...familyFor(meta.family as DslFamily).serialize(scene));
+  lines.push('', ...family.serialize(scene));
   // Motion is a projection of the text like everything else: emitted exactly
   // when the frame carries a block, for every family, and never invented.
   const animate = animateFromJson(raw.animate);

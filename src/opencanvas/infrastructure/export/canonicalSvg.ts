@@ -13,7 +13,7 @@ import {
   resolveWidgetInks, resolveWidgetPresentation, widgetBackdrop, type WidgetInk, type WidgetInkPaint, type WidgetPrimitive,
 } from '../../domain/nodes/widgetNodePresentation';
 import { frameChromePrimitives, framePresetOf } from '../../domain/nodes/framePreset';
-import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
+import { isBackdropNode, isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
@@ -130,8 +130,13 @@ function number(value: number): string {
   return Number(value.toFixed(3)).toString();
 }
 
+// Characters XML 1.0 forbids outright (control characters such as PowerPoint's soft break \u000B,
+// lone surrogates, U+FFFE/U+FFFF): one in a label would make the whole file unreadable.
+// eslint-disable-next-line no-control-regex -- matching them is the point
+const XML_ILLEGAL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
 function xml(value: unknown): string {
-  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+  return String(value ?? '').replace(XML_ILLEGAL, '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;',
   })[character]!);
 }
@@ -875,11 +880,10 @@ export function exportCanonicalSvg(
   }).join('');
   // The canvas's layers: containers (and a sequence's fragment bands) under the connectors, every
   // other node over them, so a frame never hides its edges and a band never hides its messages.
-  const backdrop = (node: SceneNode) => isContainerNodeKind(node.kind) || typeof node.content.seqFragmentId === 'string';
   const markupOf = (nodes: readonly SceneNode[]) => [...nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
     .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations, options.iconArt, (id) => byId.get(id))).join('');
-  const nodeMarkup = markupOf(page.nodes.filter((node) => !backdrop(node)));
-  const backdropMarkup = markupOf(page.nodes.filter(backdrop));
+  const nodeMarkup = markupOf(page.nodes.filter((node) => !isBackdropNode(node)));
+  const backdropMarkup = markupOf(page.nodes.filter(isBackdropNode));
   // Camera glide lives on a root group: CSS cannot animate `viewBox` inside an
   // `<img>`. The still path applies the same matrix, so both stay in step.
   const cameraMatrix = options.frame?.camera ? cameraFitMatrix(options.frame.camera, viewBox) : null;

@@ -25,6 +25,10 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   // overlays (text editor, context bar) so they track pan and zoom.
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
   const fittedRef = useRef<string | null>(null);
+  // A landing asked for before the renderer has a size; any other camera move or a document switch drops it.
+  const pendingLandingRef = useRef<{ direction: LandingDirection; nodeIds?: readonly string[] } | null>(null);
+  const statusRef = useRef<PixiRendererStatus | null>(null);
+  const docRef = useRef<string | undefined>(undefined);
   const frameRef = useRef<number | null>(null);
   const glideRef = useRef<number | null>(null);
   const glidingRef = useRef(false);
@@ -36,6 +40,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   const updateCamera = useCallback(
     (next: CanvasCamera) => {
       if (glidingRef.current) stopGlide();
+      pendingLandingRef.current = null;
       cameraRef.current = next;
       hostRef.current?.setCamera(next);
       if (frameRef.current !== null) return;
@@ -70,6 +75,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   /** Navigation motion: a short glide the user can interrupt by touching the canvas. */
   const animateTo = useCallback((destination: CanvasCamera, durationMs = foundation.motion.camera) => {
     stopGlide();
+    pendingLandingRef.current = null;
     const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const start = { ...cameraRef.current };
     if (reduced || durationMs <= 0) {
@@ -130,6 +136,14 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   const landReadable = useCallback((direction: LandingDirection, nodeIds?: readonly string[]) => {
     const bounds = hostRef.current?.getContentBounds(nodeIds);
     if (!bounds) return false;
+    // A template generates while WebGL is still starting: fitting a 0×0 viewport lands at the floor zoom, jammed at
+    // the top. The landing waits for the renderer instead (fitOnOpen runs it when the host turns ready).
+    const size = hostRef.current!.getViewportSize();
+    if (size.width <= 0 || size.height <= 0) {
+      pendingLandingRef.current = { direction, ...(nodeIds ? { nodeIds } : {}) };
+      return false;
+    }
+    pendingLandingRef.current = null;
     const { camera: fitted, free } = fitInto(bounds, 64, LANDING_MAX_ZOOM);
     const landing = readableLanding(bounds, { width: free.right - free.left, height: free.height }, direction, 64,
       { ...DEFAULT_CAMERA_LIMITS, maxZoom: LANDING_MAX_ZOOM });
@@ -182,6 +196,21 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
       revision: number,
       direction: LandingDirection
     ) => {
+      if (docRef.current !== undefined && docId !== docRef.current) pendingLandingRef.current = null;
+      docRef.current = docId;
+      const becameReady = status === 'ready' && statusRef.current !== 'ready';
+      statusRef.current = status;
+      // Only the ready transition runs a waiting landing (a later call is an edit); a viewport still 0×0 then is
+      // retried for a second of frames.
+      const flush = (frames: number) => {
+        const pending = pendingLandingRef.current;
+        if (!pending) return;
+        landReadable(pending.direction, pending.nodeIds);
+        if (!pendingLandingRef.current) return;
+        if (frames > 0) requestAnimationFrame(() => flush(frames - 1));
+        else pendingLandingRef.current = null;
+      };
+      if (becameReady) flush(60);
       if (status !== 'ready' || !document || fittedRef.current === docId) return;
       if (revision !== 0) {
         fittedRef.current = docId ?? null;

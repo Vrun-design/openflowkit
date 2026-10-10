@@ -14,6 +14,8 @@ import type { PixiRendererHost } from '../../../infrastructure/pixi/PixiRenderer
 import { foundation } from '../../design-system/tokens';
 import type { V2Tool } from '../V2CreationToolbar';
 import { isEditableTarget } from '../pointerOperations';
+import { platformKeys } from '../v2Shortcuts';
+import { keyOwnedByTarget } from '../useV2Keyboard';
 import { measure } from './layout';
 import { mapPathOf } from './mapPath';
 import {
@@ -36,7 +38,7 @@ interface Options {
   /** With the page id, names a map's lineage: default page ids repeat across documents. */
   readonly documentId?: string;
   /** A repo document: the map of this model (null while it loads) in place of a C4 page's. Opens in Map; Canvas stays one switch away. */
-  readonly repo?: { readonly model: MapModel | null } | null;
+  readonly repo?: { readonly model: MapModel | null; readonly loading?: boolean } | null;
   /** A page without a model still has the switch (an editable document with no model anywhere): Map then shows its start screen. */
   readonly startable?: boolean;
   readonly palette: DiagramPaletteName;
@@ -73,6 +75,8 @@ interface Options {
 }
 
 const NONE: ReadonlySet<string> = new Set();
+/** "Showing part of the map" is said once a session: after that the reader knows. */
+let partialSaid = false;
 const LABEL_FONT = `500 12px ${foundation.font}`;
 // What the canvas draws while the map of the current model is not laid out yet: never the Canvas page, never another model.
 const EMPTY_MAP: ScenePage = {
@@ -255,7 +259,14 @@ export function useV2MapMode(options: Options) {
   }, [active, page, updateCamera, fitView, clearSelection, select, hostRef, cameraRef, glide]);
 
   const mapPage = active ? sceneFor(scene, subject, EMPTY_MAP, lineageKey) : null;
-  const { shown, player } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef });
+  // A model to draw whose layout has not landed yet (ELK warming up, a big map), or a repo still being read.
+  const drawing = active && !start && !error && ((subject !== null && !empty && mapPage === EMPTY_MAP) || !!repo?.loading);
+  const onPartial = useCallback(() => {
+    if (partialSaid) return;
+    partialSaid = true;
+    notify(`Showing part of the map. ${platformKeys('⌘0')} shows all of it.`);
+  }, [notify]);
+  const { shown, player, fit } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef, onPartial });
   useClearance({ active, selectedId: selectedNodeId, panelsKey, selectedIds, shown, hostRef, cameraRef, glide, busy: () => player.stats().running || seqs.current.shown < seqs.current.asked });
   useMapFocus(hostRef, active && mapPage && mapPage !== EMPTY_MAP ? mapPage : null, selectedNodeId, selectedConnectorId);
 
@@ -333,10 +344,7 @@ export function useV2MapMode(options: Options) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); return true; }
       return !mapKeyAllowed(event);
     }
-    if (!active || !model || event.defaultPrevented || isEditableTarget(event.target)) return false;
-    // A focused control keeps the keys that press it.
-    if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], [role="menu"], [role="listbox"]')
-      && [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return false;
+    if (!active || !model || keyOwnedByTarget(event)) return false;
     // Arrows walk between boxes (Map has nothing to nudge), but only from the canvas or the bare page: a panel, tree or dialog keeps its own.
     // With a modifier they are swallowed like every other key Map has no use for (mapKeyAllowed below).
     const onCanvas = event.target === document.body || (event.target instanceof HTMLElement && event.target.matches('[data-testid="v2-canvas"]'));
@@ -391,7 +399,10 @@ export function useV2MapMode(options: Options) {
   return { mode: active ? 'map' as const : 'canvas' as const, available, active, start, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
-    toolbar: { depth: controls.depth, onDepth: controls.setDepth,
+    /** Zoom to fit while Map is on: the whole map clear of the panels and floating chrome (the editor's fit ignores the chrome). */
+    fit,
+    // No level is pressed while drawing: a repo map still reading in would flip from one to another as it grows.
+    toolbar: { depth: drawing ? null : controls.depth, onDepth: controls.setDepth, ...(drawing ? { drawing } : {}),
       ...(layers.layers ? { layers: layers.layers, onToggleLayer: layers.toggle } : {}) },
     /** A crowded repo level: how many arrows are drawn of all, and the switch for the rest (null when none are left out). */
     links: isRepo && counts && counts.minor > 0 ? { ...counts, all: layers.all, onToggle: layers.toggleAll } : null };

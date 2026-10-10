@@ -5,7 +5,7 @@ import type { Bounds2d, Size2d } from '../../domain/geometry/types';
 import { querySceneBounds } from '../../domain/scene/queries';
 import type { SceneIndex } from '../../domain/scene/types';
 
-export type SemanticDetailLevel = 'overview' | 'compact' | 'full';
+export type SemanticDetailLevel = 'overview' | 'full';
 
 export interface ViewportSceneProjection {
   readonly bounds: Bounds2d | null;
@@ -24,9 +24,15 @@ export const DEFAULT_VIEWPORT_CULLING_THRESHOLD = 250;
 export const DEFAULT_VIEWPORT_OVERSCAN_SCREEN_PIXELS = 240;
 
 export function semanticDetailLevel(zoom: number): SemanticDetailLevel {
-  if (zoom < 0.35) return 'overview';
-  if (zoom < 0.65) return 'compact';
-  return 'full';
+  return zoom < 0.35 ? 'overview' : 'full';
+}
+
+/** Below this size on screen a label is noise, not text. */
+const MIN_LABEL_SCREEN_PX = 6;
+
+/** A label shows while it is readable on screen: zoom × font size, so a big title outlasts body text. */
+export function labelReadable(zoom: number, fontSize: number): boolean {
+  return zoom * fontSize >= MIN_LABEL_SCREEN_PX;
 }
 
 function expandBounds(bounds: Bounds2d, padding: number): Bounds2d {

@@ -6,9 +6,10 @@ import { tokenize } from '../../../dsl/tokenize';
 import { COLOR_WORDS, EDGE_FLAG_WORDS, FILL_WORDS, SHAPE_WORDS } from '../../../dsl/vocabulary';
 import { DIAGRAM_PALETTES, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
 import { Button, Icon, Panel, Segmented } from '../design-system';
+import { platformKeys } from './v2Shortcuts';
 
 export function V2CodePanel({
-  code, diagnostics, generating, canvasEdited, palette, onPaletteChange, onCodeChange, onGenerate, onClose, convertFrom,
+  code, diagnostics, generating, canvasEdited, palette, onPaletteChange, onCodeChange, onGenerate, onClose, convertFrom, autoFocus = true,
 }: {
   code: string;
   diagnostics: readonly DslDiagnostic[];
@@ -22,6 +23,8 @@ export function V2CodePanel({
   onClose: () => void;
   /** Present when the draft is foreign syntax (Mermaid, Structurizr); converts it to DSL in place. */
   convertFrom?: { readonly label: string; readonly convert: () => void } | undefined;
+  /** False when a template opened it beside its diagram: focus stays on the canvas. */
+  autoFocus?: boolean;
 }) {
   // ponytail: an empty editor shows the placeholder, not "document is empty".
   const errors = code.trim() ? diagnostics.filter((item) => item.severity !== 'info') : [];
@@ -72,15 +75,15 @@ export function V2CodePanel({
     setSuggestions([]);
   };
   return (
-    <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel">
+    <Panel title="Diagram as code" onClose={onClose} autoFocus={autoFocus} className="ofk-v2-workspace-panel ofk-v2-code-panel">
       <div className="ofk-v2-panel-stack">
-        <div className="ofk-code-caption"><span>Source</span><span>OpenFlowKit DSL</span></div>
+        <div className="ofk-code-caption"><span>Source</span><span>Paste OpenFlowKit, Mermaid, Structurizr or D2</span></div>
         {canvasEdited ? <p className="ofk-v2-code-warning" role="status">Canvas edited — regenerate will overwrite those changes.</p> : null}
         {convertFrom ? (
           <div className="ofk-v2-code-mermaid" role="status">
             <Icon icon={IconTransform} />
             <span>{convertFrom.label} detected.</span>
-            <Button onClick={convertFrom.convert}>Convert <kbd>⌘⇧M</kbd></Button>
+            <Button onClick={convertFrom.convert}>Convert <kbd>{platformKeys('⌘⇧M')}</kbd></Button>
           </div>
         ) : null}
         <div className="ofk-v2-code-editor-wrap">
@@ -88,7 +91,7 @@ export function V2CodePanel({
           <textarea
             ref={editorRef} id="v2-code" className="ofk-v2-code-editor" spellCheck={false} value={code} aria-label="Diagram source"
             placeholder={'flowchart\nStart -> Build -> Ship\nBuild [diamond]'}
-            aria-describedby={errors.length ? 'v2-code-diagnostics' : undefined}
+            aria-describedby={errors.length ? 'v2-code-keys v2-code-diagnostics' : 'v2-code-keys'}
             aria-invalid={errors.some((item) => item.severity === 'error') || undefined}
             aria-autocomplete="list" aria-controls={suggestions.length ? 'v2-code-suggestions' : undefined}
             onScroll={(event) => { if (highlightRef.current) { highlightRef.current.scrollTop = event.currentTarget.scrollTop; highlightRef.current.scrollLeft = event.currentTarget.scrollLeft; } }}
@@ -102,9 +105,12 @@ export function V2CodePanel({
             if (event.ctrlKey && event.key === ' ') { event.preventDefault(); openSuggestions('all'); return; }
             if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'm' && convertFrom) { event.preventDefault(); convertFrom.convert(); return; }
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); onGenerate(); }
-            if (event.key === 'Tab') { event.preventDefault(); insert('  '); }
+            // Tab indents; Shift+Tab and Esc leave (WCAG 2.1.2). Esc lands on Close, so a second Esc closes the panel.
+            if (event.key === 'Tab' && !event.shiftKey) { event.preventDefault(); insert('  '); }
+            if (event.key === 'Escape') { event.preventDefault(); event.currentTarget.closest('.ofk-panel')?.querySelector<HTMLElement>('.ofk-panel-header button')?.focus(); }
             }}
           />
+          <span id="v2-code-keys" className="ofk-visually-hidden">Tab indents. Esc leaves the editor.</span>
           {suggestions.length ? <div id="v2-code-suggestions" role="listbox" className="ofk-v2-code-suggestions">
             {suggestions.slice(0, 12).map((suggestion, index) => <button type="button" role="option" aria-selected={index === suggestionIndex} key={suggestion} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseSuggestion(suggestion)}>{suggestion}</button>)}
           </div> : null}
@@ -120,12 +126,12 @@ export function V2CodePanel({
           ))}
         </div>
         <footer className="ofk-v2-panel-footer ofk-v2-code-footer">
-          <span className="ofk-code-palette-label">Diagram palette</span>
+          <span className="ofk-code-palette-label">Diagram palette, applied on Generate</span>
           <Segmented<DiagramPaletteName> label="Diagram palette" value={palette}
             onChange={onPaletteChange}
             options={DIAGRAM_PALETTES.map(({ id, label, hint }) => ({ value: id, label, title: hint }))} />
           <Button variant="primary" onClick={onGenerate} busy={generating} disabled={generating || !code.trim()}>
-            <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'} <kbd>⌘↵</kbd>
+            <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'} <kbd>{platformKeys('⌘↵')}</kbd>
           </Button>
           {errors.length ? <p>Bad lines are skipped; the rest still renders.</p> : null}
         </footer>

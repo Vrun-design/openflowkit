@@ -38,9 +38,13 @@ const searchIcons = async (query: string, limit: number) => {
   return scored.map(({ source }) => ({ provider: source.provider, slug: source.shapeId, label: source.label, category: source.category }));
 };
 
+/** §0 is the design record (sources we checked), not reference: agents get the language only, as from the MCP package. */
+export const shippedGrammar = (grammar: string): string =>
+  grammar.replace(/^## 0\. [^\n]*\n[\s\S]*?(?=^## )/m, '').replace('§0 prior art · ', '');
+
 let grammarPromise: Promise<string> | null = null;
 const loadGrammar = (): Promise<string> => {
-  grammarPromise ??= import('../../../dsl/grammar.md?raw').then((module) => module.default);
+  grammarPromise ??= import('../../../dsl/grammar.md?raw').then((module) => shippedGrammar(module.default));
   return grammarPromise;
 };
 

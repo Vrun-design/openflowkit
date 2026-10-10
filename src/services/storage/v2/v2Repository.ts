@@ -1,8 +1,8 @@
-import type { JsonObject } from '@/opencanvas/domain/document/json';
 import { UNTITLED_DOCUMENT_NAME } from '@/opencanvas/domain/document/defaults';
 import { migrateSceneDocument } from '@/opencanvas/domain/document/migration';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
-import type { DocumentValidationIssue } from '@/opencanvas/domain/document/validation';
+import { isJsonObject, type JsonObject } from '@/opencanvas/domain/document/json';
+import { validateSceneDocumentV1, type DocumentValidationIssue } from '@/opencanvas/domain/document/validation';
 import { getRecord, requestToPromise } from '../indexedDbHelpers';
 import {
   V2_DOCUMENTS_STORE_NAME,
@@ -11,6 +11,7 @@ import {
   openFlowPersistenceDatabase,
 } from '../indexedDbSchema';
 import {
+  V2DocumentInvalidError,
   V2StorageError,
   V2StorageQuotaError,
   V2StorageUnavailableError,
@@ -44,10 +45,17 @@ export type LoadV2DocumentResult =
   | { readonly status: 'corrupt'; readonly issues: readonly DocumentValidationIssue[] };
 
 export interface V2DocumentRepository {
+  /**
+   * Compare-and-swap: writes `revision` only while the stored revision is still
+   * `expectedRevision` (the one this caller loaded or last wrote; by default the
+   * step before `revision`), or nothing is stored. Otherwise `stale`, nothing written.
+   * Throws `V2StorageError` for a document that would not open again.
+   */
   readonly saveDocument: (
     id: string,
     document: SceneDocumentV1,
-    revision: number
+    revision: number,
+    expectedRevision?: number
   ) => Promise<SaveV2DocumentResult>;
   readonly loadDocument: (id: string) => Promise<LoadV2DocumentResult>;
   /** Every stored document not archived, most recently saved first. */
@@ -149,6 +157,7 @@ async function openV2Database(factory: IDBFactory | null): Promise<IDBDatabase> 
   try {
     return await openFlowPersistenceDatabase(factory);
   } catch (error) {
+    if (error instanceof V2StorageUnavailableError) throw error; // blocked by another tab: its own message
     throw new V2StorageUnavailableError(
       `IndexedDB persistence database could not be opened: ${
         error instanceof Error ? error.message : String(error)
@@ -161,8 +170,15 @@ async function saveRecord(
   database: IDBDatabase,
   id: string,
   document: SceneDocumentV1,
-  revision: number
+  revision: number,
+  expectedRevision: number
 ): Promise<SaveV2DocumentResult> {
+  // Never store what would load as damaged: refuse it while the editor still holds the document.
+  // Checked in place, not through migrateSceneDocument: its copy is most of a save's cost on a large diagram.
+  const valid = isJsonObject(document)
+    ? validateSceneDocumentV1(document)
+    : { success: false as const, issues: [{ path: '$', message: 'Document must contain JSON values only.' }] };
+  if (valid.success === false) throw new V2DocumentInvalidError(valid.issues[0]!);
   // The revision check and both writes share one transaction, so a second
   // tab cannot commit between the read and the write, and an abort leaves
   // neither a partial primary nor a detached last-known-good behind.
@@ -174,13 +190,18 @@ async function saveRecord(
     const documents = transaction.objectStore(V2_DOCUMENTS_STORE_NAME);
     const stored = await requestToPromise(documents.get(id));
     const previous = isV2DocumentRecord(stored) ? stored : null;
-    if (previous && previous.revision >= revision) {
+    if (previous && previous.revision !== expectedRevision) {
       return { status: 'stale', storedRevision: previous.revision };
     }
     // Only a record that still opens may become last-known-good; otherwise a
     // corrupt primary would evict the good fallback it was recovered from.
-    if (previous && openRecord(previous).status !== 'invalid') {
-      await requestToPromise(transaction.objectStore(V2_RECOVERY_STORE_NAME).put(previous));
+    // A damaged one may still hold work its backup lacks: it is set aside, never just overwritten.
+    // ponytail: one damaged slot per document, a later damaged primary replaces it — keep a list if that ever loses work.
+    if (stored !== undefined) {
+      const recovery = transaction.objectStore(V2_RECOVERY_STORE_NAME);
+      await requestToPromise(openRecord(stored).status !== 'invalid'
+        ? recovery.put(stored)
+        : recovery.put({ id: damagedKey(id), damaged: stored, setAsideAt: new Date().toISOString() }));
     }
     const record: V2DocumentRecord = {
       id,
@@ -212,9 +233,25 @@ async function loadRecord(database: IDBDatabase, id: string): Promise<LoadV2Docu
   if (primary.status !== 'invalid') return primary;
 
   const fallback = openRecord(await getRecord(database, V2_RECOVERY_STORE_NAME, id));
-  if (fallback.status === 'ok') return { status: 'recovered', record: fallback.record };
+  if (fallback.status === 'ok') {
+    // Opened under the damaged primary's revision: the next save replaces that record, so it must expect it.
+    const revision = isV2DocumentRecord(stored) ? stored.revision : fallback.record.revision;
+    return { status: 'recovered', record: { ...fallback.record, revision } };
+  }
   if (fallback.status === 'read-only') return fallback;
   return { status: 'corrupt', issues: primary.issues };
+}
+
+/** Where a damaged primary is set aside when a save replaces it; lives beside last-known-good. */
+const damagedKey = (id: string) => `${id}#damaged`;
+
+/** Every stored copy exactly as it is, for a person to take away a document that no longer opens. */
+export async function readRawV2Records(factory: IDBFactory | null, id: string): Promise<{ readonly primary: unknown; readonly lastKnownGood: unknown; readonly damaged: unknown }> {
+  return withDatabase(factory, 'raw read', async (database) => ({
+    primary: await getRecord(database, V2_DOCUMENTS_STORE_NAME, id),
+    lastKnownGood: await getRecord(database, V2_RECOVERY_STORE_NAME, id),
+    damaged: (await getRecord<{ damaged?: unknown }>(database, V2_RECOVERY_STORE_NAME, damagedKey(id)))?.damaged ?? null,
+  }));
 }
 
 // ponytail: reads every whole document to list a few fields — fine for one person's diagrams;
@@ -254,6 +291,7 @@ async function deleteRecord(database: IDBDatabase, id: string): Promise<void> {
   const transaction = database.transaction([V2_DOCUMENTS_STORE_NAME, V2_RECOVERY_STORE_NAME, V2_THUMBNAILS_STORE_NAME], 'readwrite');
   transaction.objectStore(V2_DOCUMENTS_STORE_NAME).delete(id);
   transaction.objectStore(V2_RECOVERY_STORE_NAME).delete(id);
+  transaction.objectStore(V2_RECOVERY_STORE_NAME).delete(damagedKey(id));
   transaction.objectStore(V2_THUMBNAILS_STORE_NAME).delete(id);
   await transactionComplete(transaction);
 }
@@ -293,10 +331,10 @@ async function withDatabase<T>(factory: IDBFactory | null, action: string, run: 
 // store name is the namespace, so keys need no prefix.
 export function createV2Repository(factory: IDBFactory | null): V2DocumentRepository {
   return {
-    saveDocument: async (id, document, revision) => {
+    saveDocument: async (id, document, revision, expectedRevision = revision - 1) => {
       const database = await openV2Database(factory);
       try {
-        return await saveRecord(database, id, document, revision);
+        return await saveRecord(database, id, document, revision, expectedRevision);
       } finally {
         database.close();
       }

@@ -20,6 +20,7 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
 import { decoratePixiText } from './pixiText';
 import { PixiTextPool } from './pixiTextPool';
+import { labelReadable } from './viewportProjection';
 
 function containerShape(kind: PixiContainerNodeVisual['presentation']['kind']): string {
   if (kind === 'group') return 'group-frame';
@@ -56,6 +57,8 @@ export class PixiContainerRenderer {
   readonly labels = new Container();
   private readonly texts = new PixiTextPool();
   private readonly labelByNodeId = new Map<string, Container>();
+  /** Title font size per container, for the on-screen readability check. */
+  private readonly labelFontByNodeId = new Map<string, number>();
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
 
@@ -70,6 +73,7 @@ export class PixiContainerRenderer {
     const canvas = canvasColor === undefined ? undefined : numericColorToHex(canvasColor);
     for (const content of this.labels.removeChildren()) this.texts.recycle(content);
     this.labelByNodeId.clear();
+    this.labelFontByNodeId.clear();
     const records: PixiNodeDebugRecord[] = [];
     const nodeStates = buildNodeStateMap(page);
     for (const node of page.nodes) {
@@ -87,6 +91,7 @@ export class PixiContainerRenderer {
         applyPixiNodeMatrix(label, matrix);
         this.labels.addChild(label);
         this.labelByNodeId.set(node.id, label);
+        this.labelFontByNodeId.set(node.id, style.fontSize);
       }
       records.push({
         id: node.id,
@@ -109,11 +114,12 @@ export class PixiContainerRenderer {
     return this.debugRecords;
   }
 
-  setLabelVisibility(visibleNodeIds: ReadonlySet<string> | null): void {
+  setLabelVisibility(visibleNodeIds: ReadonlySet<string> | null, zoom: number): void {
     this.labels.visible = visibleNodeIds !== null;
     if (!visibleNodeIds) return;
     for (const [nodeId, label] of this.labelByNodeId) {
-      label.visible = visibleNodeIds.has(nodeId) && nodeId !== this.editingNodeId;
+      label.visible = visibleNodeIds.has(nodeId) && nodeId !== this.editingNodeId
+        && labelReadable(zoom, this.labelFontByNodeId.get(nodeId) ?? 14);
     }
   }
 

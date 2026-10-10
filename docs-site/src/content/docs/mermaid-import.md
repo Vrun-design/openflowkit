@@ -3,9 +3,10 @@ title: Mermaid, Structurizr and D2 import
 description: Paste Mermaid, Structurizr DSL or D2 into the code panel, or hand it to an agent tool, and get OpenFlow DSL with every loss reported.
 ---
 
-Mermaid, Structurizr DSL and D2 come in through the code panel (⌥D). Paste the source; when
-the panel recognises the language it offers **Convert**, which rewrites the draft in place as
-OpenFlow DSL. Agents skip the panel: `create_diagram`, `update_diagram` and
+Mermaid, Structurizr DSL and D2 come in through the code panel (⌥C). Paste the source; when
+the panel recognises the language it offers **Convert** (`⌘⇧M`), which rewrites the draft in
+place as OpenFlow DSL. Mermaid pasted straight onto the canvas (`⌘V`) is converted and drawn
+in place, with the code panel open on the converted text. Agents skip the panel: `create_diagram`, `update_diagram` and
 `validate_openflow_dsl` take the same text and answer with `converted.dsl` and
 `converted.losses` ([MCP Server](/mcp-server/)).
 
@@ -36,11 +37,13 @@ for example a sequence fragment that has to be flattened, or an arrow whose head
 survive. The converted text plus its diagnostics are what you edit next; the original paste is
 not kept.
 
-## The conversion is one-way
+## Going back to Mermaid
 
-There is no Mermaid, Structurizr or D2 export. OpenFlowKit compiles DSL to the canvas and to SVG, PNG, JSON and
-motion formats; it does not emit Mermaid. If a round-trip with Mermaid is a hard requirement,
-edit in the original language and paste again after changes.
+**Copy as Mermaid** in the Export panel writes a flowchart or sequence diagram made from code
+back out as Mermaid text, and lists anything Mermaid cannot carry. Other families, Structurizr
+and D2 have no export: OpenFlowKit compiles DSL to the canvas and to SVG, PNG, JSON and motion
+formats. If a round-trip with one of those is a hard requirement, edit in the original language
+and paste again after changes.
 
 ## Where to go next
 

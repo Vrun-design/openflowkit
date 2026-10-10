@@ -10,6 +10,28 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Map mode.** A Canvas | Map switch on every document (`M`) draws the architecture model as boxes that open in
+  place: Top level, One level in or All levels; arrow keys walk, Enter opens, Escape backs out, ⌘F finds. An arrow
+  lists the relations (or, on a repo map, the `file:line` evidence) behind it. Edit as drawing (⇧M) copies the map to
+  an ordinary page in one undo step. Browsing never changes the document.
+- **Repo maps and repo → diagram.** `#/map/github/<owner>/<repo>` (or the "Map a GitHub repo" field on an empty
+  canvas) reads a public repo in the browser from GitHub and maps it; `#/from/github/<owner>/<repo>` opens it as a C4
+  model, evidence links pinned to the commit read. The address parser takes `owner/repo`, github.com URLs with or
+  without `https://` and `www.`, `/tree/` and `/blob/` links, `.git` and `git@` remotes. An optional GitHub token stays in the tab and
+  goes to `api.github.com` only.
+- **C4 views are pages.** Every view of an architecture workspace (and of an imported Structurizr workspace) is its
+  own page, grouped by level; regenerating matches pages by stable id.
+- **Encrypted share links.** Copy share link encrypts the document in the browser; the share Worker stores only
+  ciphertext, and the key stays in the link's `#` fragment. Read-only for viewers; Delete link removes it.
+- **PR diagrams Action** (`action/`): comments on a pull request with node/connector counts, the DSL diff and drift,
+  and refreshes stale committed SVGs.
+- **Copy as Mermaid** in the Export panel, for flowchart and sequence diagrams, listing what Mermaid cannot carry.
+- **Find on canvas** (⌘F): step through matches with Enter / Shift+Enter; Escape restores the selection and view.
+- **Claude Code and Codex plugins** (`plugin/`, marketplace in `.claude-plugin/`): the MCP server plus the diagram skill.
+- Pasting Mermaid onto the canvas (⌘V) converts it and draws it in place, with its source open in the code panel.
+- Saves are compare-and-swap: a second tab that saved first shows "Another tab saved first" with Reload and Save as
+  copy. A damaged diagram offers Download raw data.
+
 - CLI: `openflowkit map <dir> [--depth overview|detailed|everything]` prints a repository's parts, files, lines, resolved and unresolved imports, and the folders that import each other. `--html out.html` writes the interactive map as one offline page (no network; evidence links to GitHub only for a github.com checkout root, at the commit HEAD). In a git checkout only tracked files are mapped.
 - MCP (0.2.0): remote MCP Apps endpoint (`start:http`) with render_diagram + inline viewer; stores nothing.
 - **A real home page.** A sidebar with Recents, Starred, Templates and Archive, search (`/`), your starred diagrams,
@@ -22,8 +44,7 @@ This project follows [Semantic Versioning](https://semver.org/).
   action. Import (or drop anywhere) OpenFlowKit `.json` files, or a Mermaid, D2, Structurizr or OpenFlow DSL file,
   which opens drawn. A first visit gets four ways in and the templates as pictures. `N` starts a new diagram.
   In the editor the logo is now the menu, and its first item is Back to home.
-- **Tips at the moment they help.** Draw three shapes and Diagram as code offers to do it from text; paste Mermaid on
-  the canvas and it offers to draw it; select two shapes for the connect shortcut; a first export points at
+- **Tips at the moment they help.** Draw three shapes and Diagram as code offers to do it from text; select two shapes for the connect shortcut; a first export points at
   animation; a growing diagram without an AI key points at the assistant. One a session, each once, never over an
   open panel, Escape closes it.
 
@@ -53,6 +74,18 @@ This project follows [Semantic Versioning](https://semver.org/).
   writes the first page as `<same name>.svg` next to the file and returns its path as `svg`. CLI: `--svg` on
   `convert -o` and `op --doc`; `openflowkit discover --out` now writes `<name>.svg` beside the model too (`--no-svg` to skip). If the SVG
   fails after the file is saved, the save stands: the CLI exits 1 naming the saved path, `openflow_save` returns `svgError`.
+- **MCP (0.2.0, schema change): page-scoped ops take `pageId`** (`update_diagram`, `move`, `style`, `delete`,
+  `add_shape`, joining `create_diagram`, `get_diagram`, `get_document`, `export`, `screenshot`), in file and live mode;
+  a two-page C4 document could not be edited past page 1. `get_syntax`'s `family` is an enum of the families, so an
+  unknown one is an error that lists them (it returned the whole grammar), and works before any document is open.
+  `add_shape`'s `kind` lists `ellipse` once. Without a `documentId`, file mode targets the document opened or created last.
+- **MCP (0.2.0, output change):** `screenshot` and PNG/GIF `export` return the picture as an MCP image block (the JSON
+  keeps a short summary); base64 inside the text was over clients' output cap. `whoami` and `server_info` report
+  `bridge: { port, state }` (`listening`, `paired`, `port-in-use`). `create_diagram` / `update_diagram` refuse DSL with
+  nothing drawable (every line dropped) with its diagnostics, instead of leaving an empty frame.
+- **MCP (0.2.0, schema change): `export` takes an optional `path`** (inside the server's working directory, in file
+  and live mode) and writes the file there, returning `{ saved, bytes, mime }`. An image over 1 MB is not sent as a
+  block; the summary says to pass `path` or a lower scale.
 - **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
   `openflowkit build` site, draw the same icon art as the editor.
 - **The assistant edits hand-drawn shapes, not only diagrams.** "Make the selected box red and move it right" now
@@ -66,6 +99,7 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The code panel (Diagram as code) opens with ⌥C; ⌥A / D / W / S stay align left / right / top / bottom.
 - **A diagram names its document.** Starting from a template, an import or Generate in an untitled document names
   it after the diagram's `title:`, in the same undo step, so Home is not a wall of "Untitled diagram".
 - Home and first paint load less than half the JavaScript they did (566 KB → 231 KB): the v1 importer, the agent
@@ -99,6 +133,22 @@ Their work shipped in v1; v2 is a rewrite, so the code itself did not carry over
 
 ### Fixed
 
+- **MCP server (0.2.0).** Installed bins run: `openflowkit` and `start:http` compared the npm symlink to the real
+  file and silently did nothing (so `openflowkit drift` never failed CI). `validate_openflow_dsl` runs the same
+  parse-and-compile check as `openflowkit validate` (it skipped compiling, so dropped lines passed), and both warn when
+  the first line is a misspelled family (`flowchrt`). `drift_report` / `explain_element` read `architecture.ofk` unless
+  given a `documentId` (they took whichever document was open). The bridge refuses a `Host` other than
+  127.0.0.1/localhost/[::1] on its port (DNS rebinding) and a malformed hello (a phantom editor); the token stays opt-in.
+  Node 20.11+ (it said 18.3), `server_info` lists itself, the shipped grammar drops its research notes, the npm
+  package carries the LICENSE. The editor shows a refused hello as an error and keeps an error up while it retries;
+  "Copy" says when the clipboard refused.
+- **MCP server and agent pairing.** The server exits when its client closes stdin (an orphan kept the bridge port and
+  refused the next pairing). A closed or reloaded editor tab is noticed at once: calls say so instead of hanging 45 s.
+  A second server on a taken port says another server owns it. The Connect panel offers a `claude mcp add` one-liner,
+  says each change is one undo step (not "you review every change"), and shows only the fix for a rejected token.
+- **Ollama:** the provider dialog lists the installed models on open and defaults to one when `gemma4` is not
+  installed; the Think chip is hidden (Ollama is sent no think flag); the OLLAMA_ORIGINS advice shows only on a page
+  not served from localhost.
 - The Docker image's CSP blocked the local agent bridge and custom AI endpoints; it now matches the hosted one.
 - Home asked GitHub for the star count on every visit while rate-limited or offline; a failed lookup now waits a day.
 - **Code panel:** long lines wrap instead of scrolling sideways, with the highlight wrapping at the same places;
@@ -153,7 +203,7 @@ idea: **the text is the hub, and the canvas is a view of it.**
   around obstacles recomputed live, manual waypoints that survive a bound node
   moving, parallel and reverse edges, labels and markers.
 - **Diagram as code.** A forgiving line-oriented DSL with positional attributes,
-  per-line warnings and a deterministic serializer: `serialize(parse(text)) == text`.
+  per-line warnings and a deterministic serializer with one canonical form.
   Eight families — flowchart, architecture, sequence, state, ERD, class, gitgraph,
   mindmap. The grammar is versioned at [`src/dsl/grammar.md`](src/dsl/grammar.md).
 - **Mermaid import** with an honest loss report, and Structurizr → C4 workspaces.

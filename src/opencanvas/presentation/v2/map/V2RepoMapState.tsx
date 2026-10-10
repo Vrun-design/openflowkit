@@ -3,7 +3,8 @@ import { Button, ErrorState, Progress } from '../../design-system';
 import type { RepoMapSource } from '../../../application/map/repoMapSource';
 import { V2StateHero } from '../V2StateHero';
 import { V2StateShell } from '../V2StateShell';
-import { cliCommand, RepoTokenForm } from '../v2RepoProblem';
+import { CliText, cliCommand, RepoTokenForm } from '../v2RepoProblem';
+import { mapRepoPath, MapRepoForm } from './V2MapStart';
 import type { RepoMapState } from './useRepoMap';
 import './map.css';
 
@@ -30,10 +31,13 @@ export function V2RepoMapState({ source, map }: { readonly source: RepoMapSource
   if (map.status === 'problem' && problem) {
     return (
       <V2StateShell testId="v2-map">
-        <ErrorState hero={<V2StateHero kind={problem.hero} />} title={problem.title} description={problem.detail}
+        <ErrorState hero={<V2StateHero kind={problem.hero} />} title={problem.title} description={<CliText text={problem.detail} />}
           {...(problem.askToken
             ? { action: <RepoTokenForm home={home(false)} onSubmit={map.submitToken} /> }
-            : problem.retry ? { onRetry: map.retry, secondary: home(false) } : { action: home(true) })} />
+            : problem.retry ? { onRetry: map.retry, secondary: home(false) }
+              // Not found is most often a typo: the address field comes back with what was asked for, ready to fix.
+              : problem.retype ? { action: <MapRepoForm initial={name} onMapRepo={(ref) => navigate(mapRepoPath(ref))} />, secondary: home(false) }
+                : { action: home(true) })} />
       </V2StateShell>
     );
   }
@@ -41,7 +45,7 @@ export function V2RepoMapState({ source, map }: { readonly source: RepoMapSource
   if (map.status === 'ready' && files === 0) {
     return (
       <V2StateShell testId="v2-map">
-        <ErrorState hero={<V2StateHero kind="no-canvas" />} title="Nothing to map here." description={`${name} has no TypeScript, JavaScript, Python or Go sources the map reads. ${cliCommand('map')}`} action={home(true)} />
+        <ErrorState hero={<V2StateHero kind="no-canvas" />} title="Nothing to map here." description={<CliText text={`${name} has no TypeScript, JavaScript, Python or Go sources the map reads. ${cliCommand('map')}`} />} action={home(true)} />
       </V2StateShell>
     );
   }
@@ -61,15 +65,19 @@ export function V2RepoMapState({ source, map }: { readonly source: RepoMapSource
   return null;
 }
 
-/** Notes over the drawn map: a sampled big repo, and the reading counter while it fills in. */
+/** Notes over the drawn map: the reading counter while it fills in, then how much of a partly read repo is on it. */
 export function V2RepoMapChips({ map, links }: { readonly map: RepoMapState; readonly links?: RepoLinks | null }): React.JSX.Element | null {
-  const { sampled, read, total } = map.progress;
+  const { read, total } = map.progress;
   // Before a map is drawn the state screen has its own counter; an unknown total would read "0 of 0".
   const counting = map.status === 'loading' && (map.model?.stats.files ?? 0) > 0 && total > 0;
-  if (map.status === 'idle' || (!sampled && !links && !counting)) return null;
+  // Said once the read is over: until then the counter is the truth.
+  const sampled = counting ? undefined : map.progress.sampled;
+  const { stale, staleRef } = map.progress;
+  if (map.status === 'idle' || (!sampled && !links && !counting && !stale)) return null;
   return (
     <div className="map-status">
-      {sampled ? <div className="map-chip" role="note">{`Showing ${fmt(sampled.read)} of ${fmt(sampled.total)} files`}</div> : null}
+      {stale ? <div className="map-chip" role="note">{`May be out of date: ${staleRef ? `showing ${staleRef === 'HEAD' ? 'the default branch' : staleRef}, ` : ''}GitHub's limit was reached.`}</div> : null}
+      {sampled ? <div className="map-chip" role="note">{`Read ${fmt(sampled.read)} of ${fmt(sampled.total)}${sampled.truncated ? '+' : ''} files`}</div> : null}
       {links ? (
         <div className="map-chip" role="group" aria-label="Arrows shown">
           <span>{links.all ? `Showing all ${fmt(links.total)} links` : `Showing ${fmt(links.shown)} of ${fmt(links.total)} links`}</span>

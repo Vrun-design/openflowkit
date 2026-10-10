@@ -11,7 +11,7 @@ exports[`repoLook > draws the repo scene at overview 1`] = `
       "width": 135,
     },
     "API server",
-    "[Part · 17 files]
+    "[Module · 17 files]
 server",
   ],
   [
@@ -23,7 +23,7 @@ server",
       "width": 135,
     },
     "Web app",
-    "[Part · 4 files]
+    "[Module · 4 files]
 web",
   ],
   [

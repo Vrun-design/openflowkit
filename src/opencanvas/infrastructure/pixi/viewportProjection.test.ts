@@ -5,7 +5,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
-import { projectSceneViewport, semanticDetailLevel, viewportProjectionEquals } from './viewportProjection';
+import { labelReadable, projectSceneViewport, semanticDetailLevel, viewportProjectionEquals } from './viewportProjection';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 
@@ -75,8 +75,18 @@ describe('viewport scene projection', () => {
 
   it('uses stable semantic zoom tiers', () => {
     expect(semanticDetailLevel(0.34)).toBe('overview');
-    expect(semanticDetailLevel(0.35)).toBe('compact');
-    expect(semanticDetailLevel(0.65)).toBe('full');
+    expect(semanticDetailLevel(0.35)).toBe('full');
+  });
+
+  it('shows a label by its size on screen, not by a fixed zoom', () => {
+    // A 15-node flowchart fitted at 49%: 14 px labels are 6.9 px on screen, still text.
+    expect(labelReadable(0.49, 14)).toBe(true);
+    expect(labelReadable(0.4, 14)).toBe(false);
+    expect(labelReadable(0.5, 12)).toBe(true);
+    expect(labelReadable(0.45, 12)).toBe(false);
+    // A big title stays readable further out.
+    expect(labelReadable(0.36, 18)).toBe(true);
+    expect(labelReadable(0.4, 6 / 0.4)).toBe(true);
   });
 
   it('compares projections by visible identity rather than set instance', () => {

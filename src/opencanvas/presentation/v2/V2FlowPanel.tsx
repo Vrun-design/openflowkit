@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext, IconPlayerTrackPrev, IconX } from '@tabler/icons-react';
 import { Button, Icon, IconButton } from '../design-system';
 import type { FlowPlayback } from './useV2FlowPlayback';
@@ -27,11 +28,14 @@ function stepText(kind: FlowStepKind, label: string | undefined, from?: string, 
  */
 export function V2FlowPanel({ playback, model, onClose, onCopy }: V2FlowPanelProps): React.JSX.Element | null {
   const { flow, flat, stepIndex, step, playing } = playback;
+  // Focus comes along when a flow starts (from the model panel, say), so its keys reach the player.
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => { ref.current?.focus({ preventScroll: true }); }, [flow?.id]);
   if (!flow || !step) return null;
   const total = flat.length;
   const name = (id: string | undefined) => id ? model?.elements.find((element) => element.id === id)?.name ?? id : undefined;
   return (
-    <section className="ofk-v2-flow" aria-label={`Flow ${flow.name}`}>
+    <section ref={ref} tabIndex={-1} className="ofk-v2-flow" aria-label={`Flow ${flow.name}`}>
       <header className="ofk-v2-flow-head">
         <span className="ofk-v2-flow-title">{flow.name}</span>
         <span className="ofk-v2-flow-count" aria-live="polite">

@@ -13,6 +13,7 @@ import { MapPanel } from './MapPanel';
 import { MapToolbar } from './MapToolbar';
 import { Motion } from './motion';
 import { planMotion, type Leaving, type MotionItem } from '../../opencanvas/application/map/planMotion';
+import { depthOf as dialOf, presetOpen, sameOpen } from '../../opencanvas/application/map/mapNavigation';
 import { canOpen, layerCounts, neighbours, oneLevel, pickNeighbour, revealExpanded, type Dir, type Selected } from '../../opencanvas/application/map/navigate';
 import { usePointerCamera } from './usePointerCamera';
 import { MapLinksChip } from './MapLinksChip';
@@ -113,9 +114,11 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
     const l = live.current;
     l.model = model;
     const keep = [...l.expanded].filter((id) => model.nodes[id] && canOpen(model, id));
-    const saved = savedDepth(storageKey);
-    l.expanded = l.touched ? new Set(keep) : presets(model)[saved ?? 'overview'];
-    if (!l.touched) setDepth(saved ?? 'overview');
+    const saved = savedDepth(storageKey) ?? 'overview';
+    // The CLI's --depth opens the engine's preset (a small map's overview opens its top level); the dial names what
+    // that is in the editor's words, so it reads One level in there, not Top level.
+    l.expanded = l.touched ? new Set(keep) : presets(model)[saved];
+    if (!l.touched) setDepth(sameOpen(presetOpen(model, saved), l.expanded) ? saved : dialOf(model, l.expanded));
     setSelected((s) => (s?.type === 'node' && !model.nodes[s.id] ? null : s));
     relayout(model, l.expanded, null, !l.touched && !l.userCam);
   }, [model, storageKey, relayout]);
@@ -169,7 +172,8 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
 
   /** Toolbar and panel actions hand focus back to the map, so its keys keep working. */
   const focusMap = () => { window.setTimeout(() => svgRef.current?.focus(), 60); };
-  const chooseDepth = (d: Depth) => { saveDepth(storageKey, d); apply(presets(live.current.model)[d], null, d, false); focusMap(); };
+  // The editor's dial: Top level is every box shut.
+  const chooseDepth = (d: Depth) => { saveDepth(storageKey, d); apply(presetOpen(live.current.model, d), null, d, false); focusMap(); };
   const toggleLayer = (kind: LinkKind) => {
     const l = live.current;
     const next = new Set(l.off);

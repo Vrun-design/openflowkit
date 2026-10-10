@@ -1,4 +1,6 @@
 import { useId } from 'react';
+import { MAP_KIND_WORDS as KIND } from '../../../../dsl/map/repoLook';
+import { MAP_LINK_WORDS } from './V2MapToolbar';
 import type { AggEdge, MapModel } from '../../../../dsl/map/types';
 
 export interface MapBoxData {
@@ -15,7 +17,6 @@ export interface MapBoxData {
 }
 
 const plural = (n: number, word: string) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
-const KIND = { part: 'Part', folder: 'Folder', file: 'File', group: 'Group', external: 'Outside service', more: 'More' } as const;
 
 /** A selected repo box: what it is, where it lives on GitHub, what it talks to and what is inside. Repo text is React text only. */
 export function MapBoxPanel({ model, id, edges, pathLink, onSelect, onSelectArrow }: MapBoxData): React.JSX.Element | null {
@@ -36,7 +37,7 @@ export function MapBoxPanel({ model, id, edges, pathLink, onSelect, onSelectArro
           const out = e.from === id;
           return <li key={e.key}>
             <button type="button" className="ofk-v2-map-link" onClick={() => onSelectArrow(e.key)}>{out ? '→' : '←'} {name(out ? e.to : e.from)}</button>
-            <span className="ofk-v2-model-hint">{e.kind} · {e.count}</span>
+            {' '}<span className="ofk-v2-model-hint">{MAP_LINK_WORDS[e.kind]} · {e.count}</span>
           </li>;
         })}
       </ul> : null}

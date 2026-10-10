@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { shortcutGroups } from './v2Shortcuts';
+import { platformKeys, shortcutGroups } from './v2Shortcuts';
 
 // The `?` cheatsheet is only useful if it is complete: every key literal the
 // dispatcher compares against must appear as a token in v2Shortcuts.ts. Adding
@@ -26,6 +26,28 @@ describe('keyboard cheatsheet', () => {
     expect(shortcutGroups('Ctrl').some(({ rows }) => rows.some(({ keys }) => keys.startsWith('Ctrl')))).toBe(true);
   });
 
+  it('binds each key combination to one action', () => {
+    // These keys mean different things by context, by design: Enter opens a model view, renames or places the
+    // armed shape; the arrows nudge, step a playing flow or move on Map; Space pans or steps a flow; A arms the
+    // connector or connects two selected shapes; Esc leaves the code editor, then closes the panel.
+    const contextual = new Set(['enter', 'arrows', '←', '→', 'space', 'a', 'esc']);
+    const owner = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const { label, keys } of shortcutGroups('⌘').flatMap(({ rows }) => rows)) {
+      const [first, ...rest] = keys.split(' / ');
+      const shared = first!.split(' + ').slice(0, -1);
+      for (const alternative of [first!.split(' + ').at(-1)!, ...rest]) {
+        const parts = alternative.split(' + ');
+        const key = parts.at(-1)!.toLowerCase();
+        if (contextual.has(key)) continue;
+        const combo = [...new Set([...shared, ...parts.slice(0, -1)])].sort().concat(key).join(' + ');
+        if (owner.has(combo)) clashes.push(`${combo}: ${owner.get(combo)} / ${label}`);
+        owner.set(combo, label);
+      }
+    }
+    expect(clashes).toEqual([]);
+  });
+
   it('groups unique rows with labels and key strings', () => {
     const groups = shortcutGroups();
     expect(groups.length).toBeGreaterThanOrEqual(5);
@@ -39,5 +61,12 @@ describe('keyboard cheatsheet', () => {
         expect(row.label.length).toBeGreaterThan(2);
       }
     }
+  });
+
+  it('writes Mac glyph hints the way other platforms name the keys', () => {
+    expect(platformKeys('⌘⌥]', true)).toBe('⌘⌥]');
+    expect(platformKeys('⌘⌥]', false)).toBe('Ctrl+Alt+]');
+    expect(platformKeys('⇧⌘Z', false)).toBe('Shift+Ctrl+Z');
+    expect(platformKeys('⌘⇧⌫', false)).toBe('Ctrl+Shift+Backspace');
   });
 });

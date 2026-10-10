@@ -14,14 +14,12 @@ export class DocumentStore {
   private readonly documents = new Map<string, SceneDocumentV1>();
 
   create(name: string): SceneDocumentV1 {
-    const document = createAgentDocument(name);
-    this.documents.set(document.id, document);
-    return document;
+    return this.track(createAgentDocument(name));
   }
 
   get(id: string): SceneDocumentV1 {
     const document = this.documents.get(id);
-    if (!document) throw new RangeError(`Document "${id}" is not open. Use diagram_create or diagram_open first.`);
+    if (!document) throw new RangeError(`Document "${id}" is not open. Use openflow_create or openflow_open first.`);
     return document;
   }
 
@@ -33,8 +31,18 @@ export class DocumentStore {
     return [...this.documents.values()];
   }
 
+  /** The document opened or created last: what a call without a documentId means. */
+  latest(): SceneDocumentV1 | undefined {
+    return this.list().at(-1);
+  }
+
   async open(path: string): Promise<SceneDocumentV1> {
-    const document = parseAgentDocument(JSON.parse(await readFile(path, 'utf8')));
+    return this.track(parseAgentDocument(JSON.parse(await readFile(path, 'utf8'))));
+  }
+
+  /** Re-inserting moves a re-opened document to the end, so `latest` sees it. */
+  private track(document: SceneDocumentV1): SceneDocumentV1 {
+    this.documents.delete(document.id);
     this.documents.set(document.id, document);
     return document;
   }

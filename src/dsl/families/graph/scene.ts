@@ -9,7 +9,7 @@ import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
 import { attrsToJson, type CanonicalAttribute } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize, wrapPolicyFor } from '../../sizing';
-import { slugifyDslId } from '../../text';
+import { labelKey, slugifyDslId } from '../../text';
 import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import {
   COLOR_WORDS, DIRECTIONS, SHAPE_WORDS, attributeSlot,
@@ -101,7 +101,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     // written bare, then a label.
     const existing = reference.id
       ? byExplicitId.get(reference.id)
-      : byExplicitId.get(reference.label) ?? byName.get(reference.label);
+      : byExplicitId.get(reference.label) ?? byName.get(labelKey(reference.label));
     if (existing) {
       mergeAttributes(existing.entries, canonicalizeAttributes(reference.attributes, diagnostics));
       if (warnOnMove && parentId !== null && existing.parentId !== null && existing.parentId !== parentId) {
@@ -118,7 +118,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     nodes.push(draft);
     byExplicitId.set(id, draft);
     // A bare label means the first node that carries it.
-    if (!byName.has(reference.label)) byName.set(reference.label, draft);
+    if (!byName.has(labelKey(reference.label))) byName.set(labelKey(reference.label), draft);
     return draft;
   };
 

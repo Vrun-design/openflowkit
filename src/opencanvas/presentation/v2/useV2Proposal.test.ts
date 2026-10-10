@@ -68,7 +68,8 @@ describe('useV2Proposal', () => {
     expect(command).toMatchObject({ kind: 'batch', attribution: { kind: 'agent', source: 'byok' } });
     expect((command as { commands: readonly DocumentCommand[] }).commands.map(({ kind }) => kind)).toEqual(['set-page']);
     expect(result.current.phase).toBe('applied');
-    expect(announce).toHaveBeenCalledWith('Applied 1 change. Press ⌘Z to undo.');
+    // jsdom is not a Mac: the hint names Ctrl.
+    expect(announce).toHaveBeenCalledWith('Applied 1 change. Press Ctrl+Z to undo.');
     sync();
     expect(result.current.undoable).toBe(true);
     // Double-click on Apply: the same proposal id never commits twice.

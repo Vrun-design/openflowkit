@@ -1,3 +1,4 @@
+import { iconAliases } from '@/dsl/autoIcon';
 import type { IconChoice } from '@/opencanvas/domain/nodes/iconNode';
 import { SVG_SOURCES } from './providerCatalog';
 import { TABLER_PROVIDER } from './tablerIcons';
@@ -34,28 +35,35 @@ export interface IconSearchResult {
   readonly total: number;
 }
 
+const compact = (text: string): string => text.replace(/[\s._-]+/g, '');
+
 function score(haystack: string, query: string): number {
   if (haystack === query) return 0;
   if (haystack.startsWith(query)) return 1;
   if (haystack.includes(`-${query}`) || haystack.includes(` ${query}`)) return 2;
-  if (haystack.includes(query)) return 3;
+  // "route53" finds route-53: spaces and dashes don't count inside a match.
+  const bare = compact(query);
+  if (bare && compact(haystack).includes(bare)) return 3;
   return -1;
 }
 
-// Ranks by how the query sits in the id, then the label, then the category:
-// exact > prefix > word start > substring. Pure and synchronous over the
+// A name the auto-icon table knows ("eks", "alb") ranks first; then by how
+// the query sits in the id, the label, the category: exact > prefix > word
+// start > substring. Pure and synchronous over the
 // bundled catalog so typing never waits on I/O. `scope` is a pack id, a
 // cloud vendor id, 'cloud' (all vendors) or 'all'.
 export function searchIcons(query: string, scope = 'all', limit = 160): IconSearchResult {
   const q = query.trim().toLowerCase().replace(/\s+/g, '-');
   const pool = SVG_SOURCES.filter((source) => inScope(source.provider, scope));
+  const aliased = new Set(q ? iconAliases(q) : []);
   const ranked: { readonly source: (typeof SVG_SOURCES)[number]; readonly rank: number }[] = [];
   for (const source of pool) {
     if (!q) { ranked.push({ source, rank: 0 }); continue; }
     const byId = score(source.shapeId, q);
     const byLabel = score(source.label.toLowerCase(), q);
     const byCategory = score(source.category.toLowerCase(), q);
-    const best = Math.min(...[byId, byLabel, byCategory === -1 ? -1 : byCategory + 4].filter((value) => value >= 0));
+    const best = aliased.has(`${source.provider}/${source.shapeId}`) ? -1
+      : Math.min(...[byId, byLabel, byCategory === -1 ? -1 : byCategory + 4].filter((value) => value >= 0));
     if (Number.isFinite(best)) ranked.push({ source, rank: best });
   }
   if (q) ranked.sort((a, b) => a.rank - b.rank || a.source.shapeId.length - b.source.shapeId.length);

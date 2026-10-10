@@ -22,8 +22,9 @@ export function useV2FeatureTips(options: V2FeatureTipsOptions) {
   const [tip, setTip] = useState<V2TipId | null>(null);
 
   const offer = (id: V2TipId) => {
-    // Never over an open panel, menu or dialog (passive tooltips do not count).
-    if (tip || !mayShowTip(id) || document.querySelector('.ofk-panel, .ofk-popover:not([data-passive]), dialog[open]')) return;
+    // Never over an open panel, menu or dialog (passive tooltips do not count), nor where nothing can be edited (Map, a shared view),
+    // nor on a phone, where it would cover the toolbar.
+    if (tip || readOnly || window.innerWidth < 600 || !mayShowTip(id) || document.querySelector('.ofk-panel, .ofk-popover:not([data-passive]), dialog[open]')) return;
     recordTipShown(id);
     setTip(id);
     announce(`Tip: ${V2_TIPS[id].title}. ${V2_TIPS[id].text}`);
@@ -31,12 +32,12 @@ export function useV2FeatureTips(options: V2FeatureTipsOptions) {
 
   // Using a feature is learning it: its tip is never offered after that.
   useEffect(() => {
-    if (workspace === 'code') { markTipSeen('code'); markTipSeen('mermaid'); }
+    if (workspace === 'code') markTipSeen('code');
     if (workspace === 'assistant') markTipSeen('assistant');
     if (motionOpen) markTipSeen('motion');
     if (page && page.connectors.length > 0) markTipSeen('connect');
-    if (blocked) setTip(null);
-  }, [workspace, motionOpen, page, blocked]);
+    if (blocked || readOnly) setTip(null);
+  }, [workspace, motionOpen, page, blocked, readOnly]);
 
   // Offered after a quiet moment: drawing a shape opens its label editor a render later, and a tip
   // must not appear just to be swept away by it. Any change in between restarts the wait.
@@ -50,7 +51,7 @@ export function useV2FeatureTips(options: V2FeatureTipsOptions) {
     const timer = window.setTimeout(() => offer(id), TIP_QUIET_MS);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- offer reads the latest state; these are the triggers
-  }, [page, selectedCount, rendererReady, blocked, aiConfigured]);
+  }, [page, readOnly, selectedCount, rendererReady, blocked, aiConfigured]);
 
   return { tip, offer, dismiss: () => setTip(null) };
 }

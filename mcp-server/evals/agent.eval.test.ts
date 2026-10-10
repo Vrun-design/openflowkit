@@ -113,6 +113,7 @@ describe('agent eval — create, read, update, screenshot', () => {
         documentId: 'live-doc', documentName: 'Live checkout', pageId: 'p1',
         pages: [{ pageId: 'p1', name: 'Page 1', nodes: 3, connectors: 2 }], lastSeenMs: 10,
       }),
+      status: () => ({ port: 43119, state: 'paired' }),
       call: async (op: string) => {
         seen.push(op);
         if (op === 'create_diagram') return { frameId: 'dsl-live', family: 'flowchart', nodes: 3, connectors: 2 };
@@ -130,9 +131,11 @@ describe('agent eval — create, read, update, screenshot', () => {
     expect(read.edited).toBe(false);
     const updated = await a.call('update_diagram', { frameId: 'dsl-live', dsl: FLOWCHART }) as { nodes: number };
     expect(updated.nodes).toBe(5);
-    const shot = await a.call('screenshot', { frameId: 'dsl-live', scale: 2 }) as { base64: string; mime: string };
-    expect(shot).toMatchObject({ mime: 'image/png' });
-    expect(shot.base64.startsWith('iVBOR')).toBe(true);
+    // The picture is an MCP image block the client shows; the text names it.
+    const shot = await a.client.callTool({ name: 'screenshot', arguments: { frameId: 'dsl-live', scale: 2 } });
+    const [summary, image] = shot.content as { text?: string; type: string; data?: string; mimeType?: string }[];
+    expect(JSON.parse(summary!.text!)).toMatchObject({ mime: 'image/png', image: 1 });
+    expect(image).toMatchObject({ type: 'image', mimeType: 'image/png', data: expect.stringMatching(/^iVBOR/) });
     expect(seen).toEqual(['create_diagram', 'get_diagram', 'update_diagram', 'screenshot']);
 
     const whoami = await a.call('whoami') as { mode: string; editor: { documentId: string } };

@@ -32,6 +32,10 @@ test('right-click export scopes to the element, its subtree, and a lone connecti
     await panel.getByRole('button', { name: 'Download', exact: true }).click();
     const file = await pending;
     expect(file.suggestedFilename()).toMatch(/\.svg$/);
+    // The panel stays open for the next variant; Done hands the canvas back.
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(panel).toBeHidden();
     return (await (await file.createReadStream()).toArray()).join('');
   };
 

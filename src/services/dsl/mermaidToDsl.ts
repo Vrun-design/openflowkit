@@ -1,5 +1,5 @@
 import type { DslDiagnostic } from '../../dsl/ast';
-import { slugifyDslId } from '../../dsl/text';
+import { quote, slugifyDslId } from '../../dsl/text';
 import { detectMermaidDiagramType } from '../mermaid/detectDiagramType';
 import { parseMermaidByType } from '../mermaid/parseMermaidByType';
 
@@ -11,11 +11,12 @@ export interface MermaidConversion {
   dsl: string;
   /** One line per construct the DSL cannot express. */
   losses: string[];
+  /** W180 per loss; E004 per Mermaid line that could not be read — then the caller keeps the Mermaid text. */
   diagnostics: DslDiagnostic[];
 }
 
 /** An adapter's result; mermaidToDsl attaches the diagnostics. */
-type Converted = Omit<MermaidConversion, 'diagnostics'> & { readonly lossLines?: readonly number[] };
+type Converted = Omit<MermaidConversion, 'diagnostics'> & { readonly lossLines?: readonly number[]; readonly errors?: readonly DslDiagnostic[] };
 
 export interface MermaidConversionError {
   error: string;
@@ -103,12 +104,6 @@ const SHAPE_WORDS: Readonly<Record<string, string>> = {
 };
 
 const DIRECTION_WORDS: Readonly<Record<string, string>> = { TB: 'down', TD: 'down', LR: 'right', RL: 'left', BT: 'up' };
-
-function quote(value: string): string {
-  return /(?:->|-->|<->|:|=|,|\[|\]|\{|\}|\/\/|;|\n)/.test(value) || value.trim() !== value
-    ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
-    : value;
-}
 
 /** DSL-canonical reference: slug ids, `id = Label` only when the slug differs. */
 function nodeName(node: FlowNode): string {
@@ -638,6 +633,15 @@ function lossDiagnostic(line: number, message: string): DslDiagnostic {
   return { code: 'W180', severity: 'warning', line, col: 1, endCol: 1, message, source: 'parse' };
 }
 
+/** `classDef hot fill:#f96,stroke:#333` / `style a …`: every property but `fill` has no DSL form. */
+function styleLosses(text: string): Array<{ line: number; message: string }> {
+  return text.split('\n').flatMap((line, index) => {
+    const match = /^\s*(classDef|style)\s+(\S+)\s+(.+)$/.exec(line);
+    const dropped = match ? match[3]!.split(',').map((part) => part.split(':')[0]!.trim()).filter((key) => key && key !== 'fill') : [];
+    return dropped.length ? [{ line: index + 1, message: `${match![1]} ${match![2]}: ${dropped.join(', ')} not kept (only fill converts)` }] : [];
+  });
+}
+
 /**
  * A line that opens with a Mermaid shape — `root((x))`, `id[Label]`, `::icon(…)`,
  * `service api(server)[API]`. Our DSL puts a space before `[attrs]` and keeps
@@ -760,15 +764,22 @@ export function mermaidToDsl(source: string): MermaidConversion | MermaidConvers
     })();
     if (!converted) return unsupported;
     // Parser findings keep their Mermaid line; adapter losses are about the whole diagram (line 1).
-    const found = (parsed.structuredDiagnostics ?? []).filter((item) => item.message);
+    // An edge the parser could not read is an error: converting around it would invent or drop nodes.
+    const all = (parsed.structuredDiagnostics ?? []).filter((item) => item.message);
+    const isBrokenEdge = (item: (typeof all)[number]) => /invalid mermaid edge/i.test(item.message);
+    const found = [...all.filter((item) => !isBrokenEdge(item)), ...styleLosses(text)];
     return {
       dsl: converted.dsl,
       losses: [...converted.losses, ...found.map((item) => item.message)],
       lossLines: [...converted.losses.map(() => 1), ...found.map((item) => item.line ?? 1)],
+      errors: all.filter(isBrokenEdge).map((item): DslDiagnostic => ({
+        code: 'E004', severity: 'error', line: item.line ?? 1, col: 1, endCol: 1, source: 'parse',
+        message: `Mermaid line ${item.line ?? 1}: ${item.message.replace(/ at line \d+/, '')}; fix it, then convert`,
+      })),
     };
   })();
   if ('error' in conversion) return conversion;
-  const { losses, lossLines = [] } = conversion;
+  const { losses, lossLines = [], errors = [] }: Converted = conversion;
   // Front matter's title, or a diagram's own `title …` line, becomes our `title:` directive; config has no DSL form.
   const title = front.title ?? (/^(flowchart|graph)\b/i.test(header) ? undefined : /^\s*title:?\s+(.+?)\s*$/m.exec(text)?.[1]);
   const dsl = title && !/^title:/m.test(conversion.dsl)
@@ -777,6 +788,6 @@ export function mermaidToDsl(source: string): MermaidConversion | MermaidConvers
   return {
     dsl,
     losses: [...dropped, ...losses],
-    diagnostics: [...dropped.map((message) => lossDiagnostic(1, message)), ...losses.map((message, index) => lossDiagnostic(lossLines[index] ?? 1, message))],
+    diagnostics: [...errors, ...dropped.map((message) => lossDiagnostic(1, message)), ...losses.map((message, index) => lossDiagnostic(lossLines[index] ?? 1, message))],
   };
 }

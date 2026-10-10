@@ -7,6 +7,13 @@ describe('opInputShape', () => {
     expect(Object.keys(opInputShape(findAgentOp('add_shape')!))).toEqual(expect.arrayContaining(['kind', 'label', 'x', 'y']));
   });
 
+  it('lists each add_shape kind once', () => {
+    const kinds = (opInputShape(findAgentOp('add_shape')!).kind as unknown as { _def: { innerType: { options: { options?: string[] }[] } } })
+      ._def.innerType.options[0]!.options!;
+    expect(kinds).toContain('ellipse');
+    expect(kinds).toEqual([...new Set(kinds)]);
+  });
+
   it('gives every op with input its fields', () => {
     const empty = AGENT_OPS.filter((op) => Object.keys(opInputShape(op)).length === 0).map((op) => op.name);
     expect(empty).toEqual(AGENT_OPS.filter((op) => Object.keys((op.schema as { shape?: object }).shape ?? { refined: true }).length === 0).map((op) => op.name));

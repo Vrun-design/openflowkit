@@ -14,6 +14,7 @@ function setup() {
   ] }).pages[0];
   const getNodeLabelScreenBounds = vi.fn(() => new DOMRect(10, 20, 100, 40));
   const commit = vi.fn();
+  const amendNewNode = vi.fn();
   const focusCanvas = vi.fn();
   const announce = vi.fn();
   const hostRef = { current: { getNodeLabelScreenBounds } as unknown as PixiRendererHost };
@@ -24,13 +25,14 @@ function setup() {
         page,
         camera,
         commit,
+        amendNewNode,
         announce,
         focusCanvas,
       }),
     { initialProps: { camera: DEFAULT_CANVAS_CAMERA, page } }
   );
   act(() => hook.result.current.openEditor('n1'));
-  return { ...hook, page, getNodeLabelScreenBounds, commit, focusCanvas, announce };
+  return { ...hook, page, getNodeLabelScreenBounds, commit, amendNewNode, focusCanvas, announce };
 }
 
 describe('useV2LabelEditing', () => {
@@ -88,26 +90,35 @@ describe('useV2LabelEditing', () => {
     expect(result.current.editing).toMatchObject({ nodeId: 'n1', value: 'Q' });
   });
 
-  it('empty commit or cancel on a new node deletes it instead of leaving a blank node', () => {
-    const { result, commit } = setup();
+  it('empty commit or cancel on a new node deletes it, folded into the step that made it', () => {
+    const { result, commit, amendNewNode } = setup();
     act(() => result.current.openEditor('new', { isNew: true }));
     act(() => result.current.commitLabel('   '));
-    expect(commit).toHaveBeenCalledOnce();
-    expect(commit.mock.calls[0][0]).toMatchObject({ kind: 'batch', label: 'Delete selection' });
+    expect(amendNewNode).toHaveBeenCalledOnce();
+    expect(amendNewNode.mock.calls[0]).toMatchObject(['new', { kind: 'batch', label: 'Delete selection' }]);
     act(() => result.current.openEditor('new', { isNew: true }));
     act(() => result.current.cancelEdit());
-    expect(commit).toHaveBeenCalledTimes(2);
+    expect(amendNewNode).toHaveBeenCalledTimes(2);
     // Existing nodes keep the old label on cancel and are never deleted.
     act(() => result.current.openEditor('n1'));
     act(() => result.current.cancelEdit());
-    expect(commit).toHaveBeenCalledTimes(2);
+    expect(amendNewNode).toHaveBeenCalledTimes(2);
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('a new node\'s first label joins the step that created it: one undo for create + type', () => {
+    const { result, commit, amendNewNode } = setup();
+    act(() => result.current.openEditor('new', { isNew: true }));
+    act(() => result.current.commitLabel('Hello'));
+    expect(amendNewNode.mock.calls[0]).toMatchObject(['new', { kind: 'set-node' }]);
+    expect(commit).not.toHaveBeenCalled();
   });
 });
 
  it('keeps derived architecture view titles out of the generic label editor', () => {
     const node = createTestNode('view', {kind: 'frame', content: {label: 'container of Shop'}, metadata: {dsl: {viewTitle: 'container of Shop'}}});
     const announce = vi.fn();
-    const {result} = renderHook(() => useV2LabelEditing({page: createTestDocument({nodes: [node]}).pages[0]!, hostRef: {current: null}, camera: DEFAULT_CANVAS_CAMERA, commit: vi.fn(), announce, focusCanvas: vi.fn()}));
+    const {result} = renderHook(() => useV2LabelEditing({page: createTestDocument({nodes: [node]}).pages[0]!, hostRef: {current: null}, camera: DEFAULT_CANVAS_CAMERA, commit: vi.fn(), amendNewNode: vi.fn(), announce, focusCanvas: vi.fn()}));
     act(() => result.current.openEditor(node.id));
     expect(result.current.editing).toBeNull();
     expect(announce).toHaveBeenCalledWith('This title comes from the architecture view. Edit it in diagram source.');

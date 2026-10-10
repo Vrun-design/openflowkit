@@ -16,7 +16,7 @@ layout; the canvas edits the same document; and an agent can drive either throug
 
 - **Draw it.** Shapes, connectors, ink, images and charts, with the [canvas](/canvas-basics/)
   shortcuts a drawing tool should have.
-- **Write it.** [OpenFlow DSL](/openflow-dsl/) in the code panel: nine diagram families, one
+- **Write it.** [OpenFlow DSL](/openflow-dsl/) in the code panel: ten diagram families, one
   forgiving grammar, per-line diagnostics.
 - **Delegate it.** Connect an [MCP client](/mcp-server/) or bring your own key to
   [generate from a prompt](/ai-generation/); both paths produce the same DSL through the same

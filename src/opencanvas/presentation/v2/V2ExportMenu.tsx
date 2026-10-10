@@ -113,7 +113,7 @@ export function V2ExportMenu({
   const caption = empty
     ? effectiveScope === 'selection' ? 'Select an element or connection first.' : 'Nothing to export here — this page has no shapes.'
     : effectiveScope === 'selection' ? selectionCaption(selectedNodeIds, selectedConnectorIds, activePage)
-      : effectiveScope === 'document' ? 'Every page as its own file.' : 'The current page.';
+      : effectiveScope === 'document' ? (effectiveFormat === 'pdf' ? 'Every page, one sheet each.' : 'Every page as its own file.') : 'The current page.';
 
   // Only while the panel is open: closed, it costs nothing per render.
   const mermaidTarget = open ? mermaidFrame(activePage, selectedNodeIds) : null;
@@ -124,15 +124,22 @@ export function V2ExportMenu({
   async function copyMermaid(): Promise<void> {
     const scene = mermaidTarget && activePage ? frameScene(activePage, mermaidTarget.id) : null;
     if (!mermaidTarget || !scene || mermaidReason) return;
+    let mermaid: ReturnType<typeof diagramToMermaid>;
     try {
-      const { text, losses } = diagramToMermaid(scene);
-      await navigator.clipboard.writeText(text);
-      const name = (typeof mermaidTarget.content.label === 'string' && mermaidTarget.content.label) || dslFrameMeta(mermaidTarget).title || `${mermaidFamily} diagram`;
-      onToast(`Copied “${name}” as Mermaid.`, 'success', losses.length > 0 ? { description: mermaidLossSummary(losses) } : undefined);
-      onClose();
+      mermaid = diagramToMermaid(scene);
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'This diagram could not be written as Mermaid.', 'danger');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(mermaid.text);
     } catch {
       onToast('This browser blocked copying to the clipboard.', 'danger');
+      return;
     }
+    const name = (typeof mermaidTarget.content.label === 'string' && mermaidTarget.content.label) || dslFrameMeta(mermaidTarget).title || `${mermaidFamily} diagram`;
+    onToast(`Copied “${name}” as Mermaid.`, 'success', mermaid.losses.length > 0 ? { description: mermaidLossSummary(mermaid.losses) } : undefined);
+    onClose();
   }
 
   async function run(action: 'download' | 'copy-png'): Promise<void> {
@@ -153,7 +160,7 @@ export function V2ExportMenu({
         downloadV2Export(files);
         onToast(files.length > 1 ? `${files.length} files downloaded.` : `${files[0]?.filename ?? 'Export'} downloaded.`, 'success');
       }
-      onClose();
+      // The panel stays open: the next variant (theme, scale, format) is one click, not a reopen.
     } catch (error) {
       onToast(error instanceof Error ? error.message : 'Export failed.', 'danger');
     } finally {
@@ -174,9 +181,10 @@ export function V2ExportMenu({
         copied ? { description: 'Anyone with the link can open it. The key never leaves the link.' } : { description: link.url, persistent: true });
       onClose();
     } catch (error) {
-      if (error instanceof ShareError && error.code === 'too-large') {
-        onToast('Too big to share as a link.', 'danger', {
-          description: 'Links hold up to 1 MB. Send the file instead.', persistent: true,
+      if (error instanceof ShareError && (error.code === 'too-large' || error.code === 'unreachable')) {
+        const tooLarge = error.code === 'too-large';
+        onToast(tooLarge ? 'Too big to share as a link.' : error.message, 'danger', {
+          description: tooLarge ? 'Links hold up to 1 MB. Send the file instead.' : 'Try again in a minute, or send the file instead.', persistent: true,
           action: { label: 'Download file', onClick: () => { void buildV2Export({ document: whole, format: 'json', scope: 'document', pageId }).then(downloadV2Export); } },
         });
       } else {
@@ -226,24 +234,24 @@ export function V2ExportMenu({
           options={[
             { value: 'selection', label: 'Selection', disabled: !hasSelection, title: 'Select shapes first' },
             { value: 'page', label: 'Page' },
-            { value: 'document', label: 'All pages', title: 'One file per page' },
+            { value: 'document', label: 'All pages', title: effectiveFormat === 'pdf' ? 'One sheet per page' : 'One file per page' },
           ]} />
         {effectiveFormat === 'png' ? (
           <Segmented<'1' | '2'> label="Resolution" value={scale === 2 ? '2' : '1'}
             onChange={(value) => setScale(value === '2' ? 2 : 1)}
             options={[{ value: '1', label: '1×' }, { value: '2', label: '2×' }]} />
         ) : null}
+        {effectiveFormat !== 'json' ? (
+          <Segmented<V2ExportTheme> label="Theme" value={theme} onChange={setTheme}
+            options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'print', label: 'Print' }]} />
+        ) : null}
         {effectiveFormat === 'png' || effectiveFormat === 'svg' ? (
-          <>
-            <Segmented<V2ExportTheme> label="Theme" value={theme} onChange={setTheme}
-              options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'print', label: 'Print' }]} />
-            <Segmented<'opaque' | 'transparent'> label="Background" value={transparent ? 'transparent' : 'opaque'}
-              onChange={(value) => setTransparent(value === 'transparent')}
-              options={[
-                { value: 'opaque', label: 'Canvas', title: 'Theme background' },
-                { value: 'transparent', label: 'Transparent', title: 'No background rectangle' },
-              ]} />
-          </>
+          <Segmented<'opaque' | 'transparent'> label="Background" value={transparent ? 'transparent' : 'opaque'}
+            onChange={(value) => setTransparent(value === 'transparent')}
+            options={[
+              { value: 'opaque', label: 'Canvas', title: 'Theme background' },
+              { value: 'transparent', label: 'Transparent', title: 'No background rectangle' },
+            ]} />
         ) : null}
         <div className="ofk-v2-export-actions">
           <Button variant="primary" disabled={busy || empty} onClick={() => { void run('download'); }}>
@@ -273,7 +281,7 @@ export function V2ExportMenu({
                 </Button>
               ) : null}
             </div>
-            <p className="ofk-caption">Share link: the whole document, encrypted in your browser. Read-only for viewers. “Delete link” removes the newest one made here.{' '}
+            <p className="ofk-caption">Share link: the whole document, encrypted in your browser. Read-only for viewers.{latestLink ? ' “Delete link” removes the newest one made here.' : ''}{' '}
               <a href="https://docs.openflowkit.com/share-links/" target="_blank" rel="noreferrer">How share links work</a></p>
           </>
         ) : null}

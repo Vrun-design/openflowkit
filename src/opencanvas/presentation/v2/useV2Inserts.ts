@@ -12,7 +12,7 @@ import { FRAME_PRESET_SPECS, createPresetFrame, enclosingPresetFrame, nextFrameS
 import { nextNodeZIndex } from '../../domain/nodes/shapeNode';
 import { createWidgetNode } from '../../domain/nodes/widgetNode';
 import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
-import { reparentByPosition } from '../../domain/transforms/containment';
+import { adoptOnInsert } from '../../domain/transforms/containment';
 import type { V2Tool } from './V2CreationToolbar';
 import { mintV2Id } from './v2Document';
 import type { V2ChartKind, V2MoreItem } from './v2ToolCatalog';
@@ -45,8 +45,10 @@ export function useV2Inserts(options: V2InsertsOptions) {
     const centre = centreWorld();
     return { x: centre.x - size.width / 2, y: centre.y - size.height / 2 };
   };
+  // Dropped at the viewport centre over a frame, it joins that frame, like a drag would.
   const insertAndSelect = (page: ScenePage, node: SceneNode, label: string, message: string, also: readonly DocumentCommand[] = []) => {
-    const insert: DocumentCommand = { kind: 'insert-node', id: `create-node:${node.id}`, label, pageId: page.id, index: page.nodes.length, node };
+    const placed = node.parentId === null ? adoptOnInsert(page, node) : node;
+    const insert: DocumentCommand = { kind: 'insert-node', id: `create-node:${node.id}`, label, pageId: page.id, index: page.nodes.length, node: placed };
     commit(also.length ? { kind: 'batch', id: insert.id, label, commands: [insert, ...also] } : insert);
     applyConnectorSelection([]);
     applySelection(replaceSelection([node.id]));
@@ -73,12 +75,10 @@ export function useV2Inserts(options: V2InsertsOptions) {
     const node = slot && frame
       ? createWidgetNode(page, { id, widget, at: slot.at, size: slot.size, parentId: frame.id })
       : createWidgetNode(page, { id, widget, at: centredAt(spec.size) });
-    // Dropped at the viewport centre over a frame, it joins that frame, like a drag would.
-    const placed = frame ? node : reparentByPosition({ ...page, nodes: [...page.nodes, node] }, [node])[0]!;
     // A frame that is full grows to hold the pick, in the same undo step (the DSL does too).
     const grow = frame && slot && slot.frameHeight > frame.size.height
       ? { ...frame, size: { ...frame.size, height: slot.frameHeight } } : null;
-    insertAndSelect(page, placed, `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`,
+    insertAndSelect(page, node, `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`,
       grow && frame ? [{ kind: 'set-node', id: `grow-frame:${frame.id}`, label: 'Grow frame', pageId: page.id, before: frame, after: grow }] : []);
   };
   const insertSticky = () => {

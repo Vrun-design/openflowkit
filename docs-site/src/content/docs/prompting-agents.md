@@ -52,7 +52,7 @@ what the diagram *means*, not what syntax to use:
 
 - Manual coordinates. Layout is computed; use `pin` and `rank` only when you truly need to
   nudge the result.
-- Features that do not exist: collaboration, share links, embedded viewers, slide decks,
+- Features that do not exist: real-time collaboration, embedded viewers, slide decks,
   camera paths. Ask for what is in the [feature inventory](/introduction/) — or better, in the
   pages of this site.
 

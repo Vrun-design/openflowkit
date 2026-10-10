@@ -31,10 +31,11 @@
   "files": [
     "dist",
     "data",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=18.3"
+    "node": ">=20.11"
   },
   "scripts": {
     "build:icons": "node scripts/build-icon-manifest.mjs",

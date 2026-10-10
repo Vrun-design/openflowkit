@@ -22,6 +22,9 @@ test('a view opened from Pages lands readable, and Zoom to fit still fits everyt
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
   await page.getByRole('button', { name: 'Close panel' }).click();
   await expect.poll(() => zoomOf(page, 'shop')).toBeGreaterThan(0);
+  // The new model already lands readable: zoom out first, so only a landing on the switch brings it back up.
+  await page.keyboard.press('ControlOrMeta+Minus');
+  await expect.poll(() => zoomOf(page, 'shop')).toBeLessThan(READABLE_ZOOM - 0.01);
   const before = await zoomOf(page, 'shop');
   await page.getByRole('button', { name: /^Pages/ }).click();
   await page.getByRole('dialog', { name: 'Pages', exact: true }).getByRole('button', { name: /^Services: Shop/ }).click();

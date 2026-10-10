@@ -30,7 +30,24 @@ export function saveMode(documentId: string, mode: 'canvas' | 'map'): void {
   try { localStorage.setItem(modeKey(documentId), mode); } catch { /* storage blocked: the choice lasts this visit */ }
 }
 
-/** A deleted document leaves no choice behind. */
+const seenKey = (documentId: string): string => `ofk.map-seen:${documentId}`;
+
+/** True the first time a document's map is entered in this browser (then never again): its overview opens once. */
+export function firstMapVisit(documentId: string): boolean {
+  try {
+    if (localStorage.getItem(seenKey(documentId)) !== null) return false;
+    localStorage.setItem(seenKey(documentId), '1');
+    return true;
+  } catch { return false; }
+}
+
+/** A deleted document leaves no choice behind: neither its mode, its first visit nor any page's open boxes. */
 export function forgetMapMode(documentId: string): void {
-  try { localStorage.removeItem(modeKey(documentId)); } catch { /* storage blocked */ }
+  try {
+    localStorage.removeItem(modeKey(documentId));
+    localStorage.removeItem(seenKey(documentId));
+    const pages = openKey(documentId, '');
+    const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i));
+    for (const key of keys) if (key?.startsWith(pages)) localStorage.removeItem(key);
+  } catch { /* storage blocked */ }
 }

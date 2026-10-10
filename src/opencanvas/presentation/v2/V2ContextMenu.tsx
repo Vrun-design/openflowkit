@@ -4,6 +4,7 @@ import type { ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleConnectorCommand } from '../../domain/commands/styleConnectors';
 import type { useV2EditActions } from './useV2EditActions';
+import { platformKeys } from './v2Shortcuts';
 
 export type ContextMenuTarget =
   | { readonly kind: 'nodes'; readonly x: number; readonly y: number }
@@ -66,11 +67,11 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
         data-context-menu onPointerDown={(event) => event.stopPropagation()}>
         {target.kind === 'canvas' ? (
           <>
-            <MenuItem onSelect={() => { void actions.pasteClipboard(); }} shortcut="⌘V" disabled={!edit || !actions.hasClipboard()}>Paste</MenuItem>
-            <MenuItem onSelect={props.onSelectAll} shortcut="⌘A">Select all</MenuItem>
+            <MenuItem onSelect={() => { actions.pasteShapes(); }} shortcut={platformKeys('⌘V')} disabled={!edit || !actions.hasClipboard()}>Paste</MenuItem>
+            <MenuItem onSelect={props.onSelectAll} shortcut={platformKeys('⌘A')}>Select all</MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={props.onZoomToFit} shortcut="⇧1">Zoom to fit</MenuItem>
-            <MenuItem onSelect={props.onZoomTo100} shortcut="⌘1">Zoom to 100%</MenuItem>
+            <MenuItem onSelect={props.onZoomToFit} shortcut={platformKeys('⌘0')}>Zoom to fit</MenuItem>
+            <MenuItem onSelect={props.onZoomTo100} shortcut={platformKeys('⌘1')}>Zoom to 100%</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onToggleGrid} checked={props.showGrid} keepOpen>Show grid</MenuItem>
             <MenuItem onSelect={props.onToggleSnap} checked={props.snapToGrid} keepOpen>Snap to grid</MenuItem>
@@ -79,19 +80,19 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
           <>
             {props.modelElement ? <MenuItem onSelect={() => props.onEditInModel?.()}>Edit in model</MenuItem> : null}
             {props.inMap.onShowOnCanvas ? <MenuItem onSelect={props.inMap.onShowOnCanvas}>Show on canvas</MenuItem> : null}
-            {props.inMap.onCopyToCanvas ? <MenuItem onSelect={props.inMap.onCopyToCanvas} shortcut="⇧M">Edit as drawing</MenuItem> : null}
-            <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>
+            {props.inMap.onCopyToCanvas ? <MenuItem onSelect={props.inMap.onCopyToCanvas} shortcut={platformKeys('⇧M')}>Edit as drawing</MenuItem> : null}
+            <MenuItem onSelect={props.onZoomToSelection} shortcut={platformKeys('⇧2')}>Zoom to selection</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onExport}>Export…</MenuItem>
             {props.modelElement ? <>
               <MenuSeparator />
-              <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut="⌘⇧⌫" disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
+              <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut={platformKeys('⌘⇧⌫')} disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
             </> : null}
           </>
         ) : target.kind === 'connector' ? (
           <>
-            <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit}>Edit label</MenuItem>
-            <MenuItem onSelect={props.onInspect} shortcut="⌥I">Inspect</MenuItem>
+            <MenuItem onSelect={props.onEditLabel} shortcut={platformKeys('↵')} disabled={!edit}>Edit label</MenuItem>
+            <MenuItem onSelect={props.onInspect} shortcut={platformKeys('⌥I')}>Inspect</MenuItem>
             <MenuSeparator />
             <MenuSubmenu label="Path">
                 {(['orthogonal', 'direct', 'bezier'] as const).map((route) => (
@@ -107,23 +108,23 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             </MenuItem>
             <MenuSeparator />
             <MenuSubmenu label="Style">
-                <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
-                <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+                <MenuItem onSelect={actions.copyStyle} shortcut={platformKeys('⌘⌥C')}>Copy style</MenuItem>
+                <MenuItem onSelect={actions.pasteStyle} shortcut={platformKeys('⌘⌥V')} disabled={!edit}>Paste style</MenuItem>
             </MenuSubmenu>
             <MenuSeparator />
             <MenuItem onSelect={props.onExport}>Export…</MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={actions.deleteSelection} shortcut="⌫" disabled={!edit} danger>Delete</MenuItem>
+            <MenuItem onSelect={actions.deleteSelection} shortcut={platformKeys('⌫')} disabled={!edit} danger>Delete</MenuItem>
           </>
         ) : (
           <>
-            <MenuItem onSelect={actions.cutSelection} shortcut="⌘X" disabled={!edit}>Cut</MenuItem>
-            <MenuItem onSelect={actions.copySelection} shortcut="⌘C">Copy</MenuItem>
-            <MenuItem onSelect={actions.duplicateSelection} shortcut="⌘D" disabled={!edit}>Duplicate</MenuItem>
+            <MenuItem onSelect={actions.cutSelection} shortcut={platformKeys('⌘X')} disabled={!edit}>Cut</MenuItem>
+            <MenuItem onSelect={actions.copySelection} shortcut={platformKeys('⌘C')}>Copy</MenuItem>
+            <MenuItem onSelect={actions.duplicateSelection} shortcut={platformKeys('⌘D')} disabled={!edit}>Duplicate</MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
-            <MenuItem onSelect={props.onInspect} shortcut="⌥I">Inspect</MenuItem>
-            {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut="⌥D">Edit as code</MenuItem> : null}
+            <MenuItem onSelect={props.onEditLabel} shortcut={platformKeys('↵')} disabled={!edit || many}>Edit label</MenuItem>
+            <MenuItem onSelect={props.onInspect} shortcut={platformKeys('⌥I')}>Inspect</MenuItem>
+            {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut={platformKeys('⌥C')}>Edit as code</MenuItem> : null}
             {props.diagramIcons ? (
               <MenuItem onSelect={props.onToggleDiagramIcons} checked={props.diagramIcons.on} disabled={!edit}>Icons from labels</MenuItem>
             ) : null}
@@ -138,23 +139,23 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
                   <MenuItem onSelect={() => props.onDrillInto?.()}>Open {props.modelElement.name} view</MenuItem>
                 ) : null}
                 <MenuItem onSelect={() => props.onUnplace?.()} disabled={!edit || many}>Unplace from this view</MenuItem>
-                <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut="⌘⇧⌫" disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
+                <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut={platformKeys('⌘⇧⌫')} disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
               </>
             ) : null}
             <MenuSubmenu label="Style">
-                <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
-                <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+                <MenuItem onSelect={actions.copyStyle} shortcut={platformKeys('⌘⌥C')}>Copy style</MenuItem>
+                <MenuItem onSelect={actions.pasteStyle} shortcut={platformKeys('⌘⌥V')} disabled={!edit}>Paste style</MenuItem>
             </MenuSubmenu>
             <MenuSeparator />
             <MenuSubmenu label="Reorder">
-                <MenuItem onSelect={() => actions.reorderSelection('front')} shortcut="⌘⌥]" disabled={!edit}>Bring to front</MenuItem>
-                <MenuItem onSelect={() => actions.reorderSelection('forward')} shortcut="⌘]" disabled={!edit}>Bring forward</MenuItem>
-                <MenuItem onSelect={() => actions.reorderSelection('backward')} shortcut="⌘[" disabled={!edit}>Send backward</MenuItem>
-                <MenuItem onSelect={() => actions.reorderSelection('back')} shortcut="⌘⌥[" disabled={!edit}>Send to back</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('front')} shortcut={platformKeys('⌘⌥]')} disabled={!edit}>Bring to front</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('forward')} shortcut={platformKeys('⌘]')} disabled={!edit}>Bring forward</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('backward')} shortcut={platformKeys('⌘[')} disabled={!edit}>Send backward</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('back')} shortcut={platformKeys('⌘⌥[')} disabled={!edit}>Send to back</MenuItem>
             </MenuSubmenu>
             <MenuSubmenu label="Transform">
-                <MenuItem onSelect={() => actions.flipSelection('horizontal')} shortcut="⇧H" disabled={!edit}>Flip horizontal</MenuItem>
-                <MenuItem onSelect={() => actions.flipSelection('vertical')} shortcut="⇧V" disabled={!edit}>Flip vertical</MenuItem>
+                <MenuItem onSelect={() => actions.flipSelection('horizontal')} shortcut={many ? platformKeys('⇧H') : undefined} disabled={!edit}>Flip horizontal</MenuItem>
+                <MenuItem onSelect={() => actions.flipSelection('vertical')} shortcut={many ? platformKeys('⇧V') : undefined} disabled={!edit}>Flip vertical</MenuItem>
                 {many ? <>
                   {(['left', 'center-x', 'right', 'top', 'center-y', 'bottom'] as const).map((mode, index) =>
                     <MenuItem key={mode} onSelect={() => actions.alignSelection(mode)} disabled={!edit}>
@@ -164,16 +165,16 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
                   <MenuItem onSelect={() => actions.distributeSelection('vertical')} disabled={!edit || props.selectionCount < 3}>Distribute vertically</MenuItem>
                 </> : null}
             </MenuSubmenu>
-            {many ? <MenuItem onSelect={actions.groupSelection} shortcut="⌘G" disabled={!edit}>Group</MenuItem> : null}
-            <MenuItem onSelect={actions.wrapInSection} shortcut="⌘⌥G" disabled={!edit}>Wrap in section</MenuItem>
-            {actions.canUngroup() ? <MenuItem onSelect={actions.ungroupSelection} shortcut="⌘⇧G" disabled={!edit}>Ungroup</MenuItem> : null}
+            {many ? <MenuItem onSelect={actions.groupSelection} shortcut={platformKeys('⌘G')} disabled={!edit}>Group</MenuItem> : null}
+            <MenuItem onSelect={actions.wrapInSection} shortcut={platformKeys('⌘⌥G')} disabled={!edit}>Wrap in section</MenuItem>
+            {actions.canUngroup() ? <MenuItem onSelect={actions.ungroupSelection} shortcut={platformKeys('⌘⇧G')} disabled={!edit}>Ungroup</MenuItem> : null}
             <MenuSeparator />
             <MenuItem onSelect={props.onExport}>Export…</MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>
+            <MenuItem onSelect={props.onZoomToSelection} shortcut={platformKeys('⇧2')}>Zoom to selection</MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={actions.toggleLock} shortcut="⌘L" disabled={!edit}>Lock / Unlock</MenuItem>
-            <MenuItem onSelect={actions.deleteSelection} shortcut="⌫" disabled={!edit} danger>Delete</MenuItem>
+            <MenuItem onSelect={actions.toggleLock} shortcut={platformKeys('⌘L')} disabled={!edit}>Lock / Unlock</MenuItem>
+            <MenuItem onSelect={actions.deleteSelection} shortcut={platformKeys('⌫')} disabled={!edit} danger>Delete</MenuItem>
           </>
         )}
       </Menu>

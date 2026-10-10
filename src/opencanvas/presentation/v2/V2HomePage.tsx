@@ -16,6 +16,7 @@ import { describeStorageFailure } from '../../../services/storage/v2/v2Errors';
 import { UNTITLED_DOCUMENT_NAME } from '../../domain/document/defaults';
 import { isV1Backup, openV1Backup, readV1ImportMarker, runV1Import } from '../../../services/storage/v2/v1Import';
 import { documentFromFileText } from '../../../services/storage/v2/openDocumentFile';
+import { buildV2Thumbnail } from './v2Thumbnail';
 import { STARTER_TEMPLATES } from '../../../agent/starterTemplates';
 import { ISSUE_URL } from '../../application/ai/assistantReport';
 import { forgetMapMode } from './map/mapDepth';
@@ -266,6 +267,8 @@ export function V2HomePage(): React.JSX.Element {
     }
     let imported = 0;
     const problems: string[] = [];
+    // What opening a file had to change (a v1 edge to a deleted shape), said once per file.
+    const notes: string[] = [];
     for (const file of usable.filter((candidate) => importKind(candidate.name) === 'json')) {
       try {
         const text = await file.text();
@@ -278,21 +281,28 @@ export function V2HomePage(): React.JSX.Element {
           continue;
         }
         const opened = documentFromFileText(text, mintV2Id('doc'));
-        if ('error' in opened) { problems.push(file.name); continue; }
+        if ('error' in opened) { problems.push(`${file.name}: ${opened.error}`); continue; }
+        if (opened.notice) notes.push(`${file.name}: ${opened.notice}`);
         const untitled = !opened.document.name || opened.document.name === UNTITLED_DOCUMENT_NAME;
         const document = untitled ? { ...opened.document, name: file.name.replace(/\.json$/i, '') } : opened.document;
         const saved = await repository.saveDocument(document.id, document, 1);
-        if (saved.status === 'saved') imported += 1; else problems.push(file.name);
+        if (saved.status === 'saved') {
+          imported += 1;
+          // The card's preview is otherwise drawn only by an editor save; it arrives after the list.
+          void buildV2Thumbnail(document).then((thumbnail) => repository.saveThumbnail(document.id, thumbnail))
+            .then(() => repository.listThumbnails()).then(setThumbnails, () => undefined);
+        } else problems.push(file.name);
       } catch {
         problems.push(file.name);
       }
     }
     refresh();
     if (sources.length) problems.push(`${plural(sources.length, 'text file')} (drop those one at a time)`);
+    const description = [...(problems.length ? [`Couldn’t open ${problems.join('; ')}`.replace(/([^.])$/, '$1.')] : []), ...notes].join(' ');
     toast({
-      tone: problems.length ? (imported ? 'warning' : 'danger') : 'success',
+      tone: problems.length ? (imported ? 'warning' : 'danger') : notes.length ? 'warning' : 'success',
       title: imported ? `Imported ${plural(imported, 'diagram')}.` : 'Nothing was imported.',
-      ...(problems.length ? { description: `Couldn’t open: ${problems.join(', ')}.` } : {}),
+      ...(description ? { description } : {}),
     });
   }
 
@@ -689,7 +699,7 @@ export function V2HomePage(): React.JSX.Element {
 
         <Dialog open={deleting !== null} onClose={() => setDeleting(null)}
           title={deleting?.length === 1 ? `Delete “${deleting[0]!.name}” forever?` : `Delete ${plural(deleting?.length ?? 0, 'diagram')} forever?`}
-          description="They’re removed from this browser. This can’t be undone."
+          description={`${deleting?.length === 1 ? 'It’s' : 'They’re'} removed from this browser. This can’t be undone.`}
           actions={<>
             <Button variant="quiet" onClick={() => setDeleting(null)}>Cancel</Button>
             <Button variant="danger" onClick={() => void confirmDelete()}>Delete forever</Button>

@@ -1,10 +1,11 @@
 import type { CompileWorkspaceResult } from '../../../dsl/compile';
-import { projectRelations } from '../../../dsl/model/predicates';
-import { elementColorKey, relationConnector } from '../../../dsl/families/architecture/scene';
+import { projectRelations, selectViewElements } from '../../../dsl/model/predicates';
+import { contentColor, elementColorKey, elementNode, relationConnector } from '../../../dsl/families/architecture/scene';
 import {
-  archFrameOf, archModelFromJson, archModelOfPage, archViewIdOfPage, createArchIndex, elementDescendantIds, placedElementId,
+  archFrameOf, archModelFromJson, archModelOfPage, archViewIdOfPage, createArchIndex, elementAncestors, elementDescendantIds, flattenFlowSteps, placedElementId,
 } from '../../../dsl/model/model';
-import { ELEMENT_KIND_LABEL, type ElementKind, type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type FlowStep } from '../../../dsl/model/types';
+import { ELEMENT_KIND_LABEL, type ElementKind, type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type ArchView, type FlowStep } from '../../../dsl/model/types';
+import { nodePaletteName, paletteResolver } from '../../domain/nodes/nodePalette';
 import { createDefaultSceneLayer } from '../../domain/document/defaults';
 import type { BatchDocumentCommand, DocumentCommand } from '../../domain/commands/types';
 import type { JsonObject } from '../../domain/document/json';
@@ -80,7 +81,8 @@ function pageWithModel(page: ScenePage, model: ArchModel, resolveIcon?: IconReso
       // A kind-coloured card follows its element: an authored colour replaces it, a new kind brings its own.
       if (content.archKindColor !== undefined) {
         const { key, fromKind } = elementColorKey(element);
-        if (key) content.color = key; else delete content.color;
+        delete content.customColor;
+        if (key) Object.assign(content, contentColor(key)); else delete content.color;
         if (key && fromKind) content.archKindColor = key; else delete content.archKindColor;
       }
     }
@@ -264,8 +266,9 @@ export function buildWorkspacePagesCommand(
 }
 
 /**
- * Where the first generated view lives once `command` (from `buildWorkspacePagesCommand`) is
- * applied: the page to open and the frame to fit. A view is matched by its model's pages, so two
+ * Where the generated views land once `command` (from `buildWorkspacePagesCommand`) is applied:
+ * the page to open and the frame to fit. `stayOnPageId`, the page Generate ran from, wins when it
+ * holds one of these views; else the first view. A view is matched by its model's pages, so two
  * models' landscapes never cross.
  */
 export function firstViewLanding(
@@ -273,9 +276,13 @@ export function firstViewLanding(
   workspace: CompileWorkspaceResult,
   command: DocumentCommand | null,
   replaceFrameId?: string,
+  stayOnPageId?: string,
 ): { readonly pageId: string; readonly frameId: string } | null {
   const first = workspace.views[0]!;
-  const held = workspaceViewFrames(document, workspace, replaceFrameId)[0];
+  const frames = workspaceViewFrames(document, workspace, replaceFrameId);
+  const here = stayOnPageId ? frames.find((entry) => entry?.pageId === stayOnPageId) : undefined;
+  if (here) return here;
+  const held = frames[0];
   if (held) return held;
   const pages = (command?.kind === 'batch' ? command.commands : command ? [command] : [])
     .flatMap((entry) => entry.kind === 'insert-page' ? [entry.page] : entry.kind === 'set-page' ? [entry.after] : []);
@@ -380,11 +387,108 @@ export interface ArchElementAdd {
   readonly name: string;
 }
 
+/** The view a page draws, the implicit landscape included. */
+function pageView(model: ArchModel, page: ScenePage): ArchView | null {
+  const viewId = archViewIdOfPage(page);
+  if (!viewId) return null;
+  return model.views.find((view) => view.id === viewId)
+    ?? (viewId === 'view:landscape' ? { id: viewId, kind: 'landscape', name: 'Landscape', rules: [] } : null);
+}
+
+const PLACE_GAP = 40;
+const PLACE_PADDING = { top: 72, right: 28, bottom: 52, left: 28 };
+
 /**
- * Add an element to the model of `pageId` (placed on no view); every page sharing that model follows, so Map and the
- * code text show it. Returns the new id with the command, so the panel can select it.
+ * Draws one element on a view page without touching its layout: inside the element's nearest boundary on the page
+ * (else the view frame), below what is already there, with connectors to the elements already drawn. Every node on
+ * the page keeps its transform; only the boundaries it lands in grow to hold it. An element whose parent is drawn as
+ * a plain card is left off (drawing it would turn that card into a boundary: a Generate does that).
  */
-export function buildArchElementAddCommand(document: SceneDocumentV1, pageId: string, add: ArchElementAdd): { command: DocumentCommand; id: string } | null {
+function placeElement(page: ScenePage, model: ArchModel, elementId: string, resolveIcon?: IconResolver): ScenePage {
+  const frame = archFrameOf(page);
+  const index = createArchIndex(model);
+  const element = index.byId.get(elementId);
+  const byElement = new Map(page.nodes.flatMap((node) => {
+    const id = placedElementId(node);
+    return id ? [[id, node] as const] : [];
+  }));
+  if (!frame || !element || byElement.has(elementId)) return page;
+  let parent: SceneNode = frame;
+  for (const ancestor of elementAncestors(index, elementId)) {
+    const drawn = byElement.get(ancestor);
+    if (!drawn) continue;
+    if (drawn.kind !== 'frame') return page;
+    parent = drawn;
+    break;
+  }
+  const siblings = page.nodes.filter((node) => node.parentId === parent.id);
+  const x = siblings.length ? Math.min(...siblings.map((node) => node.transform.translation.x)) : PLACE_PADDING.left;
+  const y = siblings.length ? Math.max(...siblings.map((node) => node.transform.translation.y + node.size.height)) + PLACE_GAP : PLACE_PADDING.top;
+  const swatch = paletteResolver(nodePaletteName(frame));
+  const zIndex = Math.max(0, ...page.nodes.map((node) => node.zIndex)) + 1;
+  const drawn = elementNode(element, parent.id, zIndex, { origin: { x, y }, swatch, ...(resolveIcon ? { resolveIcon } : {}) });
+  // Grow each container up the chain just enough to hold what is inside it; positions never move.
+  const sizes = new Map<string, SceneNode['size']>();
+  const byId = new Map(page.nodes.map((node) => [node.id, node]));
+  let child: Pick<SceneNode, 'transform' | 'size'> = drawn;
+  for (let host: SceneNode | undefined = parent; host; host = host.parentId ? byId.get(host.parentId) : undefined) {
+    const size = sizes.get(host.id) ?? host.size;
+    const width = Math.max(size.width, child.transform.translation.x + child.size.width + PLACE_PADDING.right);
+    const height = Math.max(size.height, child.transform.translation.y + child.size.height + PLACE_PADDING.bottom);
+    if (width === size.width && height === size.height) break;
+    sizes.set(host.id, { width, height });
+    child = { transform: host.transform, size: { width, height } };
+  }
+  const nodeOf = (id: string) => (id === elementId ? drawn : byElement.get(id))?.id ?? id;
+  const shown = new Set([...byElement.keys(), elementId]);
+  const drawnConnectors = new Set(page.connectors.map((connector) => connector.id));
+  const connectors = projectRelations(index, shown)
+    .filter((projection) => projection.from === elementId || projection.to === elementId)
+    .map((projection) => {
+      const connector = relationConnector(projection.relation, projection.from, projection.to, projection.implied);
+      return { ...connector, source: { ...connector.source, nodeId: nodeOf(projection.from) }, target: { ...connector.target, nodeId: nodeOf(projection.to) } };
+    })
+    .filter((connector) => !drawnConnectors.has(connector.id));
+  return {
+    ...page,
+    nodes: [...page.nodes.map((node) => sizes.has(node.id) ? { ...node, size: sizes.get(node.id)! } : node), drawn],
+    connectors: [...page.connectors, ...connectors],
+  };
+}
+
+/**
+ * Every page of the model takes `next`; `elementId` is drawn, in place, on each view that now selects it
+ * and does not draw it yet. One batch: one undo step.
+ */
+function modelChangeCommand(
+  pages: readonly ModelPage[], next: ArchModel, elementId: string, id: string, label: string, resolveIcon?: IconResolver,
+): DocumentCommand {
+  const index = createArchIndex(next);
+  const commands = pages.map(({ page }) => {
+    const view = pageView(next, page);
+    const updated = pageWithModel(page, next);
+    const shows = view !== null && selectViewElements(index, view).shown.has(elementId);
+    return setPage(page, shows ? placeElement(updated, next, elementId, resolveIcon) : updated, id, label);
+  });
+  return commands.length === 1 ? commands[0]! : batch(id, label, commands);
+}
+
+/**
+ * Add an element to the model of `pageId`; every page sharing that model follows, so Map and the code text show it,
+ * and each view whose rules include it draws it without moving anything else. Returns the new id with the command.
+ */
+/** `slug` under `parentId`, suffixed -2, -3… until no element has it. */
+function freeId(model: ArchModel, parentId: string | null | undefined, slug: string): string {
+  const taken = new Set(model.elements.map((element) => element.id));
+  const base = `${parentId ? `${parentId}.` : ''}${slug}`;
+  let id = base;
+  for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+  return id;
+}
+
+export function buildArchElementAddCommand(
+  document: SceneDocumentV1, pageId: string, add: ArchElementAdd, resolveIcon?: IconResolver,
+): { command: DocumentCommand; id: string } | null {
   const name = add.name.trim();
   const page = document.pages.find((candidate) => candidate.id === pageId);
   const model = page ? archModelOfPage(page) : null;
@@ -393,14 +497,73 @@ export function buildArchElementAddCommand(document: SceneDocumentV1, pageId: st
   const pages = model.elements.length ? modelPages(document, model.elements[0]!.id) : [{ page, model, viewId: archViewIdOfPage(page) }];
   const parent = add.parentId ? model.elements.find((element) => element.id === add.parentId) : null;
   if (add.parentId && (!parent || defaultChildKind(parent.kind) === null)) return null;
-  const taken = new Set(model.elements.map((element) => element.id));
-  const base = `${parent ? `${parent.id}.` : ''}${slugifyDslId(name)}`;
-  let id = base;
-  for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+  const id = freeId(model, parent?.id, slugifyDslId(name));
   const element: ArchElement = { id, kind: add.kind, name, parent: parent?.id ?? null, tags: [], links: [] };
   const next: ArchModel = { ...model, elements: [...model.elements, element] };
-  const commands = pages.map((entry) => setPage(entry.page, pageWithModel(entry.page, next), `model-add:${id}`, 'Add element'));
-  return { command: commands.length === 1 ? commands[0]! : batch(`model-add:${id}`, 'Add element', commands), id };
+  return { command: modelChangeCommand(pages, next, id, `model-add:${id}`, 'Add element', resolveIcon), id };
+}
+
+/** Includes an element in the view `pageId` draws (a view with no rules keeps its implicit `include *`), drawn in place. */
+export function buildArchAddToViewCommand(document: SceneDocumentV1, pageId: string, elementId: string, resolveIcon?: IconResolver): DocumentCommand | null {
+  const page = document.pages.find((candidate) => candidate.id === pageId);
+  const model = page ? archModelOfPage(page) : null;
+  const view = model && page ? model.views.find((candidate) => candidate.id === archViewIdOfPage(page)) : undefined;
+  if (!model || !view || !model.elements.some((element) => element.id === elementId)) return null;
+  const rules = [...(view.rules.length ? view.rules : [{ op: 'include', subject: '*' } as const]), { op: 'include', subject: elementId } as const];
+  const next: ArchModel = { ...model, views: model.views.map((candidate) => candidate === view ? { ...view, rules } : candidate) };
+  return modelChangeCommand(modelPages(document, elementId), next, elementId, `model-view-add:${elementId}`, 'Add to view', resolveIcon);
+}
+
+/**
+ * A rename of an element still on the id "Add" gave it (`new-container`, `new-system-2`) moves the id to the new
+ * name's slug while no relation, child, view scope or flow uses it; view rules that name it follow. Once referenced,
+ * ids stay stable. Every page keeps its layout: the drawn node takes the new id in place. Null keeps the id.
+ */
+export function buildArchRenameReslugCommand(
+  document: SceneDocumentV1, elementId: string, patch: ArchElementPatch, resolveIcon?: IconResolver,
+): { command: DocumentCommand; id: string } | null {
+  const pages = modelPages(document, elementId);
+  const model = pages[0]?.model;
+  const element = model?.elements.find((candidate) => candidate.id === elementId);
+  const merged = element && patch.name !== undefined ? mergeElement(element, patch) : null;
+  if (!model || !element || !merged || merged.name === element.name) return null;
+  const local = element.parent ? element.id.slice(element.parent.length + 1) : element.id;
+  if (!new RegExp(`^new-${element.kind}(?:-\\d+)?$`).test(local)) return null;
+  const referenced = model.elements.some((other) => other.parent === elementId || other.instanceOf === elementId)
+    || model.relations.some((relation) => relation.from === elementId || relation.to === elementId)
+    || model.views.some((view) => view.of === elementId)
+    || model.flows.some((flow) => flattenFlowSteps(flow).some(({ step }) => step.from === elementId || step.to === elementId));
+  const slug = slugifyDslId(merged.name);
+  if (referenced || !slug || slug === local) return null;
+  const id = freeId(model, element.parent, slug);
+  const follow = (value: string | undefined) => value === elementId ? id : value;
+  const next: ArchModel = {
+    ...model,
+    elements: model.elements.map((candidate) => candidate.id === elementId ? { ...merged, id } : candidate),
+    views: model.views.map((view) => ({ ...view, rules: view.rules.map((rule) => ({
+      ...rule, subject: follow(rule.subject)!,
+      ...(rule.arrow ? { arrow: { ...(rule.arrow.from ? { from: follow(rule.arrow.from)! } : {}), ...(rule.arrow.to ? { to: follow(rule.arrow.to)! } : {}) } } : {}),
+    })) })),
+  };
+  const relabel = (node: SceneNode): SceneNode => {
+    if (placedElementId(node) !== elementId) return node;
+    const dsl = isRecord(node.metadata.dsl) && node.metadata.dsl.id === elementId ? { ...node.metadata.dsl, id } : node.metadata.dsl;
+    return {
+      ...node, id: node.id === elementId ? id : node.id,
+      metadata: { ...node.metadata, model: { ...(isRecord(node.metadata.model) ? node.metadata.model : {}), elementId: id }, ...(dsl ? { dsl } : {}) },
+    };
+  };
+  const commands = pages.map(({ page }) => {
+    const nodeIds = new Map(page.nodes.flatMap((node) => placedElementId(node) === elementId ? [[node.id, relabel(node).id] as const] : []));
+    const end = <T extends { nodeId: string | null }>(point: T): T => point.nodeId && nodeIds.has(point.nodeId) ? { ...point, nodeId: nodeIds.get(point.nodeId)! } : point;
+    const moved: ScenePage = {
+      ...page,
+      nodes: page.nodes.map(relabel),
+      connectors: page.connectors.map((connector) => ({ ...connector, source: end(connector.source), target: end(connector.target) })),
+    };
+    return setPage(page, pageWithModel(moved, next, resolveIcon), `model-edit:${elementId}`, 'Rename element');
+  });
+  return { command: commands.length === 1 ? commands[0]! : batch('model-edit', 'Rename element', commands), id };
 }
 
 /** `icon: none` on several elements at once; every view that places them follows. */

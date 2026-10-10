@@ -34,7 +34,7 @@ describe('feature tip rules', () => {
     expect(mayShowTip('motion')).toBe(true);
     recordTipShown('motion');
     // Without storage the page load still keeps the promise.
-    expect(mayShowTip('mermaid')).toBe(false);
+    expect(mayShowTip('connect')).toBe(false);
     expect(tipSeen('motion')).toBe(true);
     getItem.mockRestore();
     setItem.mockRestore();

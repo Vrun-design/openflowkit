@@ -14,14 +14,18 @@ export interface DslSegment extends SourceLocation {
 }
 
 /**
- * Tokens joined back into text: single spaces, tight before `,` and `]`, collapsed runs (grammar §2.4).
- * `keepBreaks` keeps a quoted `\n` for labels whose writer quotes them; anything else
- * (attribute values, conditions, directives) stays one line so its writer needs no quotes.
+ * Tokens joined back into text: single spaces, tight before `,` and `]` and after `[` (grammar §2.4).
+ * A quoted string keeps its own spacing. `keepBreaks` keeps a quoted `\n` for labels whose writer
+ * quotes them; anything else (attribute values, conditions, directives) stays one line.
  */
 export function joinTokens(tokens: readonly DslToken[], keepBreaks = false): string {
-  const text = tokens.map((token) => token.value).join(' ');
-  return (keepBreaks ? text : text.replace(/\s+/g, ' '))
-    .replace(/[^\S\n]+([,\]])/g, '$1').replace(/\[[^\S\n]+/g, '[').replace(/[^\S\n]+/g, ' ').trim();
+  return tokens.map((token, index) => {
+    const value = token.kind === 'string' && !keepBreaks ? token.value.replace(/\n/g, ' ') : token.value;
+    const previous = tokens[index - 1];
+    const tight = !previous || (token.kind !== 'string' && (token.value === ',' || token.value === ']'))
+      || (previous.kind !== 'string' && previous.value === '[');
+    return tight ? value : ` ${value}`;
+  }).join('');
 }
 
 /** Splits a token stream into statements; never throws. */

@@ -33,6 +33,8 @@ async function main() {
   // The remote endpoint serves this file; a missing viewer fails the build.
   await mkdir(dirname(DIST_VIEWER), { recursive: true });
   await cp(VIEWER, DIST_VIEWER);
+  // npm packs the package folder only; the licence lives at the repo root.
+  await cp(resolve(ROOT, '..', 'LICENSE'), resolve(ROOT, 'LICENSE'));
   console.log('[build] dist ready (agent bundle copied to dist/generated)');
 }
 

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { serializeCanonicalJson } from '../../../opencanvas/infrastructure/export/canonicalJson';
 import { createEmptyV2Document } from '../../../opencanvas/presentation/v2/v2Document';
+import { validateSceneDocumentV1 } from '../../../opencanvas/domain/document/validation';
 import { documentFromFileText } from './openDocumentFile';
 
 type V1Page = { diagramType?: string; nodes: unknown[]; edges: unknown[] };
@@ -55,6 +56,25 @@ describe('documentFromFileText', () => {
     expect(opened.document.name).toBe('Old flow');
     expect(opened.document.pages[0]!.nodes.map((node) => node.id)).toEqual(['a', 'b']);
     expect(opened.document.pages[0]!.connectors).toHaveLength(1);
+  });
+
+  it('opens a V1 file whose edge lost its node without that edge, and says so', () => {
+    const node = (id: string) => ({ id, type: 'process', position: { x: 0, y: 0 }, data: { label: id } });
+    const legacy = JSON.stringify({
+      nodes: [node('a'), node('b')],
+      edges: [{ id: 'e1', source: 'a', target: 'b' }, { id: 'e2', source: 'a', target: 'deleted' }, { id: 'e3', source: 'gone', target: 'b' }],
+    });
+    const opened = documentFromFileText(legacy, 'doc-v1');
+    if (!('document' in opened)) throw new Error(opened.error);
+    expect(opened.document.pages[0]!.connectors.map((connector) => connector.id)).toEqual(['e1']);
+    expect(opened.notice).toBe('2 connections pointed at a shape that no longer exists and were left out.');
+    expect(validateSceneDocumentV1(opened.document).success).toBe(true);
+  });
+
+  it('refuses a V1 file that would open damaged instead of saving it', () => {
+    const node = { id: 'a', type: 'process', position: { x: 0, y: 0 }, data: {} };
+    expect(documentFromFileText(JSON.stringify({ nodes: [node, node], edges: [] }), 'x'))
+      .toEqual({ error: expect.stringContaining('Invalid V1 document') });
   });
 
   it('explains what it cannot open', () => {

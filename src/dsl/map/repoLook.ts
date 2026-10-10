@@ -6,13 +6,16 @@ import type { MapModel, MapNode } from './types';
 // editor's own cards, colours and open frames apply, and `tags` replaces the C4 kind word on the card
 // with plain repo words ("Folder · 12 files"). `more` boxes stay synthetic (scene.ts draws those).
 
-const KIND: Record<MapNode['kind'], { element: ElementKind; color?: string; word: string }> = {
-  part: { element: 'system', word: 'Part' },
-  folder: { element: 'container', word: 'Folder' },
-  file: { element: 'container', word: 'File' },
-  group: { element: 'container', color: 'gray', word: 'Group' },
-  external: { element: 'external', word: 'Outside service' },
-  more: { element: 'container', color: 'gray', word: 'More' },
+/** What a reader calls each kind of box: the editor's cards, its box panel and the CLI viewer all say these. */
+export const MAP_KIND_WORDS: Readonly<Record<MapNode['kind'], string>> = { part: 'Module', folder: 'Folder', file: 'File', group: 'Group', external: 'Outside service', more: 'More' };
+
+const KIND: Record<MapNode['kind'], { element: ElementKind; color?: string }> = {
+  part: { element: 'system' },
+  folder: { element: 'container' },
+  file: { element: 'container' },
+  group: { element: 'container', color: 'gray' },
+  external: { element: 'external' },
+  more: { element: 'container', color: 'gray' },
 };
 
 const OUTSIDE = 'root#outside'; // build.ts: the group that holds the externals
@@ -22,7 +25,7 @@ const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 const filesIn = (model: MapModel, node: MapNode): number => node.files || node.children.reduce((n, id) => n + filesIn(model, model.nodes[id]), 0);
 
 function tagOf(model: MapModel, node: MapNode): string {
-  const { word } = KIND[node.kind];
+  const word = MAP_KIND_WORDS[node.kind];
   if (node.kind === 'file') return `${word} · ${count(node.loc, 'line')}`;
   if (node.kind === 'external') return word;
   if (node.id === OUTSIDE) return 'Outside services';

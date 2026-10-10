@@ -59,7 +59,8 @@ shapes.
 | `⌘`/`Ctrl + scroll`, trackpad pinch | Zoom at the pointer |
 | `⌘0` | Zoom to fit |
 | `Shift + 2` | Zoom to the selection |
-| `⌘1` / `Shift + 1` | Zoom to 100% |
+| `⌘1` | Zoom to 100% |
+| `Shift + 1` | Zoom to fit |
 | `⌘=` / `⌘-` | Zoom in / out |
 
 ## Structure

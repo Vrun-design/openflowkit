@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type RefObject } from 'react';
+import { useCallback, useMemo, useState, type RefObject } from 'react';
 import type { LaidRect } from '../../../../dsl/map/elk';
 import type { Depth, MapModel } from '../../../../dsl/map/types';
 import { depthOf, presetOpen, sameOpen, siblingMove, topLeftFirst } from '../../../application/map/mapNavigation';
@@ -32,7 +32,12 @@ const DIRS: Readonly<Partial<Record<string, Dir>>> = { ArrowLeft: 'left', ArrowR
 
 /** What the Map toolbar does (depth) and where an arrow key goes. The open set stays view state. */
 export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify }: Options) {
-  const depth = useMemo(() => (model ? depthOf(model, open) : null), [model, open]);
+  // The level the reader clicked, while it still holds: on a shallow map two levels open the same boxes.
+  const [clicked, setClicked] = useState<{ model: MapModel; open: ReadonlySet<string>; depth: Depth } | null>(null);
+  const depth = useMemo(() => {
+    if (!model) return null;
+    return clicked && clicked.model === model && sameOpen(clicked.open, open) ? clicked.depth : depthOf(model, open);
+  }, [model, open, clicked]);
   const change = useCallback((next: ReadonlySet<string>, fit: boolean) => {
     if (sameOpen(next, open)) return;
     focusRef.current = fit ? { id: null } : null;
@@ -45,7 +50,14 @@ export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef,
     }
     setOpen(next);
   }, [model, open, setOpen, focusRef, primaryId, select, clearSelection]);
-  const setDepth = useCallback((value: Depth) => { if (model) change(presetOpen(model, value), true); }, [model, change]);
+  const setDepth = useCallback((value: Depth) => {
+    if (!model) return;
+    const next = presetOpen(model, value);
+    setClicked({ model, open: next, depth: value });
+    // A selected arrow (no box) dims the rest of the map; the new depth re-frames it, likely with the arrow off screen.
+    if (!primaryId()) clearSelection();
+    change(next, true);
+  }, [model, change, primaryId, clearSelection]);
 
   /** The camera follows a drawn box only when it is off screen. */
   const follow = useCallback((id: string) => {

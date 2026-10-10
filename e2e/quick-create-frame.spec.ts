@@ -14,6 +14,9 @@ test('quick-create from a shape in a template frame lands beside it, and a drag 
   await page.getByRole('list', { name: 'Templates' }).getByRole('button', { name: 'User authentication' }).click();
   await page.waitForSelector('[data-testid="v2-canvas"]');
   await expect.poll(async () => (await state(page)).nodes).toContain('login');
+  // The template lands with the canvas focused, its source open beside it: close the source, so the
+  // empty-canvas clicks below cannot land on Generate (which would redraw the frame without our shapes).
+  await page.getByRole('button', { name: 'Close panel' }).click();
   await page.keyboard.press('Escape');
   await page.mouse.click(1300, 860);
   const canvas = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;

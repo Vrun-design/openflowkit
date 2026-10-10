@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { AggEdge, MapModel } from '../../../dsl/map/types';
 import { githubEvidenceLink, githubPathLink } from '../../../services/discovery/githubRepo';
-import { repoMapPageOf, repoMapSourceOf, sameRepoMapAddress, withRepoMapSource, type RepoMapSource } from '../../application/map/repoMapSource';
+import { repoMapAddressOfId, repoMapPageOf, repoMapSourceOf, sameRepoMapAddress, withRepoMapSource, type RepoMapSource } from '../../application/map/repoMapSource';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { MapBoxData } from './map/MapBoxPanel';
 import type { MapRepoArrow } from './map/MapArrowEvidence';
@@ -14,10 +14,11 @@ type RepoIntent = Extract<V2StartIntent, { repoMap: unknown }>['repoMap'];
  * A repo document keeps only its address (`metadata.map.source`); the facts are read here, in memory (and from the
  * IndexedDB cache after the first read while online). Its map page is read-only end to end: nothing the reader can do edits it.
  */
-export function useV2RepoDocument(document: SceneDocumentV1 | null, intent: V2StartIntent | null) {
+export function useV2RepoDocument(document: SceneDocumentV1 | null, intent: V2StartIntent | null, documentId?: string) {
   const source = useMemo(() => (document ? repoMapSourceOf(document) : null), [document]);
   const state = useRepoMap(source);
-  const repoIntent: RepoIntent | null = intent && 'repoMap' in intent ? intent.repoMap : null;
+  // A map id opened bare (a bookmark, another browser) names its repo as plainly as the intent would.
+  const repoIntent: RepoIntent | null = intent && 'repoMap' in intent ? intent.repoMap : documentId ? repoMapAddressOfId(documentId) : null;
   /** For `useV2DocumentLoad`: a repo map is born with its address and named for the repo. */
   const initialize = repoIntent ? (fresh: SceneDocumentV1) => ({ ...withRepoMapSource(fresh, repoIntent), name: `${repoIntent.owner}/${repoIntent.repo}` }) : undefined;
   // A stored document under this id that is another repo's: say so rather than show the wrong map.

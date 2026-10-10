@@ -162,7 +162,7 @@ test('a link with its key stripped or cut short says so @gate', async ({ page, c
   await expect(stripped.getByText('This link’s key is incomplete.')).toBeVisible();
 });
 
-test('opened offline shows try again that works once back online @gate', async ({ page, context }) => {
+test('opened while the share service is down shows try again that works once it is back @gate', async ({ page, context }) => {
   const backend = await serve(context);
   await openFile(page, 2);
   const link = await shareLink(page);
@@ -170,19 +170,23 @@ test('opened offline shows try again that works once back online @gate', async (
   const viewer = await context.newPage();
   backend.online = false;
   await viewer.goto(link);
-  await expect(viewer.getByText('You’re offline.')).toBeVisible();
+  // The browser is online: the service is what failed, so the message says so.
+  await expect(viewer.getByText('The share service isn’t reachable right now.')).toBeVisible();
   await expectSystemState(viewer, 'Try again');
   backend.online = true;
   await viewer.getByRole('button', { name: 'Try again' }).click();
   await expect.poll(() => labels(viewer)).toContain(LABEL);
 });
 
-test('sharing offline says so in words @gate', async ({ page, context }) => {
+test('sharing while the service is down blames the service and offers the file @gate', async ({ page, context }) => {
   const backend = await serve(context);
   await openFile(page, 2);
   backend.online = false;
   await (await exportPanel(page)).getByRole('button', { name: 'Copy share link' }).click();
-  await expect(page.getByText('Couldn’t reach the share service. Check your connection and try again.')).toBeVisible();
+  await expect(page.getByText('The share service isn’t reachable right now.')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download file' }).click();
+  expect((await download).suggestedFilename()).toMatch(/\.json$/);
 });
 
 test('a diagram over 1 MB offers the file instead @gate', async ({ page, context }) => {

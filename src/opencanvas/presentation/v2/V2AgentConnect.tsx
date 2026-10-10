@@ -4,11 +4,15 @@ import {
   IconPlugConnected, IconTerminal2,
 } from '@tabler/icons-react';
 import { Button, Icon, Panel } from '../design-system';
-import type { V2BridgeStatus } from './useV2AgentBridge';
+import { BRIDGE_DEFAULT_PORT } from '../../../agent/bridge/protocol';
+import { TOKEN_REJECTED, type V2BridgeStatus } from './useV2AgentBridge';
 
 export interface V2AgentConnectModel {
   readonly status: V2BridgeStatus;
   readonly detail: string;
+  /** The last change the agent applied (its undo label), shown with an Undo while connected. */
+  readonly activity?: string | null;
+  readonly onUndo?: () => void;
   readonly port: number;
   readonly token: string;
   readonly onPortChange: (port: number) => void;
@@ -27,9 +31,18 @@ const CAPABILITIES = [
   { icon: IconDownload, title: 'Export', text: 'Hand you PNG, SVG or JSON when it is done.' },
 ] as const;
 
+const bridgeEnv = (port: number, token: string): Record<string, string> =>
+  ({ ...(port !== BRIDGE_DEFAULT_PORT ? { OPENFLOWKIT_BRIDGE_PORT: String(port) } : {}), ...(token ? { OPENFLOWKIT_BRIDGE_TOKEN: token } : {}) });
+
+/** The same server as one `claude mcp add` line, for Claude Code. */
+export function claudeCodeCommand(port: number, token: string): string {
+  const env = Object.entries(bridgeEnv(port, token)).map(([key, value]) => `-e ${key}=${value} `).join('');
+  return `claude mcp add openflowkit ${env}-- npx -y @vrun-design/openflowkit-mcp`;
+}
+
 /** The MCP client config: the editor's token goes in env so the server and this window pair on their own. */
 export function mcpConfig(port: number, token: string): string {
-  const env = { ...(port !== 43119 ? { OPENFLOWKIT_BRIDGE_PORT: String(port) } : {}), ...(token ? { OPENFLOWKIT_BRIDGE_TOKEN: token } : {}) };
+  const env = bridgeEnv(port, token);
   return JSON.stringify({ mcpServers: { openflowkit: {
     command: 'npx', args: ['-y', '@vrun-design/openflowkit-mcp'],
     ...(Object.keys(env).length ? { env } : {}),
@@ -46,10 +59,12 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
   const port = Number(draftPort);
   const validPort = Number.isInteger(port) && port > 0 && port < 65536;
   const config = mcpConfig(props.port, props.token);
-  async function copyConfig(): Promise<void> {
-    try { await navigator.clipboard.writeText(config); setCopyStatus('Copied'); }
-    catch { setCopyStatus('Could not copy. Select the config below.'); }
+  const command = claudeCodeCommand(props.port, props.token);
+  async function copy(text: string, done: string): Promise<void> {
+    try { await navigator.clipboard.writeText(text); setCopyStatus(done); }
+    catch { setCopyStatus('Could not copy. Select it under MCP configuration.'); }
   }
+  const copyConfig = () => { void copy(config, 'Copied'); };
   return <Panel title="Connect agent" onClose={props.onClose} closeLabel="Close agent connection"
     className="ofk-v2-workspace-panel ofk-connection-panel" data-status={props.status}
     tools={<span className="ofk-connection-badge"><span className="ofk-connection-dot" />{STATUS_LABEL[props.status]}</span>}>
@@ -66,17 +81,21 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
         <div><strong>Live over MCP</strong><span className="ofk-connection-endpoint">127.0.0.1:{props.port}</span></div>
         <Button variant="quiet" onClick={() => props.onToggle(false)}>Disconnect</Button>
       </div>
+      {props.activity ? <p className="ofk-connection-activity" role="status"><span>Agent: {props.activity}</span>
+        {props.onUndo ? <Button variant="quiet" onClick={props.onUndo}>Undo</Button> : null}</p> : null}
       <h4 className="ofk-connection-heading">What your agent can do</h4>
       <ul className="ofk-connection-capabilities">
         {CAPABILITIES.map(({ icon, title, text }) => <li key={title}><Icon icon={icon} /><strong>{title}</strong><span>{text}</span></li>)}
       </ul>
     </> : <>
       <h3>Your agent, on your canvas.</h3>
-      <p className="ofk-connection-lede">Claude Code, Cursor or any MCP client can read this document and draw on it — you review every change.</p>
-      {props.status === 'error' ? <p role="alert" className="ofk-connection-error"><strong>{props.detail}</strong> Start the MCP server in your agent, or check the settings below. Retrying every few seconds.</p> : null}
+      <p className="ofk-connection-lede">Claude Code, Cursor or any MCP client can read this document and draw on it — each change is one undo step.</p>
+      {props.status === 'error' ? <p role="alert" className="ofk-connection-error"><strong>{props.detail}</strong>
+        {props.detail === TOKEN_REJECTED ? null : ' Start the MCP server in your agent, or check the settings below. Retrying every few seconds.'}</p> : null}
       <ol className="ofk-connection-steps">
         <li><span>1</span><div><strong>Add OpenFlowKit to your MCP client</strong>
-          <Button onClick={() => { void copyConfig(); }}><Icon icon={copyStatus === 'Copied' ? IconCheck : IconCopy} />{copyStatus === 'Copied' ? 'Config copied' : 'Copy MCP configuration'}</Button></div></li>
+          <Button onClick={copyConfig}><Icon icon={copyStatus === 'Copied' ? IconCheck : IconCopy} />{copyStatus === 'Copied' ? 'Config copied' : 'Copy MCP configuration'}</Button>
+          <Button variant="quiet" onClick={() => { void copy(command, 'Command copied'); }}><Icon icon={copyStatus === 'Command copied' ? IconCheck : IconTerminal2} />Copy Claude Code command</Button></div></li>
         <li><span>2</span><div><strong>Start the server, then connect</strong>
           <Button variant="primary" disabled={running || !validPort} onClick={() => props.onToggle(true)}>
             <Icon icon={IconPlugConnected} />{running ? 'Connecting…' : 'Connect'}
@@ -101,7 +120,9 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
     <details className="ofk-accordion ofk-connection-details"><summary>MCP configuration<Icon icon={IconChevronDown} /></summary>
       <div className="ofk-accordion-body">
         <pre className="ofk-v2-bridge-snippet">{config}</pre>
-        <Button variant="quiet" onClick={() => { void copyConfig(); }}><Icon icon={IconCopy} />Copy config</Button>
+        <Button variant="quiet" onClick={copyConfig}><Icon icon={IconCopy} />Copy config</Button>
+        <p>Claude Code, in one line:</p>
+        <pre className="ofk-v2-bridge-snippet">{command}</pre>
       </div>
     </details>
     {copyStatus ? <span className="ofk-copy-feedback" role="status">{copyStatus}</span> : null}

@@ -2,7 +2,7 @@
 
 # OpenFlowKit MCP Server
 
-**Give Claude Desktop, Cursor, Windsurf, or any MCP client first-class diagramming tools.**
+**Give Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client first-class diagramming tools.**
 
 [![npm](https://img.shields.io/npm/v/@vrun-design/openflowkit-mcp?style=flat-square&color=f97316)](https://www.npmjs.com/package/@vrun-design/openflowkit-mcp)
 [![MIT License](https://img.shields.io/badge/License-MIT-f97316.svg?style=flat-square)](https://github.com/Vrun-design/openflowkit/blob/main/LICENSE)
@@ -181,10 +181,10 @@ Agents can read these directly:
 | `openflowkit://docs/grammar` | The complete, versioned DSL reference |
 | `openflowkit://templates` | Starter template catalog |
 | `openflowkit://templates/{name}` | DSL for a named starter template |
-| `openflowkit://icons` | Full icon catalog |
+| `openflowkit://icons` | Provider icon catalog (Standard glyphs are under `tabler`) |
 | `openflowkit://icons/{provider}` | Icon catalog for one provider pack |
 
-Provider packs are `aws`, `azure`, `gcp`, `cncf`, and `developer`.
+Provider packs are `aws`, `azure`, `gcp`, `cncf`, `developer`, and `tabler` (the 5,000 Standard glyphs).
 
 ---
 
@@ -230,12 +230,7 @@ npm run build && PORT=8787 npm run start:http   # http://127.0.0.1:8787/mcp, hea
 
 Only `POST /mcp` is served (GET and DELETE get 405: there are no sessions). Requests over 512 KB get 413; `source` is capped at 100 KB. A diagram over 1000 shapes or 400 connections in total (all views) is refused, only the first view is laid out and drawn, a render has a 15 s deadline, and a 5th concurrent render gets 503 with `Retry-After`. Deploying it is the owner's job; nothing here deploys.
 
-| Host | Connects | Renders UI | Open link | Download | Fullscreen | Verified |
-|---|---|---|---|---|---|---|
-| Claude | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
-| ChatGPT | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
-| VS Code | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
-| MCP SDK client (local test) | yes, over HTTP on localhost | no (serves the `ui://` resource only) | link decodes back to the DSL | n/a | n/a | tools/list, render_diagram, resources/read, 413, Host check (`tests/http.test.ts`) |
+Claude, ChatGPT and VS Code are not verified yet: that needs a deployed HTTPS endpoint. Verified locally with an MCP SDK client over HTTP on localhost: tools/list, render_diagram, resources/read, 413 and the Host check (`tests/http.test.ts`); the open-in-app link decodes back to the DSL.
 
 ---
 

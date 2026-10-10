@@ -95,6 +95,18 @@ describe('workspace pages command', () => {
     expect(firstViewLanding(document, await compileWorkspace(EDITED), again)).toEqual({ pageId: landed.pageId, frameId: landed.frameId });
   });
 
+  it('regenerating from a view page stays on that page', async () => {
+    const document = await generatedDocument();
+    const containers = document.pages.find((page) => archViewIdOfPage(page) === 'view:container:shop')!;
+    const workspace = await compileWorkspace(EDITED);
+    const command = buildWorkspacePagesCommand(document, workspace, { mintId, intoPageId: containers.id });
+    const landing = firstViewLanding(document, workspace, command, undefined, containers.id)!;
+    expect(landing.pageId).toBe(containers.id);
+    expect(landing.frameId).toBe(containers.nodes.find((node) => node.kind === 'frame')!.id);
+    // A page that holds none of these views still lands on the first one.
+    expect(firstViewLanding(document, workspace, command, undefined, 'elsewhere')!.pageId).not.toBe(containers.id);
+  });
+
   it('keeps a page name the user chose, and renames one still carrying the generated name', async () => {
     const document = await generatedDocument();
     const [, context, containers] = document.pages;

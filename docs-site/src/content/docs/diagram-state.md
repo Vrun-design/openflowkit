@@ -30,7 +30,6 @@ after one — the two are distinct nodes, even when they share a name.
 | Start | `[*] -> Idle` | the token is never a node name |
 | End | `Running -> [*]` | a distinct final node |
 | Composite | `state Running { … }` | the block holds the inner states and transitions |
-| Concurrent regions | `--` on its own line inside a composite | splits the region |
 | Fork / join | `F [fork]`, `J [join]` | drawn as filled bars, no label |
 | Choice | `C [choice]` | drawn as a diamond |
 
@@ -39,6 +38,8 @@ between them are ordinary edges.
 
 ## What it does not do
 
+- **No concurrent regions.** A `--` line inside a composite is not a region divider; it is
+  dropped with warning W101.
 - **No history or entry/exit actions.** There is no `[H]` pseudo-state and no action syntax;
   the label carries whatever prose you need.
 - **Fork and join are visual.** The compiler draws the bar; it does not verify that branches

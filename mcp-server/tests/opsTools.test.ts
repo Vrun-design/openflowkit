@@ -51,6 +51,24 @@ describe('op tools', () => {
     }
   });
 
+  it('server_info lists exactly the tools the server registers', async () => {
+    const target = await client();
+    const { tools } = await target.listTools();
+    const info = await call(target, 'server_info', {});
+    expect(info.tools).toEqual(tools.map(({ name }) => name).sort());
+    expect(tools.find(({ name }) => name === 'server_info')!.description).not.toMatch(/self-test/);
+  });
+
+  it('ships the grammar without the internal prior-art notes', async () => {
+    const target = await client();
+    const { contents } = await target.readResource({ uri: 'openflowkit://docs/grammar' });
+    const grammar = String((contents[0] as { text?: string }).text);
+    expect(grammar).toContain('## 1. Goals');
+    expect(grammar).not.toContain('## 0. Prior art');
+    expect(grammar).not.toContain('§0');
+    expect(await run(target, 'get_syntax', {})).toMatchObject({ syntax: expect.not.stringContaining('## 0. Prior art') });
+  });
+
   it('advertises the input fields of an op whose schema carries a cross-field rule', async () => {
     // add_shape's schema is refined (catalog kinds need a label), which hid every field from MCP clients.
     const { tools } = await (await client()).listTools();
@@ -194,6 +212,23 @@ describe('op tools', () => {
     expect((reserved.diagnostics as { code: string }[]).some(({ code }) => code === 'W105')).toBe(true);
   });
 
+  it('validate_openflow_dsl reports what compiling finds, as the CLI validate does', async () => {
+    const target = await client();
+    const partly = await call(target, 'validate_openflow_dsl', { dsl: 'flowchart\nA -> B\nA -> \nB -->' });
+    expect(partly).toMatchObject({ ok: true, hint: expect.stringMatching(/warning/i) });
+    expect(partly.diagnostics).toEqual([
+      expect.objectContaining({ code: 'W101', line: 3 }), expect.objectContaining({ code: 'W101', line: 4 }),
+    ]);
+    // Every line dropped: nothing would be drawn, so it is not ok.
+    const dropped = await call(target, 'validate_openflow_dsl', { dsl: 'flowchart\nA -> [[[ broken' });
+    expect(dropped).toMatchObject({ ok: false, diagnostics: [expect.objectContaining({ code: 'W101', line: 2 }), expect.objectContaining({ code: 'E001' })] });
+    const { id: documentId } = await call(target, 'openflow_create', { name: 'Broken' });
+    await expect(call(target, 'create_diagram', { documentId, dsl: 'flowchart\nA -> [[[ broken' })).rejects.toThrow(/Nothing to draw[\s\S]*W101/);
+    expect(await run(target, 'list_diagrams', { documentId })).toEqual({ diagrams: [] });
+    const typo = await call(target, 'validate_openflow_dsl', { dsl: 'flowchrt\nA -> B' });
+    expect(typo.diagnostics).toContainEqual(expect.objectContaining({ code: 'W110', message: expect.stringContaining('`flowchart`') }));
+  });
+
   it('reports the mode and local documents through whoami', async () => {
     const target = await client();
     const before = await call(target, 'whoami', {});
@@ -208,6 +243,7 @@ describe('op tools', () => {
     const bridge = {
       connected: true,
       health: () => ({ ok: true, protocol: 1, name: 'openflowkit', version: '0.0.0', connected: true, documentId: 'live-doc', documentName: 'Live', pageId: 'p1', pages: [{ pageId: 'p1', name: 'Page 1', nodes: 1, connectors: 0 }], lastSeenMs: 5 }),
+      status: () => ({ port: 43119, state: 'paired' }),
       call: async (op: string, input: unknown) => { calls.push({ op, input }); return { frameId: 'dsl-live' }; },
     } as unknown as LiveBridge;
     const { server } = createServerWithDeps({ bridge, log: () => undefined });
@@ -220,7 +256,126 @@ describe('op tools', () => {
     expect(calls).toEqual([{ op: 'create_diagram', input: { dsl: 'flowchart\n  A -> B' } }]);
 
     const status = await call(instance, 'whoami', {});
-    expect(status).toMatchObject({ mode: 'live-editor', editor: { documentId: 'live-doc' } });
+    expect(status).toMatchObject({ mode: 'live-editor', editor: { documentId: 'live-doc' }, bridge: { state: 'paired' } });
+  });
+});
+
+describe('pictures', () => {
+  it('screenshot and PNG export come back as MCP image blocks, not base64 inside the JSON', async () => {
+    const png = 'iVBORw0KGgo'.padEnd(4000, 'A');
+    const bridge = {
+      connected: true,
+      health: () => ({ connected: true, pages: [] }),
+      call: async (op: string) => op === 'screenshot'
+        ? { frameId: 'f1', pageId: 'p1', filename: 'f1.png', mime: 'image/png', base64: png }
+        : { files: [{ filename: 'd.png', mime: 'image/png', base64: png }, { filename: 'd.svg', mime: 'image/svg+xml', text: '<svg/>' }] },
+    } as unknown as LiveBridge;
+    const { server } = createServerWithDeps({ bridge, log: () => undefined });
+    const live = new Client({ name: 'test', version: '0.0.0' });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(b), live.connect(a)]);
+    for (const name of ['screenshot', 'export']) {
+      const result = await live.callTool({ name, arguments: {} });
+      const [summary, ...rest] = result.content as { type: string; text?: string; data?: string; mimeType?: string }[];
+      expect(summary!.type, name).toBe('text');
+      expect(summary!.text!.length, name).toBeLessThan(1000);
+      expect(summary!.text, name).not.toContain(png);
+      expect(rest, name).toEqual([{ type: 'image', data: png, mimeType: 'image/png' }]);
+    }
+  });
+});
+
+describe('export to a file', () => {
+  const big = 'iVBORw0KGgo'.padEnd(1_500_000, 'A');
+  async function live(png: string) {
+    const bridge = {
+      connected: true, health: () => ({ connected: true, pages: [] }), status: () => ({ port: 1, state: 'paired' }),
+      call: async (op: string) => op === 'screenshot'
+        ? { frameId: 'f1', pageId: 'p1', filename: 'f1.png', mime: 'image/png', base64: png }
+        : { files: [{ filename: 'd.png', mime: 'image/png', base64: png }] },
+    } as unknown as LiveBridge;
+    const { server } = createServerWithDeps({ bridge, log: () => undefined });
+    const target = new Client({ name: 'test', version: '0.0.0' });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(b), target.connect(a)]);
+    return target;
+  }
+
+  it('export takes a path inside the working directory and writes the file there', async () => {
+    const target = await live('iVBORw0KGgoAAAA');
+    const dir = await mkdtemp(join(process.cwd(), '.tmp-export-'));
+    tempDirs.push(dir);
+    const result = await target.callTool({ name: 'export', arguments: { format: 'png', path: join(dir, 'docs/arch.png') } });
+    expect(result.content).toHaveLength(1);
+    expect(JSON.parse((result.content as { text: string }[])[0]!.text)).toMatchObject({ saved: join(dir, 'docs/arch.png'), bytes: 11, mime: 'image/png' });
+    expect((await readFile(join(dir, 'docs/arch.png'))).subarray(0, 4).toString('hex')).toBe('89504e47');
+    const outside = await target.callTool({ name: 'export', arguments: { format: 'png', path: join(tmpdir(), 'escape.png') } });
+    expect(outside.isError).toBe(true);
+    expect((outside.content as { text: string }[])[0]!.text).toMatch(/inside the server's working directory/);
+  });
+
+  it('an image over ~1 MB is not sent as a block; the summary says to pass path or a lower scale', async () => {
+    const target = await live(big);
+    for (const name of ['export', 'screenshot']) {
+      const result = await target.callTool({ name, arguments: {} });
+      expect(result.content, name).toHaveLength(1);
+      const text = (result.content as { text: string }[])[0]!.text;
+      expect(text.length, name).toBeLessThan(2000);
+      expect(text, name).toMatch(/lower scale/);
+    }
+  });
+});
+
+describe('which document a call means', () => {
+  it('targets the document opened or created last when documentId is omitted, and names real tools when there is none', async () => {
+    const target = await client();
+    await expect(call(target, 'list_pages', {})).rejects.toThrow(/openflow_create/);
+    await call(target, 'openflow_create', { name: 'First' });
+    const { id: second } = await call(target, 'openflow_create', { name: 'Second' });
+    expect(await call(target, 'list_pages', {})).toMatchObject({ documentId: second });
+    await expect(call(target, 'list_pages', { documentId: 'nope' })).rejects.toThrow(/Use openflow_create or openflow_open/);
+  });
+});
+
+describe('page targeting', () => {
+  const C4 = 'architecture\nmodel {\n  person Customer\n  system Shop { container Web; container API; Web -> API }\n  Customer -> Shop.Web : uses\n}\nviews { view context of Shop; view container of Shop }\n';
+  type Page = { pageId: string; nodes: { id: string; kind: string; x: number; label: string }[] };
+
+  it('every page-scoped op takes a pageId in file mode', async () => {
+    const target = await client();
+    const { id: documentId } = await call(target, 'openflow_create', { name: 'Two pages' });
+    const created = await run(target, 'create_diagram', { documentId, dsl: C4 });
+    const second = (created.views as { pageId: string; frameId: string }[])[1]!;
+    const page = async () => await run(target, 'get_document', { documentId, pageId: second.pageId }) as Page;
+    const shape = (await page()).nodes.find(({ kind }) => kind !== 'frame')!;
+
+    await call(target, 'move', { documentId, pageId: second.pageId, ids: [shape.id], delta: { x: 40, y: 0 } });
+    expect((await page()).nodes.find(({ id }) => id === shape.id)!.x).toBe(shape.x + 40);
+    await call(target, 'style', { documentId, pageId: second.pageId, ids: [shape.id], fill: '#112233' });
+    const added = await run(target, 'add_shape', { documentId, pageId: second.pageId, kind: 'rectangle', label: 'Note' });
+    expect((await page()).nodes.map(({ id }) => id)).toContain(added.id);
+    await call(target, 'delete', { documentId, pageId: second.pageId, ids: [added.id] });
+    expect((await page()).nodes.map(({ id }) => id)).not.toContain(added.id);
+    const updated = await run(target, 'update_diagram', { documentId, pageId: second.pageId, frameId: second.frameId, dsl: C4.replace('container API', 'container Api2') });
+    // A workspace update rewrites every view; finding the frame at all needed the pageId.
+    expect((updated.views as { pageId: string }[]).map(({ pageId }) => pageId)).toContain(second.pageId);
+    await expect(call(target, 'update_diagram', { documentId, frameId: second.frameId, dsl: C4 })).rejects.toThrow(/not found on this page/);
+  });
+
+  it('passes the pageId to the paired editor', async () => {
+    const calls: { op: string; pageId?: string }[] = [];
+    const bridge = {
+      connected: true,
+      health: () => ({ connected: true, pages: [] }),
+      call: async (op: string, _input: unknown, pageId?: string) => { calls.push({ op, ...(pageId ? { pageId } : {}) }); return {}; },
+    } as unknown as LiveBridge;
+    const { server } = createServerWithDeps({ bridge, log: () => undefined });
+    const live = new Client({ name: 'test', version: '0.0.0' });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(b), live.connect(a)]);
+    await call(live, 'move', { pageId: 'p2', ids: ['n1'], delta: { x: 1, y: 0 } });
+    await call(live, 'move', { ids: ['n1'], delta: { x: 1, y: 0 } });
+    expect(calls).toEqual([{ op: 'move', pageId: 'p2' }, { op: 'move' }]);
   });
 });
 

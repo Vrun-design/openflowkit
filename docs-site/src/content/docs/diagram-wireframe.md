@@ -1,10 +1,10 @@
 ---
 title: Wireframes
-description: The wireframe family — phone, tablet, browser and window screens of buttons, inputs, toggles and 30-odd other controls, written in Koboyo's syntax.
+description: The wireframe family — phone, tablet, browser and window screens of buttons, inputs, toggles and 30-odd other controls.
 ---
 
 A wireframe is a row of screens, each a device frame holding controls stacked down its
-column. The syntax is Koboyo's, so wireframe text written for Koboyo compiles here unchanged.
+column.
 
 ```openflow
 wireframe

@@ -110,7 +110,11 @@ const TECH: readonly (readonly string[])[] = [
   ['developer/others-c-sharp', 'c#'],
   // Infra, DevOps, observability
   ['developer/devops-ai-ml-docker', 'docker', 'docker compose'],
-  ['developer/devops-ai-ml-kubernetes', 'kubernetes', 'k8s'],
+  // Unambiguous Kubernetes words name the platform. Bare "svc", "pod", "ingress" do not ("Payments pod"): the domain word decides.
+  // ponytail: one Kubernetes logo for every kind — per-kind glyphs need SVGs the catalog lacks.
+  ['developer/devops-ai-ml-kubernetes', 'kubernetes', 'k8s', 'k8s service', 'kubernetes service',
+    'k8s pod', 'kubernetes pod', 'k8s ingress', 'kubernetes ingress', 'k8s deployment', 'kubernetes deployment',
+    'k8s namespace', 'kubernetes namespace', 'statefulset', 'daemonset', 'replicaset', 'configmap'],
   ['cncf/projects-helm', 'helm'],
   ['developer/devops-ai-ml-argocd', 'argocd', 'argo cd'],
   ['developer/infra-nginx', 'nginx'],
@@ -169,7 +173,7 @@ const TECH: readonly (readonly string[])[] = [
   ['aws/databases-elasticache', 'elasticache'],
   ['aws/compute-ec2', 'ec2', 'amazon ec2'],
   ['aws/containers-elastic-container-service', 'ecs', 'amazon ecs'],
-  ['aws/containers-elastic-kubernetes-service', 'eks', 'amazon eks'],
+  ['aws/containers-elastic-kubernetes-service', 'eks', 'amazon eks', 'elastic kubernetes service'],
   ['aws/containers-fargate', 'fargate'],
   ['aws/compute-app-runner', 'app runner'],
   ['aws/application-integration-simple-queue-service', 'sqs', 'amazon sqs', 'aws sqs'],
@@ -315,6 +319,25 @@ export const AUTO_ICON_SHAPES: ReadonlySet<string> = new Set(['rect', 'rounded',
 
 /** Every icon id the table can produce, so a test can prove each still resolves. */
 export const AUTO_ICON_IDS: readonly string[] = [...new Set(RULES.map((rule) => rule.icon))];
+
+// "Route 53", "route53" and "route-53" are one name to someone typing it.
+const compact = (text: string): string => text.toLowerCase().replace(/[\s._-]+/g, '');
+const ALIASES = new Map<string, string[]>();
+for (const rule of RULES) {
+  if (rule.tier > 1) continue;
+  const key = compact(rule.name);
+  const icons = ALIASES.get(key) ?? [];
+  if (!icons.includes(rule.icon)) ALIASES.set(key, [...icons, rule.icon]);
+}
+
+/**
+ * Icon ids a search names outright ("eks", "route 53", "alb"): the technology
+ * and platform names above, compared without spaces or punctuation. Concepts
+ * ("database") are left to the catalogue's own search.
+ */
+export function iconAliases(query: string): readonly string[] {
+  return ALIASES.get(compact(query)) ?? [];
+}
 
 function words(text: string): string[] {
   return text.toLowerCase()

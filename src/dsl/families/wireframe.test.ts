@@ -3,7 +3,6 @@ import { compile } from '../compile';
 import { serialize } from '../serialize';
 import { framePresetOf } from '../../opencanvas/domain/nodes/framePreset';
 
-// Koboyo's first docs example, verbatim: their text must compile here unchanged.
 const LOGIN = `wireframe
 title: Onboarding
 
@@ -20,7 +19,7 @@ screen Login [phone] {
 const warnings = (result: Awaited<ReturnType<typeof compile>>) => result.diagnostics.filter(({ severity }) => severity !== 'info');
 
 describe('wireframe family', () => {
-  it('compiles Koboyo text: a phone screen holding its controls in order', async () => {
+  it('compiles a phone screen holding its controls in order', async () => {
     const result = await compile(LOGIN);
     expect(warnings(result)).toEqual([]);
     expect(result.groups).toHaveLength(1);

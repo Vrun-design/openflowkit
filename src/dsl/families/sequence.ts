@@ -10,6 +10,7 @@ import { joinTokens, type DslSegment } from '../segments';
 import { attributeText, commentLines, nodeName, quote, slugifyDslId } from '../text';
 import { COLOR_WORDS, isHexColor, sortAttributes } from '../vocabulary';
 import type { Family, FamilyContext, FamilyScene } from './types';
+import type { DslToken } from '../tokenize';
 
 // The sequence family: participants, messages, activations, notes and
 // control-flow fragments on a pure timeline layout. Strict line order is the
@@ -29,6 +30,11 @@ const FRAGMENT_INSET = 40;
 // A fragment's header sits this far above its first message line: clear of the label that rides above that line.
 const FRAGMENT_LEAD = 48;
 const LABEL_LIFT = 3;
+// Fragment chrome takes timeline room: a closed block's bottom edge, an `else` divider and a
+// header nested on another header each push every later message down this far.
+const CLOSE_ROOM = 48;
+const DIVIDER_ROOM = 24;
+const NEST_ROOM = 28;
 // The guard text starts this far right of the first lifeline, which the header tag (left of it) never reaches.
 const GUARD_INSET = 10;
 
@@ -128,7 +134,13 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
   const fail = (segment: DslSegment, code: DslDiagnostic['code'], message: string, hint?: string): void => {
     context.diagnostics.push(tokenDiagnostic(code, 'warning', segment.tokens[0], message, hint));
   };
-  const resolve = (name: string): ParticipantDraft | undefined => byId.get(name) ?? byLabel.get(name) ?? byId.get(slugifyDslId(name));
+  // By id, then by label — never by slug: every CJK or emoji name slugs to `n`.
+  const resolve = (name: string): ParticipantDraft | undefined => byId.get(name) ?? byLabel.get(name);
+  /** `left = Label` / `Label` → the name and its explicit id. */
+  const named = (tokens: readonly DslToken[]): { name: string; id?: string } => {
+    const equals = tokens.findIndex((token) => token.value === '=');
+    return equals < 0 ? { name: joinTokens(tokens, true) } : { name: joinTokens(tokens.slice(equals + 1), true), id: joinTokens(tokens.slice(0, equals)) };
+  };
   const declare = (name: string, line: number, explicit: boolean, explicitId?: string): ParticipantDraft => {
     // `id = Label` names exactly that id (`a-2 = a` is not `A`); a bare name is an id, a label, then a slug.
     const existing = explicitId ? byId.get(explicitId) : resolve(name);
@@ -165,9 +177,7 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
 
     if (keyword === 'participant' || keyword === 'actor') {
       const parsed = readAttributes(segment.tokens.slice(1), context.diagnostics);
-      const equals = parsed.body.findIndex((token) => token.value === '=');
-      const name = joinTokens(equals >= 0 ? parsed.body.slice(equals + 1) : parsed.body);
-      const explicitId = equals >= 0 ? joinTokens(parsed.body.slice(0, equals)) : undefined;
+      const { name, id: explicitId } = named(parsed.body);
       if (!name) {
         fail(segment, 'W101', `${keyword} needs a name`, `${keyword} Alice`);
         continue;
@@ -271,19 +281,21 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
       const arrow = segment.tokens[arrowIndex]!.value as MessageDraft['arrow'];
       const left = segment.tokens.slice(0, arrowIndex);
       const right = segment.tokens.slice(arrowIndex + 1);
-      const equals = left.findIndex((token) => token.value === '=');
-      const fromName = joinTokens(equals >= 0 ? left.slice(equals + 1) : left);
-      const fromId = equals >= 0 ? joinTokens(left.slice(0, equals)) : undefined;
       const colon = right.findIndex((token) => token.value === ':');
       const parsed = readAttributes(colon >= 0 ? right.slice(colon + 1) : [], context.diagnostics);
-      const toName = joinTokens(colon >= 0 ? right.slice(0, colon) : right);
-      if (!fromName || !toName) {
+      const target = colon >= 0 ? right.slice(0, colon) : right;
+      if ([...left, ...target].some((token) => (token.kind === 'arrow' && MESSAGE_ARROWS.has(token.value)) || (token.kind === 'punctuation' && token.value === ','))) {
+        fail(segment, 'W112', 'One message per line: chains and fans are not read in a sequence; line dropped', 'A -> B, then B -> C');
+        continue;
+      }
+      const sender = named(left);
+      const receiver = named(target);
+      if (!sender.name || !receiver.name) {
         fail(segment, 'W101', 'Message needs a sender and a receiver', 'A -> B : text');
         continue;
       }
-      const toEquals = toName.indexOf('=');
-      const from = declare(fromName, segment.line, false, fromId);
-      const to = declare(toEquals >= 0 ? toName.slice(toEquals + 1).trim() : toName, segment.line, false, toEquals >= 0 ? toName.slice(0, toEquals).trim() : undefined);
+      const from = declare(sender.name, segment.line, false, sender.id);
+      const to = declare(receiver.name, segment.line, false, receiver.id);
       if (from.firstUseLine === null) from.firstUseLine = segment.line;
       if (to.firstUseLine === null) to.firstUseLine = segment.line;
       const label = joinTokens(parsed.body, true);
@@ -297,9 +309,7 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
 
     // Bare declaration: `api = API Gateway` or `Alice`.
     const parsed = readAttributes(segment.tokens, context.diagnostics);
-    const equals = parsed.body.findIndex((token) => token.value === '=');
-    const label = joinTokens(equals >= 0 ? parsed.body.slice(equals + 1) : parsed.body);
-    const explicitId = equals >= 0 ? joinTokens(parsed.body.slice(0, equals)) : undefined;
+    const { name: label, id: explicitId } = named(parsed.body);
     if (!label) {
       fail(segment, 'W101', `Unknown sequence statement ${keyword}`, 'participant, message, note, loop/alt/opt/par/break, activate');
       continue;
@@ -347,22 +357,34 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   }));
   const room = (note: NoteDraft) => noteSizes.get(note.id)!.height + NOTE_GAP;
   const roomOf = (notes: readonly NoteDraft[]) => notes.reduce((total, note) => total + room(note), 0);
-  /** Message `order`'s row: every note written before it (order ≤ its own) sits above it. */
-  const rowOf = (order: number) => order + roomOf(model.notes.filter((note) => note.order <= order)) / MESSAGE_SPACING;
-  const noteTop = new Map(model.notes.map((note, index) => [note.id, timelineY(note.order) + roomOf(model.notes.slice(0, index)) - 18]));
   const parentOf = new Map(model.branches.map((branch) => [branch.id, branch.parent]));
-  const within = (note: NoteDraft, branchId: string) => {
-    for (let at = note.parent; at; at = parentOf.get(at) ?? null) if (at === branchId) return true;
+  const inside = (parent: string | null, branchId: string) => {
+    for (let at = parent; at; at = parentOf.get(at) ?? null) if (at === branchId) return true;
     return false;
   };
-  const branchSpan = (branch: BranchDraft) => {
+  const byId = new Map(model.branches.map((branch) => [branch.id, branch]));
+  const continued = (branch: BranchDraft) => model.branches.some((other) => other.type === branch.type && other.parent === branch.parent
+    && other.branchIndex === branch.branchIndex + 1 && other.startOrder === branch.endOrder + 1);
+  /** Room a branch's own header takes beyond FRAGMENT_LEAD: an `else` divider, or a header nested on its parent's. */
+  const headerRoom = (branch: BranchDraft) => branch.branchIndex > 0 ? DIVIDER_ROOM
+    : branch.parent && byId.get(branch.parent)?.startOrder === branch.startOrder ? NEST_ROOM : 0;
+  /** Chrome above message `order`; `header` counts only the headers that open before (outside) that branch's. */
+  const chrome = (order: number, header?: BranchDraft) => model.branches.reduce((total, branch) => total
+    + (branch.startOrder < order || (branch.startOrder === order && (!header || branch === header || inside(header.parent, branch.id))) ? headerRoom(branch) : 0)
+    + (branch.endOrder < order && !continued(branch) ? CLOSE_ROOM : 0), 0);
+  /** Message `order`'s row: every note written before it (order ≤ its own) and all fragment chrome sit above it. */
+  const rowOf = (order: number) => order + (roomOf(model.notes.filter((note) => note.order <= order)) + chrome(order)) / MESSAGE_SPACING;
+  const noteTop = new Map(model.notes.map((note, index) => [note.id, timelineY(note.order) + roomOf(model.notes.slice(0, index)) + chrome(note.order) - 18]));
+  const branchSpan = (branch: BranchDraft): { startY: number; endY: number } => {
     // Notes written inside the block sit in its band; one written just before it sits above.
-    const startY = timelineY(branch.startOrder)
-      + roomOf(model.notes.filter((note) => note.order < branch.startOrder || (note.order === branch.startOrder && !within(note, branch.id)))) - FRAGMENT_LEAD;
+    const startY = timelineY(branch.startOrder) + chrome(branch.startOrder, branch)
+      + roomOf(model.notes.filter((note) => note.order < branch.startOrder || (note.order === branch.startOrder && !inside(note.parent, branch.id)))) - FRAGMENT_LEAD;
     const lastMessage = branch.endOrder >= branch.startOrder ? timelineY(rowOf(branch.endOrder)) : startY + 8;
-    const notesBottom = Math.max(-Infinity, ...model.notes.filter((note) => within(note, branch.id))
+    const notesBottom = Math.max(-Infinity, ...model.notes.filter((note) => inside(note.parent, branch.id))
       .map((note) => noteTop.get(note.id)! + noteSizes.get(note.id)!.height));
-    return { startY, endY: Math.max(lastMessage, notesBottom) };
+    // A block nested inside ends above this one's bottom edge.
+    const nestedBottom = Math.max(-Infinity, ...model.branches.filter((child) => child.parent === branch.id).map((child) => branchSpan(child).endY + 12));
+    return { startY, endY: Math.max(lastMessage, notesBottom, nestedBottom) };
   };
   // A branch ends where the next one (`else`, `and`) of its block begins, not 44px below its last message.
   const nextStartY = (branch: BranchDraft) => {
@@ -394,12 +416,14 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   for (const branch of model.branches) {
     const { startY, endY } = branchSpan(branch);
     const topLeft = scene(PADDING.left - FRAGMENT_INSET, startY);
+    // A branch ends exactly where the next (`else`, `and`) begins: a taller box would strike through its header.
+    const next = nextStartY(branch);
     nodes.push({
       id: branch.id, kind: 'annotation', parentId: null, layerId: 'default', zIndex: 0,
       transform: { translation: topLeft, rotationRadians: 0, scale: { x: 1, y: 1 } },
       size: {
         width: Math.max(220, lanesRight - PADDING.left + FRAGMENT_INSET + 30),
-        height: Math.max(64, (nextStartY(branch) ?? endY + 44) - startY),
+        height: next === undefined ? Math.max(64, endY + 44 - startY) : next - startY,
       },
       content: {
         seqFragmentId: branch.id,

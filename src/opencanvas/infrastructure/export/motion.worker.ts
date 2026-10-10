@@ -24,7 +24,7 @@ import { exportMotionFrameSvg } from './animatedSvg';
 import { svgViewBox } from './canonicalSvg';
 import { paintFrame } from './framePainter';
 import { INTER_URL } from './raster';
-import { motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, type MotionSize } from './motionSchedule';
+import { gifRepeat, motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, onePass, type MotionSize } from './motionSchedule';
 
 interface StartMessage {
   readonly type: 'start';
@@ -81,7 +81,10 @@ interface Session {
   readonly height: number;
   readonly fps: number;
   readonly document: SceneDocumentV1;
+  /** One pass of the clip; whether the file loops is `repeat`'s business. */
   readonly timeline: Timeline;
+  /** GIF loop block: 0 forever, -1 none (plays once and stays on the last frame). */
+  readonly repeat: number;
   readonly theme: StartMessage['theme'];
   readonly iconArt: StartMessage['iconArt'];
   readonly page: ScenePage;
@@ -207,16 +210,18 @@ async function start(message: StartMessage): Promise<void> {
   // One rule for the whole export: any visible node the canvas cannot draw
   // puts every frame back on the SVG path, so the protocol never changes
   // mid-file.
-  const mode = frameDrawList(page, frameAt(message.timeline, 0), message.theme, viewBox)[0]?.kind === 'fallback'
+  const timeline = onePass(message.timeline);
+  const mode = frameDrawList(page, frameAt(timeline, 0), message.theme, viewBox)[0]?.kind === 'fallback'
     ? 'svg' : 'canvas';
-  const times = motionFrameTimes(timelineDuration(message.timeline), motionFrameIntervalMs(message.format, message.fps));
+  const times = motionFrameTimes(timelineDuration(timeline), motionFrameIntervalMs(message.format, message.fps));
   const state: Session = {
     format: message.format,
     width,
     height,
     fps: message.fps,
     document: message.document,
-    timeline: message.timeline,
+    timeline,
+    repeat: gifRepeat(message.timeline.loop),
     theme: message.theme,
     iconArt: message.iconArt,
     page, viewBox, mode,
@@ -273,7 +278,7 @@ async function encodeCurrent(state: Session, index: number): Promise<void> {
       state.palette = quantize(data, 256, { format: 'rgb565' });
     } else {
       const indexed = applyPalette(data, state.palette, 'rgb565');
-      state.encoder!.writeFrame(indexed, width, height, { palette: state.palette, delay: state.intervalMs });
+      state.encoder!.writeFrame(indexed, width, height, { palette: state.palette, delay: state.intervalMs, repeat: state.repeat });
     }
   } else {
     await state.source!.add(state.times[index]! / 1000, state.intervalMs / 1000);

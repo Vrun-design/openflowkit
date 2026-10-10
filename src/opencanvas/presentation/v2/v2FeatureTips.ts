@@ -1,6 +1,6 @@
 import type { Placement } from '../design-system/Popover';
 
-export type V2TipId = 'code' | 'connect' | 'assistant' | 'motion' | 'mermaid';
+export type V2TipId = 'code' | 'connect' | 'assistant' | 'motion';
 
 export interface V2TipCopy {
   readonly title: string;
@@ -21,8 +21,6 @@ export const V2_TIPS: Readonly<Record<V2TipId, V2TipCopy>> = {
     anchor: `${RAIL} button[aria-label="AI assistant"]`, placement: 'left-start', action: 'Open the assistant' },
   motion: { title: 'Make it move', text: 'Export → Animate this page turns it into a GIF, MP4 or animated SVG.',
     anchor: 'button[aria-label="Canvas menu"]', placement: 'bottom-start', action: 'Animate this page' },
-  mermaid: { title: 'That’s Mermaid', text: 'Diagram as code reads it and draws it.',
-    anchor: `${RAIL} button[aria-label="Diagram as code"]`, placement: 'left-start', action: 'Draw it' },
 };
 
 /** A trigger must hold this long before its tip shows (a label editor opening a render later sweeps it). */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { forgetMapMode, savedOpen, saveOpen, savedMode, saveMode } from './mapDepth';
+import { firstMapVisit, forgetMapMode, savedOpen, saveOpen, savedMode, saveMode } from './mapDepth';
 
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
@@ -56,5 +56,28 @@ describe('forgetMapMode', () => {
     expect(savedMode('gone')).toBeNull();
     vi.stubGlobal('localStorage', { removeItem: () => { throw new Error('blocked'); } });
     expect(() => forgetMapMode('gone')).not.toThrow();
+  });
+  it('removes the open boxes of every page of the document, and no other document\'s', () => {
+    saveOpen('gone', 'p1', new Set(['a']));
+    saveOpen('gone', 'p2', new Set(['b']));
+    saveOpen('gone2', 'p1', new Set(['c']));
+    forgetMapMode('gone');
+    expect(savedOpen('gone', 'p1')).toBeNull();
+    expect(savedOpen('gone', 'p2')).toBeNull();
+    expect(savedOpen('gone2', 'p1')).not.toBeNull();
+  });
+});
+
+describe('firstMapVisit', () => {
+  it('is true once per document (the overview opens on a first visit only), and a deleted document starts over', () => {
+    expect(firstMapVisit('d1')).toBe(true);
+    expect(firstMapVisit('d1')).toBe(false);
+    expect(firstMapVisit('d2')).toBe(true);
+    forgetMapMode('d1');
+    expect(firstMapVisit('d1')).toBe(true);
+  });
+  it('blocked storage is never a first visit (no panel popping open on every load)', () => {
+    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } });
+    expect(firstMapVisit('d')).toBe(false);
   });
 });

@@ -33,6 +33,8 @@ import {
   createShapeNode, nextNodeZIndex, type ShapeKind,
 } from '../nodes/shapeNode';
 import { planQuickCreate } from '../connectors/quickCreate';
+import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
+import { adoptOnInsert } from '../transforms/containment';
 import { measurePortableText } from '../text/measurement';
 import type { ConnectSide } from '../connectors/connectHandles';
 
@@ -53,7 +55,8 @@ export function buildInsertShapeCommand(
   page: ScenePage,
   options: V2CreateShapeOptions
 ): InsertNodeCommand {
-  const node = createShapeNode(page, options);
+  // Placed inside a frame, it joins the frame, as a drag in would.
+  const node = adoptOnInsert(page, createShapeNode(page, options));
   return {
     kind: 'insert-node',
     id: `create-node:${node.id}`,
@@ -272,7 +275,7 @@ export function buildReorderCommand(
   page: ScenePage,
   nodeIds: readonly string[],
   direction: 'front' | 'back'
-): BatchDocumentCommand {
+): BatchDocumentCommand | null {
   const selected = new Set(nodeIds);
   const others = page.nodes.filter((node) => !selected.has(node.id)).map((node) => node.zIndex);
   const chosen = page.nodes.filter((node) => selected.has(node.id))
@@ -286,6 +289,8 @@ export function buildReorderCommand(
       kind: 'set-node' as const, id: `reorder:${node.id}`, label: 'Reorder',
       pageId: page.id, before: node, after: { ...node, zIndex: base + index },
     }]);
+  // Already in front (or behind): nothing to commit, and an empty batch is not a command.
+  if (commands.length === 0) return null;
   return { kind: 'batch', id: `reorder-${direction}`, label: direction === 'front' ? 'Bring to front' : 'Send to back', commands };
 }
 
@@ -365,6 +370,25 @@ export interface QuickCreateOptions {
   readonly connectorId: string;
   /** World release point of a handle drag; absent for a click (fixed gap). */
   readonly dropAt?: Point2d;
+}
+
+/**
+ * Change shape: every unlocked basic shape in the selection takes the new
+ * outline in one step. Label, size, kind (so its colour) and paint stay.
+ */
+export function buildSetShapeCommand(page: ScenePage, nodeIds: readonly string[], shape: ShapeKind): BatchDocumentCommand | null {
+  const selected = new Set(nodeIds);
+  const states = buildNodeStateMap(page);
+  const commands: SetNodeCommand[] = page.nodes
+    .filter((node) => {
+      const current = resolveBasicNodePresentation(node)?.shape;
+      return selected.has(node.id) && !states.get(node.id)?.locked && current !== undefined && current !== shape;
+    })
+    .map((before) => ({
+      kind: 'set-node', id: `shape:${before.id}`, label: 'Change shape', pageId: page.id,
+      before, after: { ...before, content: { ...before.content, shape } },
+    }));
+  return commands.length ? { kind: 'batch', id: 'set-shape', label: 'Change shape', commands } : null;
 }
 
 // Handle-drag released on empty canvas: new same-kind node at the fixed gap

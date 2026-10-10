@@ -15,10 +15,9 @@ import type {
   ConnectorStrokePresentation,
 } from '../../domain/connectors/types';
 import { buildNodeWorldMatrices, nodeWorldCenter } from '../../domain/scene/worldGeometry';
+import { labelReadable } from './viewportProjection';
 
 const LEGACY_STROKE = 0x94a3b8;
-const LABEL_DETAIL_ZOOM = 0.65;
-/** A longer label wraps: one line would run over the nodes the edge joins. */
 
 function normalizedDirection(from: Point2d, to: Point2d): Point2d {
   const distance = distanceBetweenPoints(from, to);
@@ -198,6 +197,9 @@ export class PixiConnectorRenderer {
   private readonly labels = new Container();
   private debugSnapshot = { connectors: 0, labels: 0, markers: 0, widestLabel: 0 };
   private widestLabel = 0;
+  // ponytail: connector labels share one plate layer, so they show together, once the smallest one drawn is readable.
+  private smallestLabelFont = Number.POSITIVE_INFINITY;
+  private zoom = 1;
   private editingConnectorId: string | null = null;
 
   constructor() {
@@ -238,6 +240,7 @@ export class PixiConnectorRenderer {
     let labelCount = 0;
     let markerCount = 0;
     this.widestLabel = 0;
+    this.smallestLabelFont = Number.POSITIVE_INFINITY;
     for (const connector of connectors) {
       const hasCurve = connector.commands.some((command) => command.kind === 'cubic');
       // Beziers sample their own curve; everything else gets arc-sampled
@@ -278,6 +281,7 @@ export class PixiConnectorRenderer {
       markers: markerCount,
       widestLabel: Math.round(this.widestLabel),
     };
+    this.showReadableLabels();
   }
 
   getDebugSnapshot(): {
@@ -291,7 +295,12 @@ export class PixiConnectorRenderer {
   }
 
   setZoom(zoom: number): void {
-    const visible = zoom >= LABEL_DETAIL_ZOOM;
+    this.zoom = zoom;
+    this.showReadableLabels();
+  }
+
+  private showReadableLabels(): void {
+    const visible = labelReadable(this.zoom, this.smallestLabelFont);
     this.labels.visible = visible;
     this.labelPlates.visible = visible;
   }
@@ -323,6 +332,7 @@ export class PixiConnectorRenderer {
     const color = pixiPaintColor(style.textColor, 0x334155).color;
     const text = new Text({ text: label.text, style: { ...pixiTextStyle(style, color, LABEL_WRAP_WIDTH), align: 'center' } });
     this.widestLabel = Math.max(this.widestLabel, text.width);
+    this.smallestLabelFont = Math.min(this.smallestLabelFont, style.fontSize);
     text.anchor.set(0.5);
     text.position.set(label.point.x, label.point.y);
     const plate = pixiPaintColor(style.fill, 0xffffff);

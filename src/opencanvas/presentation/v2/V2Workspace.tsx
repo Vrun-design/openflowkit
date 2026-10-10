@@ -6,6 +6,7 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   FloatingRegion,
@@ -17,6 +18,7 @@ import {
   Tooltip,
 } from '../design-system';
 import { shortcutGroups } from './v2Shortcuts';
+import { mapRepoPath, MapRepoForm } from './map/V2MapStart';
 
 export type V2WorkspaceMode = 'assistant' | 'code' | 'model' | 'agent' | 'inspect';
 const MODES = [
@@ -132,6 +134,7 @@ export function V2Welcome({ testId, title, body, actions, below }: {
 }
 
 export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) => void }) {
+  const navigate = useNavigate();
   return (
     <V2Welcome
       testId="v2-welcome"
@@ -143,6 +146,8 @@ export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) =>
           {label}
         </Button>
       ))}
+      // A repo is one more way to start: its map opens as its own document (the same field Map's start screen has).
+      below={<><p className="ofk-v2-welcome-or" aria-hidden="true">or</p><MapRepoForm onMapRepo={(repo) => navigate(mapRepoPath(repo))} /></>}
     />
   );
 }
@@ -152,7 +157,7 @@ export const INITIAL_CODE =
 
 export function V2Shortcuts({ onClose }: { onClose: () => void }) {
   return (
-    <Panel title="Keyboard shortcuts" onClose={onClose} className="ofk-v2-workspace-panel">
+    <Panel title="Keyboard shortcuts" onClose={onClose} className="ofk-v2-workspace-panel" modal>
       <p className="ofk-v2-muted">Less reaching. More creating.</p>
       {shortcutGroups().map(({ title, rows }) => (
         <section className="ofk-v2-shortcut-group" key={title}>

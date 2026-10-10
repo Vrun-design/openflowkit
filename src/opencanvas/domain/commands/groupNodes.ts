@@ -80,23 +80,21 @@ export function buildUngroupCommand(page: ScenePage, nodeIds: readonly string[])
   const groups = page.nodes.filter((node) => nodeIds.includes(node.id)
     && (node.kind === 'group' || node.kind === 'section') && node.parentId === null);
   if (groups.length === 0) return null;
-  const commands: DocumentCommand[] = [];
-  for (const group of groups) {
-    for (const child of page.nodes.filter((node) => node.parentId === group.id)) {
-      commands.push({
-        kind: 'set-node', id: `ungroup-child:${child.id}`, label: 'Ungroup', pageId: page.id, before: child,
-        after: {
-          ...child, parentId: null,
-          transform: { ...child.transform, translation: {
-            x: child.transform.translation.x + group.transform.translation.x,
-            y: child.transform.translation.y + group.transform.translation.y,
-          } },
-        },
-      });
-    }
+  // Children first, then the groups from the highest index down, so each recorded index still holds.
+  const commands: DocumentCommand[] = groups.flatMap((group) => page.nodes.filter((node) => node.parentId === group.id).map((child) => ({
+    kind: 'set-node' as const, id: `ungroup-child:${child.id}`, label: 'Ungroup', pageId: page.id, before: child,
+    after: {
+      ...child, parentId: null,
+      transform: { ...child.transform, translation: {
+        x: child.transform.translation.x + group.transform.translation.x,
+        y: child.transform.translation.y + group.transform.translation.y,
+      } },
+    },
+  })));
+  for (const group of [...groups].reverse()) {
     commands.push({
       kind: 'remove-node', id: `ungroup:${group.id}`, label: 'Ungroup', pageId: page.id,
-      index: page.nodes.findIndex((node) => node.id === group.id), node: group,
+      index: page.nodes.indexOf(group), node: group,
     });
   }
   return { kind: 'batch', id: 'ungroup', label: 'Ungroup', commands };

@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { grammarSection } from '../lib/agent.js';
+import { DSL_FAMILIES, grammarSection } from '../lib/agent.js';
 import { loadGrammar } from '../lib/fileCapabilities.js';
 import { stableForPicture } from '../cliCommands.js';
 import { DEFAULT_DEADLINE_MS, renderCheck, withDeadline, type LayoutPortLike } from './render.js';
@@ -81,7 +81,10 @@ export function registerRemoteTools(server: McpServer, { appOrigin, deadlineMs =
   server.registerTool('get_syntax', {
     title: 'Read the DSL grammar',
     description: 'The OpenFlowKit DSL grammar, so you can write source for render_diagram. Pass a family (flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart, wireframe) for just that section.',
-    inputSchema: { family: z.string().min(1).max(40).optional().describe('One family’s section; omit for the full reference.') },
+    inputSchema: {
+      family: z.preprocess((value) => typeof value === 'string' ? value.trim().toLowerCase() : value, z.enum(DSL_FAMILIES))
+        .optional().describe('One family’s section; omit for the full reference.'),
+    },
   }, async ({ family }): Promise<CallToolResult> => ({
     content: [{ type: 'text', text: grammarSection(await loadGrammar(), family) }],
   }));

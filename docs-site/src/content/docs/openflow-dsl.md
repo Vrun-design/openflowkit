@@ -9,7 +9,7 @@ and written down in full in the [DSL reference](/openflow-dsl-reference/).
 
 ## The code panel
 
-Press `⌥D` to open **Diagram as code**. Type or paste DSL and press `⌘↵` (or **Generate
+Press `⌥C` to open **Diagram as code**. Type or paste DSL and press `⌘↵` (or **Generate
 diagram**). Diagnostics appear under the editor as you type; **the diagram is the compiled
 result of the text you see**, not a parallel copy of the canvas.
 

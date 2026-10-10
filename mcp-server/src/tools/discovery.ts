@@ -1,5 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { AGENT_OPS, FRAME_PRESETS, WIDGET_KINDS } from '../lib/agent.js';
+import type { LiveBridge } from '../lib/bridge.js';
 import { MCP_SERVER_NAME, MCP_SERVER_VERSION } from '../lib/version.js';
 
 // Shape words an agent can write inside `[...]` attributes (grammar §5.1).
@@ -33,13 +34,14 @@ const STATIC_TOOLS = [
   'list_starter_templates',
   'get_starter_template',
   'list_diagram_node_types',
+  'server_info',
   'openflow_create',
   'openflow_open',
   'openflow_save',
   'whoami',
 ];
 
-export function registerDiscoveryTools(server: McpServer): void {
+export function registerDiscoveryTools(server: McpServer, bridge: Pick<LiveBridge, 'status'>): void {
   server.registerTool(
     'list_diagram_node_types',
     {
@@ -66,7 +68,7 @@ export function registerDiscoveryTools(server: McpServer): void {
     {
       title: 'Server info',
       description:
-        'Return version, capabilities, and a self-test report from the MCP server. ' +
+        'Return the server version and the tools, resources and prompts it serves. ' +
         'Useful when debugging client connections.',
     },
     async () => ({
@@ -78,6 +80,7 @@ export function registerDiscoveryTools(server: McpServer): void {
               name: MCP_SERVER_NAME,
               version: MCP_SERVER_VERSION,
               localFirst: true,
+              bridge: bridge.status(),
               modes: ['live-editor (pair with "Connect agent")', 'file (.openflow.json)'],
               tools: [...STATIC_TOOLS, ...AGENT_OPS.map(({ name }) => name)].sort(),
               resources: [

@@ -8,7 +8,7 @@ import { nonVisualAttributes, readAttributes, typedFrom } from '../attributes';
 import { tokenDiagnostic } from '../diagnostics';
 import { attrsToJson, dslConnectorMeta, dslFrameRaw, dslNodeMeta, type CanonicalAttribute, type DslFrameScene } from '../sceneMeta';
 import { joinTokens, type DslSegment } from '../segments';
-import { attributeText, commentLines, nodeName, quote, slugifyDslId } from '../text';
+import { attributeText, commentLines, isBareWords, nodeName, nodeReference, quote, quoted, slugifyDslId } from '../text';
 import { COLOR_WORDS, isHexColor, sortAttributes } from '../vocabulary';
 import type { Family, FamilyContext, FamilyScene } from './types';
 import type { DslToken } from '../tokenize';
@@ -112,11 +112,28 @@ interface StructuredModel {
 }
 
 // Relation pieces start with structural punctuation; a bare `*` or `o` is a
-// multiplicity marker, not part of the arrow.
-const isRelationPiece = (token: DslToken): boolean => token.kind === 'arrow' || /^[-<>|{}]/.test(token.value);
-/** `"1"`, `*`, `0..*` — UML multiplicity beside a relation arrow. */
-const isCardinalityToken = (token: DslToken | undefined): boolean =>
-  Boolean(token) && (token!.kind === 'string' || /^[0-9*.]+$/.test(token!.value));
+// multiplicity marker, not part of the arrow. A quoted string is always a name.
+const isRelationPiece = (token: DslToken): boolean => token.kind === 'arrow' || (token.kind !== 'string' && /^[-<>|{}]/.test(token.value));
+const BARE_MULTIPLICITY = /^(?:\d+|\*)$/;
+/**
+ * `"1"`, `*`, `"one"` — UML multiplicity beside a relation arrow (any quoted text, a bare
+ * number or `*`), read only while a name remains on that side: a lone `"store"` is the entity.
+ */
+function cardinalityOf(side: readonly DslToken[], token: DslToken | undefined): string | undefined {
+  if (side.length < 2 || !token) return undefined;
+  return token.kind === 'string' || BARE_MULTIPLICITY.test(token.value) ? token.value : undefined;
+}
+/** `A, B --> C` and `A --> B --> C`: one relation per line (W112). A comma inside `Map<K,V>` is the name's. */
+function isChainOrFan(sides: readonly (readonly DslToken[])[]): boolean {
+  return sides.some((side) => {
+    let generic = 0;
+    return side.some((token) => {
+      if (token.kind === 'string') return false;
+      if (token.kind === 'word') generic += (token.value.match(/</g)?.length ?? 0) - (token.value.match(/>/g)?.length ?? 0);
+      return (token.value === ',' && generic <= 0) || isRelationPiece(token);
+    });
+  });
+}
 const isDivider = (tokens: readonly DslToken[]): boolean => tokens.length > 0 && tokens.every((token) => /^-+$/.test(token.value));
 
 function parseErRow(tokens: readonly DslToken[], at: { line: number }): MemberDraft | undefined {
@@ -133,12 +150,13 @@ function parseErRow(tokens: readonly DslToken[], at: { line: number }): MemberDr
   return { text, field: { name, dataType, ...flags }, line: at.line };
 }
 
-function erFieldName(name: string): string {
-  return /[\s,;[\]]/.test(name) ? `"${name.replace(/"/g, '\\"')}"` : name;
+/** A row cell is one token: a value the lexer would split or read as syntax is quoted. */
+function erCell(value: string): string {
+  return isBareWords(value) && !value.includes(' ') ? value : quoted(value);
 }
 
 function erRowText(name: string, dataType: string, flags: ErFlags): string {
-  return `${erFieldName(name)} ${dataType}${
+  return `${erCell(name)} ${erCell(dataType)}${
     ['isPrimaryKey', 'isForeignKey', 'isUnique', 'isNotNull', 'isNullable']
       .map((key) => flags[key as keyof ErFlags] ? ` ${ER_FLAG_WORDS[key as keyof ErFlags]}` : '').join('')}`;
 }
@@ -218,7 +236,14 @@ function parseStructured(kind: StructuredKind, segments: readonly DslSegment[], 
     byLabel.set(reference.label, entity);
     return entity;
   };
-  const resolve = (name: string): EntityDraft | undefined => byId.get(name) ?? byLabel.get(name) ?? byId.get(slugifyDslId(name));
+  // By id, then by label — never by slug: every CJK or emoji name slugs to `n`.
+  const resolve = (name: string): EntityDraft | undefined => byId.get(name) ?? byLabel.get(name);
+  const fanned = (segment: DslSegment, sides: readonly (readonly DslToken[])[]): boolean => {
+    if (!isChainOrFan(sides)) return false;
+    fail(segment, 'W112', 'One relation per line: chains and fans are not read in this family; line dropped',
+      kind === 'erd' ? 'A ||--o{ B, then B ||--o{ C' : 'A --> B, then B --> C');
+    return true;
+  };
 
   for (const segment of segments) {
     const claimed = context.comments.claim(segment.line);
@@ -258,7 +283,7 @@ function parseStructured(kind: StructuredKind, segments: readonly DslSegment[], 
         continue;
       }
       const equal = body.findIndex((token) => token.value === '=');
-      const label = joinTokens(equal >= 0 ? body.slice(equal + 1) : body);
+      const label = joinTokens(equal >= 0 ? body.slice(equal + 1) : body, true);
       const id = equal >= 0 ? joinTokens(body.slice(0, equal)) : undefined;
       if (!label) {
         fail(segment, 'W101', 'A block needs a name', kind === 'erd' ? 'users {' : 'Order {');
@@ -288,8 +313,9 @@ function parseStructured(kind: StructuredKind, segments: readonly DslSegment[], 
     const tokens = segment.tokens.filter((token) => token.kind !== 'comment');
     const alias = kind === 'erd' ? findCardinalityAlias(tokens) : null;
     if (alias) {
-      const from = resolve(joinTokens(alias.before)) ?? declareEntity({ label: joinTokens(alias.before) }, segment.line);
-      const to = resolve(joinTokens(alias.after)) ?? declareEntity({ label: joinTokens(alias.after) }, segment.line);
+      if (fanned(segment, [alias.before, alias.after])) continue;
+      const from = resolve(joinTokens(alias.before, true)) ?? declareEntity({ label: joinTokens(alias.before, true) }, segment.line);
+      const to = resolve(joinTokens(alias.after, true)) ?? declareEntity({ label: joinTokens(alias.after, true) }, segment.line);
       relations.push({
         id: `${from.id}->${to.id}`,
         from: from.id, to: to.id, token: alias.token,
@@ -312,27 +338,30 @@ function parseStructured(kind: StructuredKind, segments: readonly DslSegment[], 
       const leftTokens = tokens.slice(0, runStart);
       let rightTokens = tokens.slice(runEnd + 1);
       const colon = rightTokens.findIndex((token) => token.value === ':');
-      const label = colon >= 0 ? joinTokens(rightTokens.slice(colon + 1)) : undefined;
+      const label = colon >= 0 ? joinTokens(rightTokens.slice(colon + 1), true) : undefined;
       if (colon >= 0) rightTokens = rightTokens.slice(0, colon);
+      if (fanned(segment, [leftTokens, rightTokens])) continue;
       // Multiplicity sits in quotes beside the arrow: `Order "1" --> "*" Item`.
-      const sourceCardinality = isCardinalityToken(leftTokens.at(-1)) ? leftTokens.at(-1)!.value : undefined;
-      const leftName = joinTokens((sourceCardinality ? leftTokens.slice(0, -1) : leftTokens));
-      const targetCardinality = isCardinalityToken(rightTokens[0]) ? rightTokens[0]!.value : undefined;
-      const rightName = joinTokens(targetCardinality ? rightTokens.slice(1) : rightTokens);
+      const leftCardinality = cardinalityOf(leftTokens, leftTokens.at(-1));
+      const leftName = joinTokens(leftCardinality ? leftTokens.slice(0, -1) : leftTokens, true);
+      const rightCardinality = cardinalityOf(rightTokens, rightTokens[0]);
+      const rightName = joinTokens(rightCardinality ? rightTokens.slice(1) : rightTokens, true);
       // Relations auto-declare their endpoints, exactly like graph edges; a later
       // block fills in the members.
       const from = resolve(leftName) ?? declareEntity({ label: leftName }, segment.line);
       const to = resolve(rightName) ?? declareEntity({ label: rightName }, segment.line);
       const reversed = canonical.startsWith('reverse:');
       const token = reversed ? canonical.slice(8) : canonical;
+      const sourceCardinality = reversed ? rightCardinality : leftCardinality;
+      const targetCardinality = reversed ? leftCardinality : rightCardinality;
       relations.push({
         id: `${reversed ? to.id : from.id}->${reversed ? from.id : to.id}`,
         from: reversed ? to.id : from.id,
         to: reversed ? from.id : to.id,
         token,
         ...(label ? { label } : {}),
-        ...(sourceCardinality && !reversed ? { sourceCardinality } : {}),
-        ...(targetCardinality && !reversed ? { targetCardinality } : {}),
+        ...(sourceCardinality ? { sourceCardinality } : {}),
+        ...(targetCardinality ? { targetCardinality } : {}),
         line: segment.line,
         attrs: [],
         comments: claimed,
@@ -548,6 +577,12 @@ function structuredText(kind: StructuredKind, scene: DslFrameScene): string[] {
     }
   };
   emitIn(null, '');
+  // A relation names its ends by name when the id is the name's slug, else by id: it has no `id = Name` form.
+  // A bare number or `*` beside the arrow would read as a multiplicity: `"Phase 1" --> B`.
+  const ref = (node: SceneNode): string => {
+    const name = slugifyDslId(nodeReference(node)) === node.id ? nodeReference(node) : node.id;
+    return name.split(' ').some((word) => BARE_MULTIPLICITY.test(word)) ? quoted(name) : quote(name);
+  };
   for (const connector of scene.connectors) {
     const meta = dslConnectorMeta(connector);
     const from = connector.source.nodeId ? byId.get(connector.source.nodeId) : undefined;
@@ -562,7 +597,7 @@ function structuredText(kind: StructuredKind, scene: DslFrameScene): string[] {
     const label = connector.labels[0]?.text;
     lines.push(
       ...commentLines(meta.comments, ''),
-      `${nodeName(from)} ${sourceCardinality ? `${JSON.stringify(sourceCardinality)} ` : ''}${token} ${targetCardinality ? `${JSON.stringify(targetCardinality)} ` : ''}${nodeName(to)}${label ? ` : ${quote(label)}` : ''}`,
+      `${ref(from)} ${sourceCardinality ? `${quoted(sourceCardinality)} ` : ''}${token} ${targetCardinality ? `${quoted(targetCardinality)} ` : ''}${ref(to)}${label ? ` : ${quote(label)}` : ''}`,
     );
   }
   const reserved = Array.isArray(raw.reserved) ? raw.reserved.filter((item): item is string => typeof item === 'string') : [];

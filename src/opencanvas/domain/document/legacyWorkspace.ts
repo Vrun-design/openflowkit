@@ -1,6 +1,6 @@
 import type { Point2d } from '../geometry/types';
 import { isJsonObject, type JsonObject, type JsonValue } from './json';
-import { projectLegacyDocument, type LegacyProjectionOptions } from './legacyProjection';
+import { dropDanglingConnectors, projectLegacyDocument, type LegacyProjectionOptions } from './legacyProjection';
 import type { SceneDocumentV1, ScenePage } from './types';
 import { validateSceneDocumentV1 } from './validation';
 
@@ -142,7 +142,7 @@ async function migrateRecord(record: LegacyRecord, options: LegacyWorkspaceOptio
   if (projected.length === 0) throw new TypeError('Legacy document has no pages.');
   const pages: ScenePage[] = [];
   for (const document of projected) pages.push(await convertMermaidNodes(document.pages[0]!, options.convertMermaid));
-  const document = { ...projected[0]!, name: record.name, createdAt: record.createdAt, updatedAt: record.updatedAt, pages };
+  const { document } = dropDanglingConnectors({ ...projected[0]!, name: record.name, createdAt: record.createdAt, updatedAt: record.updatedAt, pages });
   const validation = validateSceneDocumentV1(document);
   if (validation.success === false) throw new TypeError(`${validation.issues[0]?.path}: ${validation.issues[0]?.message}`);
   return document;

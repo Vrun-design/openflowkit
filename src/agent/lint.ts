@@ -1,8 +1,8 @@
 // DSL lint for tools that only have text: the real parser's diagnostics, not a
 // second grammar. Compilation (layout, icons) is the caller's next step.
-import { parseDocument } from '../dsl/document';
-import type { DslDiagnostic } from '../dsl/ast';
-import { isReservedFamily } from '../dsl/document';
+import { isReservedFamily, parseDocument, type DslDocument } from '../dsl/document';
+import { DSL_FAMILIES, type DslDiagnostic } from '../dsl/ast';
+import { DIRECTIONS } from '../dsl/vocabulary';
 import { d2ToDsl, looksLikeD2 } from '../services/dsl/d2ToDsl';
 import { looksLikeMermaid, mermaidToDsl } from '../services/dsl/mermaidToDsl';
 import { looksLikeStructurizr, structurizrToDsl } from '../services/dsl/structurizrToDsl';
@@ -86,6 +86,37 @@ export function readAgentSource(text: string): AgentSource {
   };
 }
 
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(previous[j]! + 1, current[j - 1]! + 1, previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[b.length]!;
+}
+
+/**
+ * `flowchrt` on the first line parses as an architecture node, which is valid and wrong.
+ * Kept narrow so a real first node never warns: implemented families only (`Pipeline` is not
+ * `timeline`), one edit under 10 letters (`Airframe` is not `wireframe`), no family-plus-suffix
+ * (`Sequencer`, `mindmaps`), and a second word only when it is a direction (`Journal Service`).
+ */
+function misspelledFamily(document: DslDocument, text: string): DslLintReport['diagnostics'][number] | null {
+  const assumed = document.diagnostics.find(({ code }) => code === 'I003');
+  const [, first, second] = (assumed && /^([A-Za-z]+)(?:\s+(\S+))?$/.exec(text.split('\n')[assumed.line - 1]?.trim() ?? '')) || [];
+  const word = first?.toLowerCase();
+  if (!assumed || !word || (second !== undefined && !DIRECTIONS[second.toLowerCase()])) return null;
+  const family = DSL_FAMILIES.find((name) => name.length >= 6 && !isReservedFamily(name) && !word.startsWith(name)
+    && editDistance(word, name) <= (name.length < 10 ? 1 : 2));
+  return family ? {
+    code: 'W110', severity: 'warning', line: assumed.line, col: assumed.col,
+    message: `First line looks like a misspelled family header; did you mean \`${family}\`? Parsed as architecture.`,
+  } : null;
+}
+
 export function lintDsl(text: string): DslLintReport {
   let source: AgentSource;
   try {
@@ -94,14 +125,19 @@ export function lintDsl(text: string): DslLintReport {
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, family: 'unknown', reserved: false, statements: 0, lines: text.split('\n').length, diagnostics: [{ code: 'E003', severity: 'error', line: 1, col: 1, message }] };
   }
-  const document = parseDocument(source.converted ? source.dsl : unfenced(text));
+  const parsed = source.converted ? source.dsl : unfenced(text);
+  const document = parseDocument(parsed);
+  const typo = misspelledFamily(document, parsed);
   return {
     ok: !document.diagnostics.some(({ severity }) => severity === 'error'),
     family: document.family,
     reserved: isReservedFamily(document.family),
     statements: document.segments.length,
     lines: document.lineCount,
-    diagnostics: document.diagnostics.map(({ code, severity, line, col, message }) => ({ code, severity, line, col, message })),
+    diagnostics: [
+      ...document.diagnostics.map(({ code, severity, line, col, message }) => ({ code, severity, line, col, message })),
+      ...(typo ? [typo] : []),
+    ],
     ...(source.converted ? { converted: { ...source.converted, dsl: source.dsl } } : {}),
   };
 }

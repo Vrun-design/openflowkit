@@ -3,7 +3,7 @@ import type { MapModel } from '../../../../dsl/map/types';
 import { visible } from '../../../../dsl/map/view';
 import { MAP_BOX_BUDGET } from '../../../application/map/mapNavigation';
 import { canOpen } from '../../../application/map/navigate';
-import { keepInView, landing, type Cam, type Rect, type Viewport } from '../../../application/map/geometry';
+import { frameBox, keepInView, landing, type Cam, type Rect, type Viewport } from '../../../application/map/geometry';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
 import type { Bounds2d } from '../../../domain/geometry/types';
@@ -72,7 +72,7 @@ export function mapKeyAllowed(e: KeyLike): boolean {
   // Remove from model edits the model, not the drawing: the model panel offers it in Map too.
   if (command && e.shiftKey && !e.altKey && (e.key === 'Delete' || e.key === 'Backspace')) return true;
   if (command) return !e.altKey && ['z', 'y', 'f', 'j', '0', '1', '=', '+', '-'].includes(key);
-  if (e.altKey) return !e.shiftKey && ['KeyD', 'KeyM', 'KeyI'].includes(e.code);
+  if (e.altKey) return !e.shiftKey && ['KeyC', 'KeyM', 'KeyI'].includes(e.code);
   if (e.shiftKey) return e.code === 'Digit1' || e.code === 'Digit2';
   return ['v', 'h', 'l', 'm'].includes(key);
 }
@@ -184,12 +184,40 @@ export function clearOfPanel({ selection, content, cam, before, seen, after }: {
   return content && seenStart ? nudgeInto(content, cam, after) : null;
 }
 
+/** A fit the camera was given and still holds: all of the map (Zoom to fit), or its readable start (a landing). */
+export interface HeldFit { readonly cam: CanvasCamera; readonly all: boolean }
+
+/**
+ * A layout with no box to follow (a repo still streaming in, a connection kind switched): redo the fit the camera still
+ * holds, so a growing map keeps being framed the way the reader last asked. `moving`: the camera is the one the move to
+ * that fit last set. Null when the reader has moved the camera since, or nothing was fitted.
+ */
+export function refitKind(held: HeldFit | null, current: CanvasCamera, moving: boolean): 'all' | 'start' | null {
+  if (!held) return null;
+  const same = Math.abs(current.zoom - held.cam.zoom) < 1e-6 && Math.abs(current.x - held.cam.x) < 0.5 && Math.abs(current.y - held.cam.y) < 0.5;
+  return same || moving ? (held.all ? 'all' : 'start') : null;
+}
+
+/** Zoom to fit: the whole map inside `free`, however small that makes it (the reader asked for all of it). */
+export function fitAll(extent: Bounds2d, free: FreeArea): CanvasCamera {
+  const cam = frameBox({ x: extent.x, y: extent.y, width: extent.width, height: extent.height }, { width: free.width, height: free.height, top: 0, bottom: 0, pad: PAD }, 1.15, 0.05);
+  return { zoom: cam.k, x: free.left + cam.x, y: free.top + cam.y };
+}
+
+/** Whether `cam` shows the whole of `extent` inside `free` (a landing kept readable may show only its start). */
+export function showsAll(extent: Bounds2d, cam: CanvasCamera, free: FreeArea): boolean {
+  const [x, y] = [extent.x * cam.zoom + cam.x, extent.y * cam.zoom + cam.y];
+  return x >= free.left - 0.5 && y >= free.top - 0.5
+    && x + extent.width * cam.zoom <= free.left + free.width + 0.5 && y + extent.height * cam.zoom <= free.top + free.height + 0.5;
+}
+
 /**
  * The camera a map opens at: everything when that stays readable (READABLE), else the map's top-left corner at READABLE,
- * so the reader starts at a known place. `free` is the canvas the panels and floating chrome leave.
+ * so the reader starts at a known place: `start` (the first box in reading order) when given, so a tall or ragged layout
+ * does not open on an empty corner. `free` is the canvas the panels and floating chrome leave.
  */
-export function mapCamera(extent: Bounds2d, free: FreeArea): CanvasCamera {
-  return landOn(extent, undefined, free);
+export function mapCamera(extent: Bounds2d, free: FreeArea, start?: Rect): CanvasCamera {
+  return landOn(extent, undefined, free, undefined, start);
 }
 
 /**
@@ -197,7 +225,7 @@ export function mapCamera(extent: Bounds2d, free: FreeArea): CanvasCamera {
  * scale it stays there and pans only until the whole box is in `free` (zooming out, never in, when the box does not fit);
  * otherwise, never below READABLE: everything when it fits, else `focus` fitted, else its header and first row.
  */
-export function landOn(extent: Bounds2d, focus: Rect | undefined, free: FreeArea, current?: CanvasCamera): CanvasCamera {
+export function landOn(extent: Bounds2d, focus: Rect | undefined, free: FreeArea, current?: CanvasCamera, start?: Rect): CanvasCamera {
   const view: Viewport = { width: free.width, height: free.height, top: 0, bottom: 0, pad: PAD };
   const place = (cam: Cam): CanvasCamera => ({ zoom: cam.k, x: free.left + cam.x, y: free.top + cam.y });
   if (focus && current) {
@@ -205,6 +233,7 @@ export function landOn(extent: Bounds2d, focus: Rect | undefined, free: FreeArea
     if (kept) return place(kept);
   }
   // `landing` frames a map that starts at the origin; shift the focus there and the result back.
-  const cam = landing(extent, focus && { ...focus, x: focus.x - extent.x, y: focus.y - extent.y }, view);
+  const shift = (r: Rect | undefined) => r && { ...r, x: r.x - extent.x, y: r.y - extent.y };
+  const cam = landing(extent, shift(focus), view, shift(start));
   return place({ ...cam, x: cam.x - extent.x * cam.k, y: cam.y - extent.y * cam.k });
 }

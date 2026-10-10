@@ -11,7 +11,7 @@ import type { CanvasCamera } from '../../domain/camera/types';
 import { createBounds2d, unionBounds } from '../../domain/geometry/bounds';
 import type { Bounds2d, Point2d, Size2d } from '../../domain/geometry/types';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
-import { nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
+import { frameNameAt, nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import {
   connectorEditHandles, MIN_SEGMENT_HANDLE_PX,
@@ -98,7 +98,6 @@ export interface PlacementGhost {
   readonly bounds: Bounds2d;
 }
 const MARQUEE_FILL = CHROME_ACCENT;
-const LABEL_DETAIL_ZOOM = 0.55;
 // Pixi 8 CanvasText can throw while returning pooled textures during stage-tree
 // destruction across overlapping React StrictMode lifecycles. The renderer owns
 // and releases GPU resources; display children can be reclaimed with the host.
@@ -520,6 +519,9 @@ export class PixiRendererHost {
     // Locked nodes stay selectable (their menu is how they get unlocked);
     // the pointer flow refuses to move them.
     const hit = [...hits].reverse().find((hit) => hit.visible) ?? null;
+    // A frame's name sits above its box: over it, the frame is what's under the pointer (a line drawn across it still wins).
+    const named = hit?.kind === 'node' ? null : frameNameAt(this.index, point);
+    if (named && !this.pickConnector(screenPoint)) return this.outermostGroup(named);
     if (!hit) return null;
     // A connector drawn across a container is painted on top of it, so a click
     // on the line belongs to the line. Without this, nothing inside a section
@@ -785,7 +787,7 @@ export class PixiRendererHost {
   }
 
   /** The shape a creation tool will drop, drawn under the pointer in world
-   * space (Koboyo's placement affordance); null clears. Text ghosts as its box. */
+   * space; null clears. Text ghosts as its box. */
   setPlacementGhost(ghost: PlacementGhost | null): void {
     this.placementGhost.clear();
     if (ghost) {
@@ -1070,9 +1072,10 @@ export class PixiRendererHost {
 
   private updateLabelVisibility(): void {
     if (!this.index || !this.app.renderer) return;
-    if (this.camera.zoom < LABEL_DETAIL_ZOOM || this.viewportProjection?.detailLevel !== 'full') {
-      this.nodeRenderer.setLabelVisibility(null);
-      this.containerRenderer.setLabelVisibility(null);
+    // Overview draws no labels; otherwise each label shows while it is readable on screen (labelReadable).
+    if (this.viewportProjection?.detailLevel === 'overview') {
+      this.nodeRenderer.setLabelVisibility(null, this.camera.zoom);
+      this.containerRenderer.setLabelVisibility(null, this.camera.zoom);
       return;
     }
     const visibleIds = new Set(
@@ -1080,8 +1083,8 @@ export class PixiRendererHost {
         kinds: new Set(['node', 'container']),
       }).map((object) => object.id)
     );
-    this.nodeRenderer.setLabelVisibility(visibleIds);
-    this.containerRenderer.setLabelVisibility(visibleIds);
+    this.nodeRenderer.setLabelVisibility(visibleIds, this.camera.zoom);
+    this.containerRenderer.setLabelVisibility(visibleIds, this.camera.zoom);
   }
 
   private createViewportProjection(): ViewportSceneProjection | null {

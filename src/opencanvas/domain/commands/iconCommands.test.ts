@@ -15,6 +15,14 @@ describe('icon commands', () => {
     expect(buildSetIconCommand(page, ['zzz'], s3)).toBeNull();
   });
 
+  it('inserts an icon dropped on a frame as the frame\'s child', () => {
+    const frame = createTestNode('f', { kind: 'section', size: { width: 400, height: 300 }, transform: { translation: { x: 100, y: 100 }, rotationRadians: 0, scale: { x: 1, y: 1 } } });
+    const page = createTestDocument({ nodes: [frame] }).pages[0]!;
+    const command = buildInsertIconCommand(page, { id: 'n', at: { x: 150, y: 150 }, icon: s3 });
+    expect(command.node.parentId).toBe('f');
+    expect(command.node.transform.translation).toEqual({ x: 50, y: 50 });
+  });
+
   it('inserts an icon node at the point', () => {
     const page = createTestDocument().pages[0];
     const command = buildInsertIconCommand(page, { id: 'n', at: { x: 5, y: 6 }, icon: s3 });

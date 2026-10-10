@@ -105,7 +105,14 @@ async function runOp(args: readonly string[], io: CliIo): Promise<number> {
   const store = new DocumentStore();
   const document = exists ? await store.open(docPath!) : store.create(docPath ? path.basename(docPath).replace(/\.openflow\.json$|\.json$/, '') : 'Untitled diagram');
   const pageId = (values.page as string | undefined) ?? document.pages[0]!.id;
-  const result = await runAgentOp(op, input, { document, pageId, capabilities: await loadFileCapabilities() });
+  let result;
+  try {
+    result = await runAgentOp(op, input, { document, pageId, capabilities: await loadFileCapabilities() });
+  } catch (error) {
+    if (!(error as { diagnostics?: unknown }).diagnostics) throw error;
+    io.err(`openflowkit op ${name}: ${(error as Error).message.replace(/\n/g, '; ')}; nothing saved`);
+    return 1;
+  }
   const errors = ((result.output as { diagnostics?: readonly Diagnostic[] } | null)?.diagnostics ?? []).filter(({ severity }) => severity === 'error');
   if (errors.length) {
     io.out(JSON.stringify({ changed: false, output: result.output }, null, 2));
@@ -163,14 +170,23 @@ export async function check(source: string, name: string, layout: 'elk' | 'none'
   const capabilities = layout === 'elk' ? elk : {
     ...elk, compileWorkspace: (text: string, options?: unknown) => elk.compileWorkspace(text, { ...(options as object), layout: deterministicLayout }),
   };
-  const result = await runAgentOp(findAgentOp('create_diagram')!, { dsl: source }, { document, pageId: document.pages[0]!.id, capabilities });
-  const output = result.output as { views?: readonly unknown[]; diagnostics?: readonly Diagnostic[] };
   const seen = new Set<string>();
-  const issues = notable([...lint.diagnostics, ...(output.diagnostics ?? [])]).filter((issue) => {
+  const once = (list: readonly Diagnostic[]) => notable(list).filter((issue) => {
     const key = `${issue.code}:${issue.line}:${issue.col}`;
     return !seen.has(key) && Boolean(seen.add(key));
   });
-  return { lint, issues, document: result.document, views: output.views?.length ?? 0 };
+  let result;
+  try {
+    result = await runAgentOp(findAgentOp('create_diagram')!, { dsl: source }, { document, pageId: document.pages[0]!.id, capabilities });
+  } catch (error) {
+    // Nothing drawable: the op names the lines it dropped; the check fails with them.
+    const dropped = (error as { diagnostics?: readonly Diagnostic[] }).diagnostics;
+    if (!dropped) throw error;
+    const nothing: Diagnostic = { code: 'E001', severity: 'error', line: 1, col: 1, message: 'Nothing to draw' };
+    return { lint, issues: [...once([...lint.diagnostics, ...dropped]), nothing], views: 0 };
+  }
+  const output = result.output as { views?: readonly unknown[]; diagnostics?: readonly Diagnostic[] };
+  return { lint, issues: once([...lint.diagnostics, ...(output.diagnostics ?? [])]), document: result.document, views: output.views?.length ?? 0 };
 }
 
 function report(checked: Checked, io: CliIo, command: string): void {
@@ -180,7 +196,7 @@ function report(checked: Checked, io: CliIo, command: string): void {
 }
 
 /** Losses and warnings are fine by default; `--strict` turns them into exit 1. */
-function failed(checked: Checked, strict: boolean): boolean {
+export function failed(checked: Checked, strict: boolean): boolean {
   if (!checked.document || checked.issues.some(({ severity }) => severity === 'error')) return true;
   return strict && ((checked.lint.converted?.losses.length ?? 0) > 0 || checked.issues.length > 0);
 }

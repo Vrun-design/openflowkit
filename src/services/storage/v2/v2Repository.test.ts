@@ -12,6 +12,7 @@ import {
   V2_DOCUMENTS_STORE_NAME,
   openFlowPersistenceDatabase,
 } from '../indexedDbSchema';
+import { V2StorageBlockedError, describeStorageFailure } from './v2Errors';
 import {
   V2_THUMBNAIL_MAX_CHARS,
   createV2Repository,
@@ -89,6 +90,23 @@ describe('v2 document repository', () => {
       .toMatchObject({ content: { label: 'Tab A' } });
   });
 
+  it('refuses a save from a tab that loaded an older revision, even one numbered higher', async () => {
+    const repository = createV2Repository(indexedDB);
+    await repository.saveDocument('document-1', labeledDocument('Base'), 5);
+    expect(await repository.saveDocument('document-1', labeledDocument('Tab A'), 6, 5)).toMatchObject({ status: 'saved' });
+    // Tab B also loaded 5 and made two edits: 7 is past 6, but it never saw Tab A's write.
+    expect(await repository.saveDocument('document-1', labeledDocument('Tab B'), 7, 5)).toEqual({ status: 'stale', storedRevision: 6 });
+    expect(requireOk(await repository.loadDocument('document-1')).document.pages[0].nodes[0])
+      .toMatchObject({ content: { label: 'Tab A' } });
+  });
+
+  it('never stores a document that would load as damaged', async () => {
+    const repository = createV2Repository(indexedDB);
+    const broken = { ...labeledDocument('A'), name: '' } as SceneDocumentV1;
+    await expect(repository.saveDocument('document-1', broken, 1)).rejects.toThrow('This diagram has a problem we can’t save: Expected a non-empty string. ($.name)');
+    expect(await repository.loadDocument('document-1')).toEqual({ status: 'missing' });
+  });
+
   it('orders two saves issued in the same tick', async () => {
     const repository = createV2Repository(indexedDB);
     const first = repository.saveDocument('document-1', labeledDocument('First'), 3);
@@ -155,6 +173,24 @@ describe('v2 document repository', () => {
     check.close();
     expect(v1After).toEqual(v1Record);
     expect(sha256(JSON.stringify(v1After))).toBe(before);
+  });
+
+  it('says to close other tabs when an older one holds the database open, instead of waiting forever', async () => {
+    // An old build's tab: open at an earlier version, never closing on versionchange.
+    const old = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(FLOW_PERSISTENCE_DB_NAME, 3);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const failure = await createV2Repository(indexedDB).loadDocument('document-1').catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(V2StorageBlockedError);
+    expect(describeStorageFailure(failure).message).toContain('Close other OpenFlowKit tabs');
+    // Retry while it is still open says the same at once, instead of queueing behind the blocked open.
+    await expect(createV2Repository(indexedDB).loadDocument('document-1')).rejects.toBeInstanceOf(V2StorageBlockedError);
+    old.close();
+    await new Promise((resolve) => setTimeout(resolve, 20)); // the blocked open completes and lets go
+    // Once it lets go, the next attempt opens.
+    expect(await createV2Repository(indexedDB).loadDocument('document-1')).toEqual({ status: 'missing' });
   });
 
   it('exports a saved-then-loaded document byte-identically', async () => {

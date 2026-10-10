@@ -55,7 +55,7 @@ plain, plus `head:`/`tail:` markers, `from:`/`to:` port hints and a `: label`.
 
 - **No custom shapes.** The library is the library; DSL shape words and toolbar entries are
   the same set.
-- **No connector kinds beyond the five.** Dashes, heads and labels are attributes, not kinds.
+- **No connector kinds beyond the three.** Dashes, heads and labels are attributes, not kinds.
 - **No arrowheads on free ink.** Pen strokes are ink nodes; only connectors have marker heads.
 - **Waypoints are per connector and manual.** There is no "route through this corridor"
   control.

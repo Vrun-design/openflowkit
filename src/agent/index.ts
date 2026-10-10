@@ -10,7 +10,7 @@ export { headlessElkLayout } from './headlessLayout';
 export type { FileHostOptions } from './host';
 export {
   BRIDGE_DEFAULT_PORT, BRIDGE_IDLE_MS, BRIDGE_POLL_SECONDS, BRIDGE_PROTOCOL_VERSION,
-  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest,
+  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeClientInfo, isBridgeRequest,
 } from './bridge/protocol';
 export type { BridgeClientInfo, BridgeHealth, BridgePageSummary, BridgeRequest, BridgeResult } from './bridge/protocol';
 export type { AnyAgentOp } from './ops';
@@ -50,6 +50,8 @@ export { parseRepoPath } from '../services/discovery/githubRepo';
 // The wireframe vocabulary, so discovery lists what the renderer draws.
 export { WIDGET_KINDS } from '../opencanvas/domain/nodes/widgetNodePresentation';
 export { FRAME_PRESETS } from '../opencanvas/domain/nodes/framePreset';
+// The family headers the parser accepts: get_syntax answers one of these or says which exist.
+export { DSL_FAMILIES } from '../dsl/ast';
 
 export function createAgentDocument(name: string, id: string = crypto.randomUUID()): SceneDocumentV1 {
   const now = new Date().toISOString();

@@ -44,6 +44,16 @@ async function host(document: SceneDocumentV1 = createAgentDocument('Ops fixture
 }
 
 describe('agent ops', () => {
+  it('refuses DSL with nothing drawable instead of leaving an empty frame, and says why', async () => {
+    const run = await host();
+    const before = run.document();
+    await expect(run.run('create_diagram', { dsl: 'flowchart\nA -> [[[ broken' })).rejects.toThrow(/Nothing to draw[\s\S]*line 2:1 W101/);
+    expect(run.document()).toBe(before);
+    await run.run('create_diagram', { dsl: FLOW });
+    await expect(run.run('update_diagram', { frameId: run.frame().id, dsl: 'A -> [[[' })).rejects.toThrow(/Nothing to draw/);
+    expect(run.dataIds()).toHaveLength(3);
+  });
+
   it('creates a diagram as one undoable page command and reads its authored text back', async () => {
     const run = await host();
     const created = await run.run('create_diagram', { dsl: FLOW });
@@ -151,6 +161,9 @@ views { view context of Shop; view container of Shop }
     const syntax = await run.run('get_syntax', { family: 'sequence' });
     expect(syntax.output).toMatchObject({ family: 'sequence', syntax: '## family sequence' });
     expect(run.capabilities.recording.syntaxCalls).toContain('sequence');
+    // An unknown family used to answer the whole grammar, as if it had matched.
+    await expect(run.run('get_syntax', { family: 'flowchrt' })).rejects.toThrow(/flowchart.*architecture|architecture.*flowchart/);
+    expect((await run.run('get_syntax', { family: ' Sequence ' })).output).toMatchObject({ family: 'sequence' });
 
     const search = await run.run('search_icons', { query: 'lambda' });
     expect((search.output as { matches: readonly unknown[] }).matches).toHaveLength(1);

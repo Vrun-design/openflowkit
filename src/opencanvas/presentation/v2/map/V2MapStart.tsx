@@ -20,9 +20,28 @@ interface Props {
 }
 
 /** Map on a document with no model yet: the Canvas welcome's layout, two ways to get a model, or a repo to map. The drawing behind is not touched. */
-export function V2MapStart({ busy, onStartModel, onMapRepo, onAgent }: Props): React.JSX.Element {
-  const [address, setAddress] = useState('');
+/** Where a repo's map opens: `#/map/github/<owner>/<repo>[/tree/<ref>]`. */
+export const mapRepoPath = ({ owner, repo, ref }: RepoRef): string => `/map/github/${owner}/${repo}${ref !== 'HEAD' ? `/tree/${encodeURIComponent(ref)}` : ''}`;
+
+/** One line: a GitHub address and "Map repo". Map's start screen, the Canvas welcome and a repo that was not found share it. */
+export function MapRepoForm({ onMapRepo, initial = '' }: { readonly onMapRepo: (repo: RepoRef) => void; readonly initial?: string }): React.JSX.Element {
+  const [address, setAddress] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  return (
+    <form className="ofk-v2-map-repo-form" aria-label="Map a GitHub repo" noValidate onSubmit={(event) => {
+      event.preventDefault();
+      const repo = repoToMap(address);
+      if (repo) onMapRepo(repo); else setError('Enter owner/repo or a github.com address.');
+    }}>
+      <Field label="Map a GitHub repo" placeholder="owner/repo or GitHub URL" spellCheck={false} autoComplete="off" value={address}
+        {...(error ? { error } : {})}
+        onChange={(event) => { setAddress(event.target.value); setError(null); }} />
+      <Button variant="secondary" type="submit">Map repo</Button>
+    </form>
+  );
+}
+
+export function V2MapStart({ busy, onStartModel, onMapRepo, onAgent }: Props): React.JSX.Element {
   return (
     <V2Welcome
       testId="v2-map-start"
@@ -37,16 +56,7 @@ export function V2MapStart({ busy, onStartModel, onMapRepo, onAgent }: Props): R
       below={(
         <>
           <p className="ofk-v2-welcome-or" aria-hidden="true">or</p>
-          <form className="ofk-v2-map-repo-form" aria-label="Map a GitHub repo" noValidate onSubmit={(event) => {
-            event.preventDefault();
-            const repo = repoToMap(address);
-            if (repo) onMapRepo(repo); else setError('Enter owner/repo or a github.com address.');
-          }}>
-            <Field label="Map a GitHub repo" placeholder="owner/repo or GitHub URL" spellCheck={false} autoComplete="off" value={address}
-              {...(error ? { error } : {})}
-              onChange={(event) => { setAddress(event.target.value); setError(null); }} />
-            <Button variant="secondary" type="submit">Map repo</Button>
-          </form>
+          <MapRepoForm onMapRepo={onMapRepo} />
         </>
       )}
     />

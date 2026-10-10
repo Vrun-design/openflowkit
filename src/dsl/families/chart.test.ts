@@ -29,4 +29,25 @@ describe('chart family', () => {
     const again = await compile(serialize(result));
     expect(again.nodes[0]!.content).toMatchObject({ xLabels: ['Cheap', 'Costly'], quadrants: ['Do now', 'Plan', 'Skip', 'Delegate'] });
   });
+
+  it('writes the title once, and a title edited on the canvas wins', async () => {
+    const chart = await compile('chart bar\ntitle: Old\nRevenue: Jan 12, Feb 19');
+    expect(serialize(chart).match(/title:/g)).toHaveLength(1);
+    const titled = (title: string) => ({ ...chart, nodes: [{ ...chart.nodes[0]!, content: { ...chart.nodes[0]!.content, title } }] });
+    const again = await compile(serialize(titled('New')));
+    expect(again.nodes[0]!.content.title).toBe('New');
+    expect(again.diagnostics.filter(({ severity }) => severity !== 'info')).toEqual([]);
+    expect(serialize(titled(''))).not.toContain('title:');
+  });
+});
+
+
+describe('chart title edits', () => {
+  it('keeps a title renamed on the frame, and the drawn title when that is the one edited', async () => {
+    const chart = await compile('chart bar\ntitle: Old\nRevenue: Jan 12, Feb 19');
+    const framed = { ...chart, frame: { ...chart.frame, content: { ...chart.frame.content, label: 'Framed' } } };
+    expect((await compile(serialize(framed))).nodes[0]!.content.title).toBe('Framed');
+    const drawn = { ...chart, nodes: [{ ...chart.nodes[0]!, content: { ...chart.nodes[0]!.content, title: 'Drawn' } }] };
+    expect((await compile(serialize(drawn))).nodes[0]!.content.title).toBe('Drawn');
+  });
 });

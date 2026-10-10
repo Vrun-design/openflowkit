@@ -36,4 +36,16 @@ describe('architecture card text layout', () => {
     expect(layout.resource.displayText).toBe('React');
     expect(layout.provider.width + layout.resource.width).toBeLessThanOrEqual(240 - 64);
   });
+
+  it('shows a technology whole when the element type leaves it room', () => {
+    const node = createTestNode('card', {
+      kind: 'architecture',
+      size: { width: 240, height: 152 },
+      content: { label: 'Checkout Web', archProviderLabel: 'Container', archResourceType: 'React, TypeScript' },
+    });
+    const layout = architectureCardLayout(node, resolveNodeStyle(node));
+    expect(layout.resource.displayText).toBe('React, TypeScript');
+    expect(layout.provider.displayText).toBe('Container');
+    expect(layout.provider.width + layout.resource.width).toBeLessThanOrEqual(240 - 64);
+  });
 });

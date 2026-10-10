@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { IconAlertTriangle, IconChevronDown, IconCircleCheck, IconExternalLink } from '@tabler/icons-react';
 import { AiProviderError, createProvider, keyProblem, listModels } from '../../../services/ai/provider';
 import {
-  AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, type AiProviderDefinition,
+  AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, providerHint, type AiProviderDefinition,
 } from '../../../services/ai/providers';
 import { Button, Dialog, Field, Icon } from '../design-system';
 import {
@@ -73,23 +73,39 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
   const modelsKey = `${definition.id}|${connection.baseUrl.trim() || definition.defaultBaseUrl}`;
   // Keyed by provider: switching never shows another provider's list (GitHub #69).
   const models = fetchedModels.get(modelsKey) ?? definition.suggestedModels;
+  // What an empty model field means: the provider's default, or on Ollama the first installed model when that default is not.
+  const installed = definition.wire === 'ollama' ? fetchedModels.get(modelsKey) : undefined;
+  const fallbackModel = installed?.length && !installed.includes(definition.defaultModel) ? installed[0]! : definition.defaultModel;
+  const model = connection.model.trim() || (fallbackModel === definition.defaultModel ? '' : fallbackModel);
   const fetchModels = () => {
     if (fetchedModels.has(modelsKey) || (definition.needsKey && !key) || !(connection.baseUrl.trim() || definition.defaultBaseUrl)) return;
     listModels({ provider: definition.id, apiKey: key, baseUrl: connection.baseUrl }, AbortSignal.timeout(8000))
       .then((list) => { if (list.length) { fetchedModels.set(modelsKey, list); setModelsFetched((count) => count + 1); } })
       .catch(() => undefined);
   };
-  const patch = (next: Partial<V2AiConnection>) => { setTest(IDLE); setDraft((current) => withConnection(current, next)); };
-  const pick = (provider: V2AiSettings['provider']) => {
+  // A local Ollama answers at once and needs no key: list what is installed as soon as it is picked.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchModels reads the current draft; the provider is the trigger
+  useEffect(() => { if (open && draft.provider === 'ollama') fetchModels(); }, [open, draft.provider]);
+  // A changed key, model, endpoint or provider makes a running test's verdict stale: stop it.
+  const resetTest = () => {
+    testAbort.current?.abort();
+    testAbort.current = null;
     setTest(IDLE);
+  };
+  const patch = (next: Partial<V2AiConnection>) => { resetTest(); setDraft((current) => withConnection(current, next)); };
+  const pick = (provider: V2AiSettings['provider']) => {
+    resetTest();
     setDraft((current) => ({ ...current, provider }));
     keyInput.current?.focus();
   };
   const save = () => {
-    onSave(withConnection(draft, { apiKey: key, baseUrl: connection.baseUrl.trim(), model: connection.model.trim() }));
+    onSave(withConnection(draft, { apiKey: key, baseUrl: connection.baseUrl.trim(), model }));
     onClose();
   };
   const shapeHint = keyShapeHint(definition, key);
+  // Open on arrival when the endpoint matters; after that it is the reader's, and never folds while they edit it.
+  const endpointOpen = useRef(new Map<string, boolean>());
+  if (!endpointOpen.current.has(definition.id)) endpointOpen.current.set(definition.id, Boolean(connection.baseUrl) || !definition.defaultBaseUrl);
 
   const testKey = async () => {
     if (!ready) return;
@@ -102,14 +118,16 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
       const provider = createProvider({
         provider: draft.provider, apiKey: key,
         ...(connection.baseUrl.trim() ? { baseUrl: connection.baseUrl } : {}),
-        ...(connection.model.trim() ? { model: connection.model } : {}),
+        ...(model ? { model } : {}),
       });
       await provider.complete({
         system: 'You are a connection test.', prompt: 'Reply with the single word OK.',
         maxTokens: TEST_MAX_TOKENS, signal: controller.signal,
       });
+      if (testAbort.current !== controller) return;
       setTest({ state: 'ok', message: `Connected — ${provider.model} answered.` });
     } catch (caught) {
+      if (testAbort.current !== controller) return;
       const cause = caught instanceof AiProviderError ? caught.cause : undefined;
       setTest({
         state: 'fail',
@@ -159,7 +177,7 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
               </span>
             </p>
             <p className="ofk-v2-provider-hint">
-              {definition.hint}
+              {providerHint(definition, window.location.origin)}
               {definition.consoleUrl ? <>
                 {' '}<a href={definition.consoleUrl} target="_blank" rel="noreferrer">
                   {definition.consoleName}<Icon icon={IconExternalLink} />
@@ -178,11 +196,11 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
           ref={keyInput} value={connection.apiKey} placeholder={definition.keyPlaceholder}
           onChange={(event) => patch({ apiKey: event.target.value })} />
         <Field label="Model" list={modelListId} spellCheck={false} autoComplete="off"
-          hint={definition.defaultModel ? `Leave empty for ${definition.defaultModel}. Any model id works.` : 'Required for a custom endpoint.'}
-          value={connection.model} placeholder={definition.defaultModel || 'your-model-id'}
+          hint={fallbackModel ? `Leave empty for ${fallbackModel}. Any model id works.` : 'Required for a custom endpoint.'}
+          value={connection.model} placeholder={fallbackModel || 'your-model-id'}
           onFocus={fetchModels} onChange={(event) => patch({ model: event.target.value })} />
         <datalist id={modelListId}>
-          {models.map((model) => <option key={model} value={model} />)}
+          {models.map((id) => <option key={id} value={id} />)}
         </datalist>
         <div className="ofk-v2-provider-test">
           <Button variant="secondary" busy={test.state === 'testing'} disabled={!ready}
@@ -192,7 +210,7 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
             {test.message}
           </p>
         </div>
-        <details className="ofk-connection-details" open={Boolean(connection.baseUrl) || !definition.defaultBaseUrl || undefined}>
+        <details key={definition.id} className="ofk-connection-details" open={endpointOpen.current.get(definition.id) || undefined}>
           <summary>Endpoint<Icon icon={IconChevronDown} /></summary>
           <div className="ofk-v2-provider-advanced">
             <Field label="Base URL" hint={definition.defaultBaseUrl ? `Default: ${definition.defaultBaseUrl}` : 'Required for a custom endpoint.'} spellCheck={false}
