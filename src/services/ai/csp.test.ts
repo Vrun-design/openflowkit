@@ -1,12 +1,14 @@
 // The one test that keeps the CSP bug class dead: every default provider origin
-// must be permitted by connect-src in _headers. The app was shipped once with
+// must be permitted by connect-src in public/_headers. The app was shipped once with
 // NVIDIA and localhost missing, and the blocked calls looked exactly like CORS.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AI_PROVIDERS } from './providers';
 
-const HEADERS = readFileSync(path.resolve(process.cwd(), '_headers'), 'utf8');
+const read = (file: string) => readFileSync(path.resolve(process.cwd(), file), 'utf8');
+// Cloudflare reads _headers from the deployed folder, so it lives in public/ (Vite copies it into dist/).
+const HEADERS = read('public/_headers');
 const CONNECT_SRC = /connect-src([^;]*);/.exec(HEADERS)?.[1]?.trim().split(/\s+/) ?? [];
 
 /** CSP source matching for the subset we write: scheme-source, host-source, wildcard host/port. */

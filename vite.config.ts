@@ -1,13 +1,24 @@
+import { readFileSync } from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+
+// The `/*` block of public/_headers (what Cloudflare sends): dev and preview send it too, so every e2e
+// test runs under the production CSP. The deployed policy once blocked icons nobody saw in dev.
+const deployedHeaders = Object.fromEntries(
+  readFileSync(path.resolve(__dirname, 'public/_headers'), 'utf8').split(/\n(?=\S)/)[0]!.split('\n').slice(1)
+    .map((line) => line.trim()).filter(Boolean)
+    .map((line) => [line.slice(0, line.indexOf(':')), line.slice(line.indexOf(':') + 1).trim()]),
+);
 
 export default defineConfig(() => {
   return {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      headers: deployedHeaders,
     },
+    preview: { headers: deployedHeaders },
     plugins: [react()],
     // Workers are not in the dev server's startup scan: their deps (gifenc, mediabunny) were found on the
     // first encode, and Vite reloaded every open page mid-session (CI's motion-dialog flake).
